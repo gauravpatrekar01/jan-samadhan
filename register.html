@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Grievance – JanSamadhan</title>
+    <meta name="description"
+        content="File a new public grievance with JanSamadhan. Provide details, set priority, and mark location.">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📝</text></svg>">
+    <link rel="stylesheet" href="css/main.css">
+    <style>
+        body {
+            background: var(--bg);
+            padding-top: 68px;
+        }
+
+        .reg-layout {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 28px;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 36px 24px 60px;
+        }
+
+        @media(max-width:900px) {
+            .reg-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .reg-sidebar-card {
+            position: sticky;
+            top: 88px;
+        }
+
+        .form-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            margin-bottom: 20px;
+        }
+
+        .form-section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .step-indicator {
+            display: flex;
+            gap: 0;
+            margin-bottom: 28px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            padding: 4px;
+        }
+
+        .step-ind {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            border-radius: 8px;
+            font-size: .8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .step-ind.active {
+            background: var(--primary-light);
+            color: #fff;
+        }
+
+        .step-ind.done {
+            background: rgba(22, 163, 74, .12);
+            color: var(--success);
+        }
+
+        .sidebar-tip {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+
+        .tip-title {
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .tip-item {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-size: .86rem;
+            color: var(--text-muted);
+        }
+
+        .success-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9000;
+            background: rgba(255, 255, 255, .96);
+            backdrop-filter: blur(8px);
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 24px;
+        }
+
+        [data-theme="dark"] .success-overlay {
+            background: rgba(13, 17, 23, .96);
+        }
+
+        .success-overlay.show {
+            display: flex;
+            animation: fade-up .4s ease;
+        }
+
+        .success-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            animation: bounce-in .6s ease;
+        }
+
+        @keyframes bounce-in {
+            0% {
+                transform: scale(0)
+            }
+
+            60% {
+                transform: scale(1.2)
+            }
+
+            100% {
+                transform: scale(1)
+            }
+        }
+
+        .success-id {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--primary-light);
+            font-family: var(--font-head);
+            letter-spacing: 2px;
+            background: rgba(37, 99, 235, .08);
+            padding: 12px 28px;
+            border-radius: 12px;
+            border: 2px dashed var(--primary-light);
+            margin: 16px 0;
+        }
+
+        .category-icons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .cat-icon-btn {
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 12px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition);
+            background: var(--bg-card);
+        }
+
+        .cat-icon-btn:hover {
+            border-color: var(--primary-light);
+            background: rgba(37, 99, 235, .04);
+        }
+
+        .cat-icon-btn.selected {
+            border-color: var(--primary-light);
+            background: rgba(37, 99, 235, .08);
+        }
+
+        .cat-icon-btn .ci {
+            font-size: 1.5rem;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .cat-icon-btn .cl {
+            font-size: .7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        @media(max-width:500px) {
+            .category-icons {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- PAGE LOADER -->
+    <div class="page-loader" id="pageLoader">
+        <div class="loader-logo">📝</div>
+        <div class="loader-text">Filing Portal</div>
+        <div class="loader-bar-wrap">
+            <div class="loader-bar"></div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast-container"></div>
+
+    <!-- NAVBAR -->
+    <nav class="navbar" id="mainNav">
+        <div class="nav-brand">
+            <a href="index.html" style="display:flex;align-items:center;gap:12px">
+                <div class="nav-logo">🏛️</div>
+                <div>
+                    <div class="nav-title">JanSamadhan</div>
+                    <div class="nav-tagline">Transparent Governance. Faster Resolutions.</div>
+                </div>
+            </a>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="index.html#track">Track</a>
+            <a href="register.html" class="active">Register</a>
+        </div>
+        <div class="nav-actions">
+            <button class="dark-toggle" onclick="toggleDark()">🌙</button>
+            <a href="citizen.html" class="btn-nav-login">Dashboard</a>
+            <button class="hamburger" onclick="toggleMobileNav()"><span></span><span></span><span></span></button>
+        </div>
+    </nav>
+
+    <div class="mobile-nav" id="mobileNav">
+        <a href="index.html" onclick="toggleMobileNav()">🏠 Home</a>
+        <a href="index.html#track" onclick="toggleMobileNav()">🔍 Track</a>
+        <a href="citizen.html" onclick="toggleMobileNav()">👤 Dashboard</a>
+    </div>
+
+    <!-- MAIN LAYOUT -->
+    <div class="reg-layout">
+        <!-- LEFT – FORM -->
+        <div>
+            <div style="margin-bottom:24px">
+                <h1 style="font-size:1.8rem">📝 Register New Grievance</h1>
+                <p style="margin-top:6px;font-size:.9rem">Fill the form below with accurate details. Fields marked <span
+                        style="color:var(--danger)">*</span> are required.</p>
+            </div>
+
+            <!-- Step indicator -->
+            <div class="step-indicator" id="stepIndicator">
+                <div class="step-ind active" id="stp1">1. Personal Info</div>
+                <div class="step-ind" id="stp2">2. Complaint</div>
+                <div class="step-ind" id="stp3">3. Location & Media</div>
+            </div>
+
+            <form id="grievanceForm" onsubmit="submitGrievance(event)" novalidate>
+
+                <!-- SECTION 1: Personal Info -->
+                <div class="form-section" id="sec1">
+                    <div class="form-section-title">👤 Personal Information</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Full Name <span class="req">*</span></label>
+                            <input type="text" class="form-control" id="fName" placeholder="Ravi Kumar" required>
+                            <div class="form-error" id="err_name"></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Contact Number <span class="req">*</span></label>
+                            <input type="tel" class="form-control" id="fContact" placeholder="9XXXXXXXXX" maxlength="10"
+                                required>
+                            <div class="form-error" id="err_contact"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email Address <span class="req">*</span></label>
+                        <input type="email" class="form-control" id="fEmail" placeholder="your@email.com"
+                            value="ravi@example.com" required>
+                        <div class="form-error" id="err_email"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Region / Area</label>
+                        <select class="form-control" id="fRegion">
+                            <option value="">-- Select Region --</option>
+                            <option>North Delhi</option>
+                            <option>South Delhi</option>
+                            <option>East Delhi</option>
+                            <option>West Delhi</option>
+                            <option>Central Delhi</option>
+                            <option>Noida</option>
+                            <option>Gurugram</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- SECTION 2: Complaint Details -->
+                <div class="form-section" id="sec2">
+                    <div class="form-section-title">📋 Complaint Details</div>
+
+                    <!-- Category icon grid -->
+                    <div class="form-group">
+                        <label class="form-label">Category <span class="req">*</span></label>
+                        <div class="category-icons" id="catIcons">
+                            <div class="cat-icon-btn" data-cat="Infrastructure" onclick="selectCategory(this)">
+                                <span class="ci">🏗️</span><span class="cl">Infrastructure</span>
+                            </div>
+                            <div class="cat-icon-btn" data-cat="Water Supply" onclick="selectCategory(this)">
+                                <span class="ci">💧</span><span class="cl">Water Supply</span>
+                            </div>
+                            <div class="cat-icon-btn" data-cat="Electricity" onclick="selectCategory(this)">
+                                <span class="ci">⚡</span><span class="cl">Electricity</span>
+                            </div>
+                            <div class="cat-icon-btn" data-cat="Sanitation" onclick="selectCategory(this)">
+                                <span class="ci">🚯</span><span class="cl">Sanitation</span>
+                            </div>
+                            <div class="cat-icon-btn" data-cat="Transport" onclick="selectCategory(this)">
+                                <span class="ci">🚌</span><span class="cl">Transport</span>
+                            </div>
+                            <div class="cat-icon-btn" data-cat="Law & Order" onclick="selectCategory(this)">
+                                <span class="ci">⚖️</span><span class="cl">Law & Order</span>
+                            </div>
+                            <div class="cat-icon-btn" data-cat="Healthcare" onclick="selectCategory(this)">
+                                <span class="ci">🏥</span><span class="cl">Healthcare</span>
+                            </div>
+                            <div class="cat-icon-btn" data-cat="Other" onclick="selectCategory(this)">
+                                <span class="ci">📋</span><span class="cl">Other</span>
+                            </div>
+                        </div>
+                        <input type="hidden" id="fCategory">
+                        <div class="form-error" id="err_cat"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Subcategory / Specific Issue</label>
+                        <input type="text" class="form-control" id="fSubcategory"
+                            placeholder="e.g., Potholes on Main Road">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Description <span class="req">*</span></label>
+                        <textarea class="form-control" id="fDescription" rows="5"
+                            placeholder="Describe the issue in detail. Include when it started, how many people are affected, exact location details..."></textarea>
+                        <div style="font-size:.75rem;color:var(--text-muted);text-align:right;margin-top:4px"
+                            id="descCount">0 / 500</div>
+                        <div class="form-error" id="err_desc"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Priority Level <span class="req">*</span></label>
+                        <div class="priority-pills">
+                            <div class="priority-pill low">
+                                <input type="radio" name="priority" id="pLow" value="Low">
+                                <label for="pLow">🟢 Low</label>
+                            </div>
+                            <div class="priority-pill med">
+                                <input type="radio" name="priority" id="pMed" value="Medium" checked>
+                                <label for="pMed">🟠 Medium</label>
+                            </div>
+                            <div class="priority-pill high">
+                                <input type="radio" name="priority" id="pHigh" value="High">
+                                <label for="pHigh">🔴 High</label>
+                            </div>
+                            <div class="priority-pill emg">
+                                <input type="radio" name="priority" id="pEmg" value="Emergency">
+                                <label for="pEmg">🚨 Emergency</label>
+                            </div>
+                        </div>
+                        <div style="font-size:.78rem;color:var(--text-muted);margin-top:8px" id="priorityHint">
+                            ℹ️ <em>Medium: Expected resolution in 3-5 working days.</em>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 3: Location & Media -->
+                <div class="form-section" id="sec3">
+                    <div class="form-section-title">🗺️ Location &amp; Media</div>
+
+                    <div class="form-group">
+                        <label class="form-label">Address / Location Details</label>
+                        <input type="text" class="form-control" id="fAddress"
+                            placeholder="Street, Colony, Sector, City...">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Mark Location on Map</label>
+                        <div class="dummy-map" id="registrationMap">
+                            <div class="map-grid"></div>
+                            <div class="map-label">
+                                <div style="font-size:2rem">🗺️</div>
+                                <div style="font-weight:600;color:var(--text-muted)">Click to mark your complaint
+                                    location</div>
+                                <div style="font-size:.78rem;color:var(--text-light);margin-top:4px">Interactive Demo
+                                    Map</div>
+                            </div>
+                        </div>
+                        <div id="locationText"
+                            style="font-size:.82rem;color:var(--primary-light);margin-top:6px;font-weight:600"></div>
+                        <input type="hidden" id="locationHidden" value="">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Upload Evidence Image (Optional)</label>
+                        <div class="img-upload-area" id="uploadArea"
+                            onclick="document.getElementById('imgInput').click()">
+                            <div style="font-size:2rem;margin-bottom:8px">📷</div>
+                            <div style="font-weight:600;color:var(--text-muted)">Click to upload or drag &amp; drop
+                            </div>
+                            <div style="font-size:.8rem;color:var(--text-light);margin-top:4px">PNG, JPG, GIF up to 5MB.
+                                Preview only, not stored.</div>
+                        </div>
+                        <input type="file" id="imgInput" accept="image/*" style="display:none"
+                            onchange="previewImage(this)">
+                        <img id="imgPreview" class="img-preview" style="display:none">
+                    </div>
+
+                    <!-- Consent -->
+                    <div class="form-group" style="display:flex;gap:12px;align-items:flex-start">
+                        <input type="checkbox" id="fConsent"
+                            style="margin-top:4px;width:16px;height:16px;accent-color:var(--primary-light)" required>
+                        <label for="fConsent" style="font-size:.88rem;color:var(--text-muted);cursor:pointer">
+                            I confirm that the information provided is accurate and true to the best of my knowledge. I
+                            understand this grievance will be reviewed by government officials.
+                        </label>
+                    </div>
+                </div>
+
+                <!-- SUBMIT -->
+                <button type="submit" class="btn btn-primary btn-lg w-full" id="submitBtn"
+                    style="justify-content:center">
+                    📤 Submit Grievance
+                </button>
+                <p style="text-align:center;font-size:.8rem;color:var(--text-muted);margin-top:10px">
+                    🔒 Your data is secure. A unique Grievance ID will be generated on submission.
+                </p>
+            </form>
+        </div>
+
+        <!-- RIGHT SIDEBAR -->
+        <div class="reg-sidebar-card">
+            <div class="sidebar-tip">
+                <div class="tip-title">💡 Filing Tips</div>
+                <div class="tip-item">✅ <span>Be specific about the location and issue</span></div>
+                <div class="tip-item">✅ <span>Upload a photo for faster resolution</span></div>
+                <div class="tip-item">✅ <span>Mark the exact location on map</span></div>
+                <div class="tip-item">✅ <span>Use Emergency only for critical situations</span></div>
+                <div class="tip-item">✅ <span>Note down your Grievance ID after submission</span></div>
+            </div>
+
+            <div class="sidebar-tip">
+                <div class="tip-title">⏱️ Response Times</div>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                    <div>
+                        <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px">
+                            <span>🟢 Low</span><span style="color:var(--text-muted)">7–10 days</span>
+                        </div>
+                        <div class="progress-bar-wrap">
+                            <div class="progress-bar-fill" style="width:20%;background:#16a34a"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px">
+                            <span>🟠 Medium</span><span style="color:var(--text-muted)">3–5 days</span>
+                        </div>
+                        <div class="progress-bar-wrap">
+                            <div class="progress-bar-fill" style="width:50%;background:#d97706"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px">
+                            <span>🔴 High</span><span style="color:var(--text-muted)">24–48 hrs</span>
+                        </div>
+                        <div class="progress-bar-wrap">
+                            <div class="progress-bar-fill" style="width:75%;background:#dc2626"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px">
+                            <span>🚨 Emergency</span><span style="color:var(--text-muted)">&lt; 24 hrs</span>
+                        </div>
+                        <div class="progress-bar-wrap">
+                            <div class="progress-bar-fill" style="width:95%;background:#991b1b"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-tip">
+                <div class="tip-title">🆔 Preview</div>
+                <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:12px">Your submission form summary:
+                </div>
+                <div id="formPreview">
+                    <div style="font-size:.82rem;color:var(--text-light);text-align:center;padding:16px">Fill the form
+                        to see preview</div>
+                </div>
+            </div>
+
+            <div class="sidebar-tip"
+                style="background:linear-gradient(135deg,var(--primary-dark),var(--primary));border:none">
+                <div style="font-weight:700;color:#fff;margin-bottom:8px">📞 Emergency Helpline</div>
+                <div style="font-size:1.4rem;font-weight:900;color:#fff;margin-bottom:4px">1800-XXX-XXXX</div>
+                <div style="font-size:.78rem;color:rgba(255,255,255,.6)">Toll-free • Mon–Sat • 9AM–6PM</div>
+                <div style="margin-top:8px;font-size:.78rem;color:rgba(255,255,255,.5)">For life-threatening
+                    emergencies: <strong style="color:#fff">112</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUCCESS OVERLAY -->
+    <div class="success-overlay" id="successOverlay">
+        <div style="max-width:520px;width:100%">
+            <div class="success-icon">🎉</div>
+            <h2 style="font-size:1.8rem;margin-bottom:8px">Grievance Submitted!</h2>
+            <p style="color:var(--text-muted)">Your complaint has been registered successfully. Track it using:</p>
+            <div class="success-id" id="successID">JSM-2026-XXXX</div>
+            <p style="font-size:.88rem;color:var(--text-muted);margin-bottom:24px">
+                📋 Save this ID for future reference. You can track progress from your dashboard.
+            </p>
+            <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+                <button class="btn btn-primary" onclick="window.location.href='citizen.html'">👤 Go to
+                    Dashboard</button>
+                <button class="btn btn-outline"
+                    onclick="document.getElementById('successOverlay').classList.remove('show');window.location.href='index.html'">🏠
+                    Back to Home</button>
+            </div>
+            <div style="margin-top:24px" id="successProgress"></div>
+        </div>
+    </div>
+
+    <!-- CHATBOT (same as index) -->
+    <button class="chatbot-toggle" id="chatbotToggle" title="Chat with JanBot">🤖</button>
+    <div class="chatbot-window" id="chatbotWindow">
+        <div class="chat-header">
+            <div class="chat-avatar">🤖</div>
+            <div>
+                <div class="chat-name">JanBot</div>
+                <div class="chat-status">● Online</div>
+            </div>
+            <button class="chat-close" id="chatClose">✕</button>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-suggestions">
+            <button class="chat-suggestion">How to file?</button>
+            <button class="chat-suggestion">Emergency process?</button>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" class="chat-input" id="chatInput" placeholder="Ask JanBot...">
+            <button class="chat-send" id="chatSend">➤</button>
+        </div>
+    </div>
+
+    <!-- FIREBASE SDKS -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+
+    <script src="js/api.js"></script>
+    <script src="js/ledger.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/chatbot.js"></script>
+    <script>
+        // ── Init map ──
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = getSessionUser();
+            if (user && user.role === 'citizen') {
+                const fName = document.getElementById('fName');
+                const fEmail = document.getElementById('fEmail');
+                if (fName) { fName.value = user.name || ''; fName.readOnly = true; fName.style.background = 'var(--bg)'; }
+                if (fEmail) { fEmail.value = user.email || ''; fEmail.readOnly = true; fEmail.style.background = 'var(--bg)'; }
+                // Hide step 1 or indicate it's done
+                document.getElementById('stp1')?.classList.add('done');
+                document.getElementById('stp2')?.classList.add('active');
+                document.getElementById('stp1')?.classList.remove('active');
+            } else if (!user) {
+                showToast('Please login as a citizen to file a grievance', 'error');
+                // Optional: Redirect or show login overlay
+                setTimeout(() => { if (confirm('You need to be logged in to file a grievance. Go to login?')) window.location.href = 'index.html'; }, 1000);
+                const btn = document.getElementById('submitBtn');
+                if (btn) { btn.disabled = true; btn.innerText = '🔒 Login Required'; }
+            }
+
+            renderDummyMap('registrationMap', [], true);
+
+            // Description char counter
+            const desc = document.getElementById('fDescription');
+            const count = document.getElementById('descCount');
+            desc?.addEventListener('input', () => {
+                count.textContent = `${desc.value.length} / 500`;
+                updatePreview();
+            });
+
+            // Priority hints
+            document.querySelectorAll('input[name="priority"]').forEach(r => {
+                r.addEventListener('change', () => updatePriorityHint(r.value));
+            });
+
+            // Live preview updates
+            ['fName', 'fContact', 'fEmail', 'fRegion', 'fSubcategory', 'fAddress'].forEach(id => {
+                document.getElementById(id)?.addEventListener('input', updatePreview);
+            });
+        });
+
+        const priorityHints = {
+            Low: 'ℹ️ <em>Low: Non-urgent issue. Expected resolution in 7–10 working days.</em>',
+            Medium: 'ℹ️ <em>Medium: Moderate issue. Expected resolution in 3–5 working days.</em>',
+            High: '⚠️ <em>High: Urgent issue. Expected resolution in 24–48 hours. Will be prioritized.</em>',
+            Emergency: '🚨 <em><strong>Emergency: Life-threatening or critical. Auto-escalated to senior officers. Response within 24 hours.</strong></em>'
+        };
+        function updatePriorityHint(p) { document.getElementById('priorityHint').innerHTML = priorityHints[p]; updatePreview(); }
+
+        let selectedCategory = '';
+        function selectCategory(el) {
+            document.querySelectorAll('.cat-icon-btn').forEach(b => b.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedCategory = el.dataset.cat;
+            document.getElementById('fCategory').value = selectedCategory;
+            document.getElementById('err_cat').textContent = '';
+            updatePreview();
+        }
+
+        function updatePreview() {
+            const name = document.getElementById('fName')?.value;
+            const cat = selectedCategory;
+            const priority = document.querySelector('input[name="priority"]:checked')?.value || 'Medium';
+            const region = document.getElementById('fRegion')?.value;
+            const desc = document.getElementById('fDescription')?.value;
+            const previewEl = document.getElementById('formPreview');
+            if (!previewEl) return;
+            previewEl.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:.82rem">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Name</span><strong>${name || '—'}</strong></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Category</span><strong>${cat ? categoryIcon(cat) + ' ' + cat : '—'}</strong></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Priority</span><span>${priorityBadge(priority)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Region</span><strong>${region || '—'}</strong></div>
+      ${desc ? `<div style="margin-top:4px;padding:8px;background:var(--bg);border-radius:6px;color:var(--text-muted);font-size:.78rem;line-height:1.4">"${desc.substring(0, 80)}${desc.length > 80 ? '...' : ''}"</div>` : ''}
+    </div>
+  `;
+        }
+
+        function previewImage(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const prev = document.getElementById('imgPreview');
+                prev.src = e.target.result;
+                prev.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+            // Drag visual
+            const area = document.getElementById('uploadArea');
+            area.innerHTML = `<div style="font-size:2rem">✅</div><div style="font-weight:600;color:var(--success)">${file.name}</div><div style="font-size:.78rem;color:var(--text-muted);margin-top:4px">${(file.size / 1024 / 1024).toFixed(2)} MB – Preview only</div>`;
+        }
+
+        // Drag & drop
+        const uploadArea = document.getElementById('uploadArea');
+        uploadArea?.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+        uploadArea?.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+        uploadArea?.addEventListener('drop', e => {
+            e.preventDefault(); uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                document.getElementById('imgInput').files = e.dataTransfer.files;
+                previewImage(document.getElementById('imgInput'));
+            }
+        });
+
+        // FORM VALIDATION & SUBMIT
+        async function submitGrievance(e) {
+            e.preventDefault();
+            let valid = true;
+
+            const name = document.getElementById('fName').value.trim();
+            const contact = document.getElementById('fContact').value.trim();
+            const email = document.getElementById('fEmail').value.trim();
+            const desc = document.getElementById('fDescription').value.trim();
+            const consent = document.getElementById('fConsent').checked;
+
+            // Validate
+            if (!name) {
+                document.getElementById('err_name').textContent = 'Full name is required';
+                document.getElementById('fName').classList.add('error');
+                valid = false;
+            } else { document.getElementById('err_name').textContent = ''; document.getElementById('fName').classList.remove('error'); }
+
+            if (!contact || contact.length < 10) {
+                document.getElementById('err_contact').textContent = 'Valid 10-digit contact required';
+                document.getElementById('fContact').classList.add('error');
+                valid = false;
+            } else { document.getElementById('err_contact').textContent = ''; document.getElementById('fContact').classList.remove('error'); }
+
+            if (!email || !email.includes('@')) {
+                document.getElementById('err_email').textContent = 'Valid email is required';
+                document.getElementById('fEmail').classList.add('error');
+                valid = false;
+            } else { document.getElementById('err_email').textContent = ''; document.getElementById('fEmail').classList.remove('error'); }
+
+            if (!selectedCategory) {
+                document.getElementById('err_cat').textContent = 'Please select a category';
+                valid = false;
+            } else { document.getElementById('err_cat').textContent = ''; }
+
+            if (!desc || desc.length < 20) {
+                document.getElementById('err_desc').textContent = 'Description must be at least 20 characters';
+                document.getElementById('fDescription').classList.add('error');
+                valid = false;
+            } else { document.getElementById('err_desc').textContent = ''; document.getElementById('fDescription').classList.remove('error'); }
+
+            if (!consent) { showToast('Please accept the declaration to proceed', 'warning'); valid = false; }
+
+            if (!valid) { showToast('Please fill all required fields correctly', 'error'); return; }
+
+            // Loading state
+            const btn = document.getElementById('submitBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="typing-dot" style="background:#fff"></span><span class="typing-dot" style="background:#fff"></span><span class="typing-dot" style="background:#fff"></span> Submitting...';
+            btn.disabled = true;
+
+            try {
+                const priority = (document.querySelector('input[name="priority"]:checked')?.value || 'Medium').toLowerCase();
+                const locationRaw = document.getElementById('locationHidden').value;
+                let locationObj = { lat: 28.6139, lng: 77.2090, address: document.getElementById('fAddress').value || 'Location marked on map' };
+                try {
+                    if (locationRaw) locationObj = JSON.parse(locationRaw);
+                } catch (err) { }
+
+                const grievanceData = {
+                    title: document.getElementById('fSubcategory').value || `${selectedCategory} Issue`,
+                    description: desc,
+                    category: selectedCategory,
+                    subcategory: document.getElementById('fSubcategory').value || '',
+                    priority: priority,
+                    location: locationObj.address,
+                    region: document.getElementById('fRegion').value || 'Central Delhi',
+                    latitude: locationObj.lat,
+                    longitude: locationObj.lng
+                };
+
+                const response = await window.JanSamadhanAPI.createGrievance(grievanceData);
+
+                // Store in session
+                sessionStorage.setItem('lastGrievanceID', response.id);
+
+                // Show success
+                document.getElementById('successID').textContent = response.id;
+                document.getElementById('successProgress').innerHTML = `
+                  <div style="font-weight:700;margin-bottom:8px;font-size:.88rem;color:var(--text-muted)">Current Status:</div>
+                  ${renderProgressBar(0)}
+                `;
+                document.getElementById('successOverlay').classList.add('show');
+                showToast('Grievance registered successfully!', 'success');
+            } catch (err) {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                showToast(err.message || 'Submission failed', 'error');
+            }
+        }
+    </script>
+</body>
+
+</html>

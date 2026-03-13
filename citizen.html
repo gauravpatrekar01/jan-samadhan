@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Citizen Dashboard – JanSamadhan</title>
+    <meta name="description" content="Citizen Dashboard – Track your grievances, view progress, and submit feedback.">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👤</text></svg>">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+
+<body>
+    <div class="toast-container"></div>
+
+    <!-- ════════════════════════════
+     SIDEBAR
+════════════════════════════ -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-logo">🏛️</div>
+            <div>
+                <div class="sidebar-name">JanSamadhan</div>
+                <div class="sidebar-tag">Citizen Portal</div>
+            </div>
+        </div>
+        <div class="sidebar-user" id="sidebarUser">
+            <div class="user-avatar" id="sbAvatar">👤</div>
+            <div>
+                <div class="user-name" id="sbName">Loading...</div>
+                <div class="user-role">Citizen</div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Main</div>
+            <div class="nav-item active" onclick="showPage('overview', this)">
+                <span class="nav-icon">🏠</span> Overview
+            </div>
+            <div class="nav-item" onclick="showPage('myGrievances', this)" id="navMyGrievances">
+                <span class="nav-icon">📋</span> My Grievances
+                <span class="nav-badge" id="pendingBadge">0</span>
+            </div>
+            <div class="nav-item" onclick="showPage('trackStatus', this)">
+                <span class="nav-icon">🔍</span> Track Status
+            </div>
+            <div class="nav-item" onclick="showPage('mapView', this)">
+                <span class="nav-icon">🗺️</span> Complaint Map
+            </div>
+            <div class="nav-section-label">Actions</div>
+            <div class="nav-item" onclick="window.location.href='register.html'">
+                <span class="nav-icon">📝</span> New Grievance
+            </div>
+            <div class="nav-item" onclick="showPage('feedback', this)" id="navFeedback">
+                <span class="nav-icon">⭐</span> Feedback
+            </div>
+            <div class="nav-section-label">Info</div>
+            <div class="nav-item" onclick="showPage('announcements', this)">
+                <span class="nav-icon">📢</span> Notices
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="sidebar-footer-btn" onclick="logoutUser()">🚪 Logout</button>
+            <button class="sidebar-footer-btn" onclick="window.location.href='index.html'">🏠 Home</button>
+        </div>
+    </div>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- ════════════════════════════
+     MAIN CONTENT
+════════════════════════════ -->
+    <div class="dash-main">
+        <!-- TOPBAR -->
+        <div class="topbar">
+            <button class="topbar-hamburger" id="topbarHamburger" onclick="openSidebar()">☰</button>
+            <div>
+                <div class="topbar-title" id="topbarTitle">Overview</div>
+                <div class="topbar-breadcrumb">JanSamadhan → Citizen Dashboard</div>
+            </div>
+            <div class="topbar-actions">
+                <div class="notif-btn" onclick="toggleNotifPanel()" title="Notifications">
+                    🔔<div class="notif-dot"></div>
+                </div>
+                <button class="topbar-dark-toggle" onclick="toggleDark()">🌙</button>
+                <a href="register.html" class="btn btn-primary btn-sm">+ New Grievance</a>
+                <div class="topbar-user" onclick="logoutUser()">
+                    <span id="topbarUserName">Citizen</span>
+                    <span>🚪</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="dash-content">
+
+            <!-- ─── PAGE: OVERVIEW ─── -->
+            <div class="dash-page active" id="page-overview">
+                <div class="welcome-banner">
+                    <div>
+                        <div class="wb-title" id="wbTitle">Welcome back, Citizen!</div>
+                        <div class="wb-sub">Track your grievances and stay updated on resolutions.</div>
+                        <div class="wb-time" id="wbTime"></div>
+                    </div>
+                    <a href="register.html" class="btn btn-accent">📝 File New Grievance</a>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats-grid" id="citizenStats"></div>
+
+                <!-- Recent grievances -->
+                <div
+                    style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;margin-top:8px">
+                    <h3 style="font-size:1.05rem">Recent Grievances</h3>
+                    <button class="btn btn-ghost btn-sm" onclick="showPage('myGrievances',null)">View All →</button>
+                </div>
+                <div class="grievance-list" id="recentList"></div>
+            </div>
+
+            <!-- ─── PAGE: MY GRIEVANCES ─── -->
+            <div class="dash-page" id="page-myGrievances">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">📋 My Grievances</div>
+                        <div class="page-subtitle">All complaints filed by you, sorted by priority</div>
+                    </div>
+                    <a href="register.html" class="btn btn-primary">+ New Grievance</a>
+                </div>
+
+                <div class="filters-bar">
+                    <div class="search-bar" style="flex:1;min-width:200px">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="citizenSearch" placeholder="Search by ID, description..."
+                            oninput="loadCitizenGrievances()">
+                    </div>
+                    <select class="filter-select" id="citizenFilterStatus" onchange="loadCitizenGrievances()">
+                        <option value="">All Status</option>
+                        <option>Submitted</option>
+                        <option>Under Review</option>
+                        <option>In Progress</option>
+                        <option>Resolved</option>
+                        <option>Closed</option>
+                    </select>
+                    <select class="filter-select" id="citizenFilterCat" onchange="loadCitizenGrievances()">
+                        <option value="">All Categories</option>
+                        <option>Infrastructure</option>
+                        <option>Water Supply</option>
+                        <option>Electricity</option>
+                        <option>Sanitation</option>
+                        <option>Transport</option>
+                        <option>Law & Order</option>
+                        <option>Healthcare</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+
+                <div class="grievance-list" id="allGrievanceList"></div>
+            </div>
+
+            <!-- ─── PAGE: TRACK STATUS ─── -->
+            <div class="dash-page" id="page-trackStatus">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">🔍 Track Grievance</div>
+                        <div class="page-subtitle">Enter your Grievance ID to see detailed status</div>
+                    </div>
+                </div>
+                <div class="card" style="max-width:620px">
+                    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+                        <input type="text" class="form-control" id="dashTrackInput"
+                            placeholder="Enter Grievance ID (JSM-2026-XXXX)" style="flex:1">
+                        <button class="btn btn-primary" onclick="dashTrack()">🔍 Track</button>
+                    </div>
+                    <div id="dashTrackResult"></div>
+                </div>
+
+                <!-- Last submitted auto-load -->
+                <div class="card" style="max-width:620px;margin-top:20px" id="lastSubmittedCard">
+                    <h4 style="margin-bottom:12px">📬 Recently Filed by You</h4>
+                    <div id="lastSubmittedList"></div>
+                </div>
+            </div>
+
+            <!-- ─── PAGE: MAP VIEW ─── -->
+            <div class="dash-page" id="page-mapView">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">🗺️ Complaint Map</div>
+                        <div class="page-subtitle">View complaint locations across the city</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="dummy-map" id="citizenMap" style="height:420px"></div>
+                    <div style="margin-top:16px;font-size:.85rem;color:var(--text-muted)">
+                        🔴 Emergency &nbsp; 🟠 High &nbsp; 🟡 Medium &nbsp; 🟢 Low &nbsp; | Click markers for details
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-top:16px"
+                    id="regionStats"></div>
+            </div>
+
+            <!-- ─── PAGE: FEEDBACK ─── -->
+            <div class="dash-page" id="page-feedback">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">⭐ Submit Feedback</div>
+                        <div class="page-subtitle">Rate resolutions and help improve governance</div>
+                    </div>
+                </div>
+                <div id="feedbackList" class="grievance-list"></div>
+            </div>
+
+            <!-- ─── PAGE: ANNOUNCEMENTS ─── -->
+            <div class="dash-page" id="page-announcements">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">📢 Government Notices</div>
+                        <div class="page-subtitle">Official announcements and notifications</div>
+                    </div>
+                </div>
+                <div class="announce-list" id="dashAnnouncements"></div>
+            </div>
+
+        </div><!-- /dash-content -->
+    </div><!-- /dash-main -->
+
+    <!-- ── DETAIL MODAL ── -->
+    <div class="modal-overlay" id="grievanceDetailModal">
+        <div class="modal-box" style="max-width:640px">
+            <div class="modal-header">
+                <h3 id="modalGID"></h3>
+                <button class="modal-close" onclick="closeModal('grievanceDetailModal')">✕</button>
+            </div>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <!-- ── FEEDBACK MODAL ── -->
+    <div class="modal-overlay" id="feedbackModal">
+        <div class="modal-box" style="max-width:480px">
+            <div class="modal-header">
+                <h3>⭐ Rate This Resolution</h3>
+                <button class="modal-close" onclick="closeModal('feedbackModal')">✕</button>
+            </div>
+            <div id="feedbackFormContent"></div>
+        </div>
+    </div>
+
+    <!-- Chatbot -->
+    <button class="chatbot-toggle" id="chatbotToggle">🤖</button>
+    <div class="chatbot-window" id="chatbotWindow">
+        <div class="chat-header">
+            <div class="chat-avatar">🤖</div>
+            <div>
+                <div class="chat-name">JanBot</div>
+                <div class="chat-status">● Online</div>
+            </div>
+            <button class="chat-close" id="chatClose">✕</button>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-suggestions">
+            <button class="chat-suggestion">How to track?</button>
+            <button class="chat-suggestion">Feedback help?</button>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" class="chat-input" id="chatInput" placeholder="Ask JanBot...">
+            <button class="chat-send" id="chatSend">➤</button>
+        </div>
+    </div>
+
+    <!-- FIREBASE SDKS -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+
+    <script src="js/api.js"></script>
+    <script src="js/ledger.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/chatbot.js"></script>
+    <script>
+        // ── Sidebar ──
+        function openSidebar() { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('visible'); }
+        function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('visible'); }
+
+        // ── Page routing ──
+        function showPage(id, navEl) {
+            document.querySelectorAll('.dash-page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(`page-${id}`)?.classList.add('active');
+            if (navEl) navEl.classList.add('active');
+            document.getElementById('topbarTitle').textContent = navEl?.querySelector('.nav-icon').nextSibling?.textContent?.trim() || id;
+            closeSidebar();
+            // Lazy init
+            if (id === 'myGrievances') loadCitizenGrievances();
+            if (id === 'mapView') initMapPage();
+            if (id === 'feedback') loadFeedbackPage();
+            if (id === 'announcements') loadAnnouncementsPage();
+            if (id === 'trackStatus') loadLastSubmitted();
+        }
+
+        // ── Auth check & init ──
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = getSessionUser();
+            if (!user || user.role !== 'citizen') {
+                showToast('Access denied. Please login as a citizen.', 'error');
+                setTimeout(() => window.location.href = 'index.html', 1500);
+                return;
+            }
+            window._citizenUser = user;
+
+            document.getElementById('sbName').textContent = user.name || user.email.split('@')[0];
+            document.getElementById('sbAvatar').textContent = '👤';
+            document.getElementById('wbTitle').textContent = `Welcome, ${user.name ? user.name.split(' ')[0] : user.email.split('@')[0]}! 👋`;
+            document.getElementById('topbarUserName').textContent = user.name ? user.name.split(' ')[0] : 'Citizen';
+            document.getElementById('wbTime').textContent = `📅 ${new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
+
+            loadOverview();
+            loadCitizenGrievances();
+        });
+
+        // ── Overview ──
+        async function loadOverview() {
+            const user = window._citizenUser;
+            let grievances = [];
+
+            try {
+                grievances = await window.JanSamadhanAPI.getMyGrievances();
+            } catch (e) {
+                console.warn("Failed to fetch from API, using dummy", e);
+                const myGrievances = window.JanSamadhan.getPriorityQueue({ citizenID: 'U001' });
+                const allForDemo = window.JanSamadhan.getPriorityQueue({}).slice(0, 12);
+                grievances = myGrievances.length ? myGrievances : allForDemo.slice(0, 3);
+            }
+
+            // Stats
+            const pending = grievances.filter(g => g.status !== 'resolved' && g.status !== 'closed').length;
+            const resolved = grievances.filter(g => g.status === 'resolved' || g.status === 'closed').length;
+            const emergency = grievances.filter(g => g.priority === 'emergency').length;
+            document.getElementById('pendingBadge').textContent = pending;
+
+            const statsEl = document.getElementById('citizenStats');
+            if (statsEl) {
+                statsEl.innerHTML = [
+                    { label: 'My Complaints', value: grievances.length, icon: '📋', color: 'var(--primary-light)', bg: 'rgba(37,99,235,.1)' },
+                    { label: 'Pending', value: pending, icon: '⏳', color: 'var(--warning)', bg: 'rgba(217,119,6,.1)' },
+                    { label: 'Resolved', value: resolved, icon: '✅', color: 'var(--success)', bg: 'rgba(22,163,74,.1)' },
+                    { label: 'Emergency', value: emergency, icon: '🚨', color: 'var(--danger)', bg: 'rgba(220,38,38,.1)' },
+                ].map(s => `
+                    <div class="stat-card card-hover" style="--stat-color:${s.color};--stat-bg:${s.bg}">
+                      <div class="stat-icon">${s.icon}</div>
+                      <div class="stat-value">${s.value}</div>
+                      <div class="stat-label">${s.label}</div>
+                    </div>
+                  `).join('');
+            }
+
+            // Recent 3
+            const recentList = document.getElementById('recentList');
+            if (recentList) {
+                const showList = grievances.slice(0, 3);
+                recentList.innerHTML = showList.map(g => grievanceCard(g, true)).join('');
+            }
+        }
+
+        async function loadCitizenGrievances() {
+            const search = document.getElementById('citizenSearch')?.value || '';
+            const statusFilter = document.getElementById('citizenFilterStatus')?.value?.toLowerCase() || '';
+            const categoryFilter = document.getElementById('citizenFilterCat')?.value || '';
+
+            let grievances = [];
+            try {
+                grievances = await window.JanSamadhanAPI.getMyGrievances();
+
+                // Client-side filtering for simplicity
+                if (search) {
+                    const q = search.toLowerCase();
+                    grievances = grievances.filter(g =>
+                        g.id.includes(q) ||
+                        g.description.toLowerCase().includes(q) ||
+                        g.category.toLowerCase().includes(q)
+                    );
+                }
+                if (statusFilter) {
+                    grievances = grievances.filter(g => g.status === statusFilter);
+                }
+                if (categoryFilter) {
+                    grievances = grievances.filter(g => g.category === categoryFilter);
+                }
+            } catch (e) {
+                console.warn("API list failed", e);
+            }
+
+            const container = document.getElementById('allGrievanceList');
+            if (!container) return;
+            if (!grievances.length) {
+                container.innerHTML = `<div class="card" style="text-align:center;padding:40px"><div style="font-size:2.5rem;margin-bottom:12px">📭</div><h4>No grievances found</h4><p style="margin-top:6px">Try adjusting filters or <a href="register.html" style="color:var(--primary-light)">file a new complaint</a>.</p></div>`;
+                return;
+            }
+            container.innerHTML = grievances.map((g, i) => grievanceCard(g, true, i + 1)).join('');
+        }
+
+        function getProgressFromStatus(status) {
+            const s = status?.toLowerCase() || '';
+            if (s === 'submitted') return 10;
+            if (s === 'under_review') return 40;
+            if (s === 'in_progress') return 70;
+            if (s === 'resolved') return 90;
+            if (s === 'closed') return 100;
+            return 0;
+        }
+
+        function grievanceCard(g, showProgress = false, rank = null) {
+            const displayID = g.id ? `GS-${g.id.substring(0, 8).toUpperCase()}` : 'N/A';
+            return `
+    <div class="grievance-card priority-${g.priority ? g.priority.toLowerCase() : 'medium'}" id="gc-${g.id}">
+      ${rank ? `<div class="queue-rank">${rank}</div>` : ''}
+      <div class="gc-header">
+        <div class="gc-icon" style="background:${categoryColor(g.category)}">${categoryIcon(g.category)}</div>
+        <div style="flex:1">
+          <div class="gc-id">${displayID}</div>
+          <div class="gc-title">${g.title || g.category}</div>
+          <div class="gc-meta">
+            ${priorityBadge(g.priority)}
+            ${statusBadge(g.status)}
+            <span style="font-size:.78rem;color:var(--text-muted)">📅 ${timeAgo(g.created_at || g.timestamp)}</span>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:12px;line-height:1.5">${(g.description || '').substring(0, 120)}...</p>
+      <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:12px">📍 ${g.location || 'N/A'} &nbsp;|&nbsp; 🏙️ ${g.region || 'Delhi'}</div>
+      ${showProgress ? renderProgressBar(getProgressFromStatus(g.status)) : ''}
+      <div class="gc-actions">
+        <button class="btn btn-ghost btn-sm" onclick="viewDetail('${g.id}')">👁️ View Details</button>
+        ${(g.status === 'resolved' || g.status === 'closed') && !g.feedbackRating
+                    ? `<button class="btn btn-sm" style="background:rgba(249,115,22,.1);color:var(--accent)" onclick="openFeedback('${g.id}')">⭐ Rate Resolution</button>` : ''}
+        ${g.feedbackRating ? `<span class="badge badge-success">⭐ ${g.feedbackRating}/5 Rated</span>` : ''}
+      </div>
+    </div>
+  `;
+        }
+
+        async function viewDetail(id) {
+            let g;
+            try {
+                g = await window.JanSamadhanAPI.getGrievanceByID(id);
+            } catch (e) {
+                console.error("Failed to fetch detail", e);
+                return;
+            }
+
+            const displayID = `GS-${g.id.substring(0, 8).toUpperCase()}`;
+            document.getElementById('modalGID').innerHTML = `${displayID} &nbsp; ${priorityBadge(g.priority)} ${statusBadge(g.status)}`;
+            document.getElementById('modalContent').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;font-size:.88rem">
+      <div><span style="color:var(--text-muted);font-size:.75rem">TITLE</span><br><strong>${g.title || 'Untitled'}</strong></div>
+      <div><span style="color:var(--text-muted);font-size:.75rem">CATEGORY</span><br><strong>${categoryIcon(g.category)} ${g.category}</strong></div>
+      <div><span style="color:var(--text-muted);font-size:.75rem">REGION</span><br><strong>${g.region || 'N/A'}</strong></div>
+      <div><span style="color:var(--text-muted);font-size:.75rem">LOCATION</span><br><strong>📍 ${g.location || 'N/A'}</strong></div>
+      <div><span style="color:var(--text-muted);font-size:.75rem">FILED ON</span><br><strong>${formatDate(g.created_at)}</strong></div>
+    </div>
+    <div style="background:var(--bg);padding:14px;border-radius:8px;margin-bottom:16px;font-size:.9rem;line-height:1.6">${g.description}</div>
+    <div style="font-weight:700;font-size:.88rem;margin-bottom:8px">Resolution Progress:</div>
+    ${renderProgressBar(getProgressFromStatus(g.status))}
+    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+       ${(g.status === 'resolved' || g.status === 'closed') && !g.feedbackRating ? `<button class="btn btn-accent btn-sm" onclick="closeModal('grievanceDetailModal');openFeedback('${g.id}')">⭐ Rate Resolution</button>` : ''}
+    </div>
+  `;
+            openModal('grievanceDetailModal');
+        }
+
+        // ── Feedback ──
+        let _feedbackGID = null;
+        let _feedbackRating = 0;
+
+        function openFeedback(gid) {
+            _feedbackGID = gid;
+            _feedbackRating = 0;
+            const g = window.JanSamadhan.getGrievanceByID(gid);
+            document.getElementById('feedbackFormContent').innerHTML = `
+    <div style="margin-bottom:16px">
+      <div style="font-size:.88rem;color:var(--text-muted);margin-bottom:8px">${g.grievanceID} – ${g.category}</div>
+      <div style="font-size:.9rem;padding:10px;background:var(--bg);border-radius:6px">${g.description.substring(0, 100)}...</div>
+    </div>
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-weight:700;margin-bottom:12px">How satisfied are you with the resolution?</div>
+      <div class="star-rating" style="justify-content:center" id="starRating">
+        ${[1, 2, 3, 4, 5].map(i => `<span class="star" data-val="${i}" onclick="setRating(${i})" title="${i} star${i > 1 ? 's' : ''}">⭐</span>`).join('')}
+      </div>
+      <div id="ratingText" style="font-size:.85rem;color:var(--text-muted);margin-top:8px">Click to rate</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Comment (Optional)</label>
+      <textarea class="form-control" id="feedbackComment" rows="3" placeholder="Share your experience..."></textarea>
+    </div>
+    <button class="btn btn-success w-full" style="justify-content:center" onclick="submitFeedback()">Submit Feedback</button>
+  `;
+            openModal('feedbackModal');
+        }
+
+        const ratingLabels = { 1: 'Very Poor 😞', 2: 'Poor 🙁', 3: 'Average 😐', 4: 'Good 😊', 5: 'Excellent 🎉' };
+        function setRating(val) {
+            _feedbackRating = val;
+            document.querySelectorAll('.star').forEach((s, i) => s.classList.toggle('active', i < val));
+            document.getElementById('ratingText').textContent = ratingLabels[val];
+        }
+
+        function submitFeedback() {
+            if (!_feedbackRating) { showToast('Please select a rating', 'warning'); return; }
+            const comment = document.getElementById('feedbackComment')?.value || '';
+            window.JanSamadhan.submitFeedback(_feedbackGID, _feedbackRating, comment);
+            closeModal('feedbackModal');
+            showToast('Thank you for your feedback! ⭐', 'success');
+            loadOverview();
+            loadCitizenGrievances();
+            loadFeedbackPage();
+        }
+
+        async function loadFeedbackPage() {
+            const container = document.getElementById('feedbackList');
+            if (!container) return;
+            let grievances = await window.JanSamadhan.getPriorityQueue({ citizenID: 'U001' });
+            if (!grievances.length) grievances = await window.JanSamadhan.getPriorityQueue({});
+            const resolved = grievances.filter(g => g.status === 'resolved' || g.status === 'closed');
+
+            if (!resolved.length) {
+                container.innerHTML = `<div class="card" style="text-align:center;padding:40px"><div style="font-size:2.5rem">⏳</div><h4 style="margin-top:12px">No resolved complaints yet</h4><p style="margin-top:6px">Feedback can be submitted after your complaint is resolved.</p></div>`;
+                return;
+            }
+
+            container.innerHTML = resolved.map(g => `
+    <div class="grievance-card priority-${g.priority.toLowerCase()}">
+      <div class="gc-header">
+        <div class="gc-icon" style="background:${categoryColor(g.category)}">${categoryIcon(g.category)}</div>
+        <div style="flex:1">
+          <div class="gc-id">${g.id ? g.id.toUpperCase().substring(0, 8) : g.grievanceID}</div>
+          <div class="gc-title">${g.category}</div>
+          <div class="gc-meta">${statusBadge(g.status)} <span style="font-size:.78rem;color:var(--text-muted)">${timeAgo(g.createdAt || g.timestamp)}</span></div>
+        </div>
+      </div>
+      ${g.officerRemarks ? `<div style="font-size:.85rem;padding:10px;background:var(--bg);border-radius:6px;margin-bottom:10px">✅ ${g.officerRemarks}</div>` : ''}
+      ${g.feedbackRating
+                    ? `<div style="padding:12px;background:rgba(22,163,74,.06);border-radius:8px;display:flex;align-items:center;gap:12px">
+             <span style="font-size:1.5rem">${'⭐'.repeat(g.feedbackRating)}</span>
+             <div><div style="font-weight:700;font-size:.88rem">${ratingLabels[g.feedbackRating]}</div>${g.feedbackComment ? `<div style="font-size:.8rem;color:var(--text-muted)">"${g.feedbackComment}"</div>` : ''}</div>
+           </div>`
+                    : `<button class="btn btn-accent btn-sm" onclick="openFeedback('${g.id}')">⭐ Rate This Resolution</button>`
+                }
+    </div>
+  `).join('');
+        }
+
+        // ── Map ──
+        async function initMapPage() {
+            const all = await window.JanSamadhan.getPriorityQueue({});
+            renderDummyMap('citizenMap', all);
+            const stats = await window.JanSamadhan.getStats();
+            const container = document.getElementById('regionStats');
+            if (container && stats.byRegion) {
+                container.innerHTML = Object.entries(stats.byRegion).map(([r, c]) => `
+      <div class="stat-card" style="--stat-color:var(--primary-light);--stat-bg:rgba(37,99,235,.08)">
+        <div class="stat-icon">📍</div>
+        <div class="stat-value">${c}</div>
+        <div class="stat-label">${r}</div>
+      </div>
+    `).join('');
+            }
+        }
+
+        // ── Announcements ──
+        function loadAnnouncementsPage() {
+            const container = document.getElementById('dashAnnouncements');
+            if (!container) return;
+            container.innerHTML = window.JanSamadhan.getAnnouncements().map(a => `
+    <div class="announce-card ${a.pinned ? 'pinned' : ''}">
+      <div class="announce-icon">${a.pinned ? '📌' : '📣'}</div>
+      <div><div class="announce-text">${a.text}</div><div class="announce-date">📅 ${a.date}</div></div>
+    </div>
+  `).join('');
+        }
+
+        // ── Track (in dashboard) ──
+        async function dashTrack() {
+            const id = document.getElementById('dashTrackInput')?.value.trim();
+            const result = document.getElementById('dashTrackResult');
+            if (!id) { showToast('Enter a Grievance ID', 'warning'); return; }
+            try {
+                const g = await window.JanSamadhan.getGrievanceByID(id);
+                if (!g) { result.innerHTML = `<div style="color:var(--danger);text-align:center;padding:16px">❌ Not found: ${id}</div>`; return; }
+                const displayID = g.id ? g.id.toUpperCase().substring(0, 8) : g.grievanceID;
+                result.innerHTML = `
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${priorityBadge(g.priority)} ${statusBadge(g.status)} ${g.escalated ? '<span class="escalation-tag">🚨 ESCALATED</span>' : ''}</div>
+        <div style="font-size:.88rem;font-weight:700">${g.category} – ${g.name || 'Citizen'}</div>
+        <div style="font-size:.8rem;color:var(--text-muted);margin:6px 0">📍 ${g.location || g.location?.address || 'N/A'}</div>
+        ${renderProgressBar(getProgressFromStatus(g.status))}
+        ${g.officerRemarks ? `<div style="margin-top:10px;padding:10px;background:rgba(37,99,235,.06);border-left:3px solid var(--primary-light);border-radius:6px;font-size:.85rem">🧑‍💼 <strong>${g.officerRemarks}</strong></div>` : ''}
+        <button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="viewDetail('${g.id}')">Full Details →</button>
+      `;
+            } catch (e) {
+                result.innerHTML = `<div style="color:var(--danger);text-align:center;padding:16px">❌ Error fetching ID</div>`;
+            }
+        }
+
+        async function loadLastSubmitted() {
+            const container = document.getElementById('lastSubmittedList');
+            if (!container) return;
+            const lastID = sessionStorage.getItem('lastGrievanceID');
+            let grievances = await window.JanSamadhan.getPriorityQueue({ citizenID: 'U001' });
+            
+            const showList = lastID
+                ? [await window.JanSamadhan.getGrievanceByID(lastID), ...grievances.slice(0, 2)].filter(Boolean)
+                : grievances.slice(0, 3);
+
+            container.innerHTML = showList.map(g => `
+    <div style="padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="viewDetail('${g.id}')">
+      <div style="font-size:1.3rem">${categoryIcon(g.category)}</div>
+      <div style="flex:1"><div style="font-weight:600;font-size:.9rem">${g.id ? g.id.toUpperCase().substring(0, 8) : g.grievanceID}</div><div style="font-size:.78rem;color:var(--text-muted)">${g.category}</div></div>
+      ${statusBadge(g.status)}
+    </div>
+  `).join('');
+        }
+
+        // ── Mock PDF download ──
+        function mockDownload(id) {
+            showToast(`📄 Generating summary for ${id}...`, 'info');
+            setTimeout(() => showToast(`✅ Summary for ${id} ready (Demo — no file generated)`, 'success'), 1500);
+        }
+
+        // ── Notifications ──
+        function toggleNotifPanel() {
+            showToast('🔔 You have 2 new updates on your grievances', 'info');
+        }
+
+        // ── Logout ──
+        function logoutUser() {
+            window.JanSamadhan.logout();
+            sessionStorage.removeItem('js_user');
+            showToast('Logged out successfully', 'success');
+            setTimeout(() => window.location.href = 'index.html', 800);
+        }
+    </script>
+</body>
+
+</html>

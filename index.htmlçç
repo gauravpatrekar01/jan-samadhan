@@ -1,0 +1,90 @@
+    // ── Auth Modal State & Logic ──
+    window.JanSamadhanAuth = {
+      role: 'citizen',
+      mode: 'login'
+    };
+
+    function openLoginModal(role) {
+      console.log("🔓 Opening login modal for:", role);
+      window.JanSamadhanAuth.role = role;
+      const modal = document.getElementById('loginModal');
+      if (modal) {
+        modal.classList.add('show');
+        setLoginRole(role);
+      } else {
+        console.error("❌ Modal 'loginModal' not found!");
+      }
+    }
+
+    function closeLoginModal() {
+      document.getElementById('loginModal').classList.remove('show');
+    }
+
+    function setAuthMode(mode) {
+      console.log("🔄 Switching auth mode to:", mode);
+      window.JanSamadhanAuth.mode = mode;
+      
+      const mLogin = document.getElementById('modeLogin');
+      const mSignup = document.getElementById('modeSignup');
+      if (mLogin) mLogin.classList.toggle('active', mode === 'login');
+      if (mSignup) mSignup.classList.toggle('active', mode === 'signup');
+
+      const fullName = document.getElementById('fullNameGroup');
+      if (fullName) fullName.style.display = mode === 'signup' ? 'block' : 'none';
+      
+      const title = document.getElementById('authModalTitle');
+      if (title) title.innerText = mode === 'login' ? '🔑 Login to JanSamadhan' : '📝 Create Account';
+      
+      const btn = document.getElementById('authSubmitBtn');
+      if (btn) btn.innerText = mode === 'login' ? '🔑 Login & Enter Portal' : '📝 Sign Up & Register';
+    }
+
+    function setLoginRole(role) {
+      console.log("👤 Setting role to:", role);
+      window.JanSamadhanAuth.role = role;
+      document.querySelectorAll('.role-tab').forEach(t => t.classList.toggle('active', t.dataset.role === role));
+      const hints = { citizen: 'citizen@example.com / citizen123', officer: 'officer@example.com / officer123', admin: 'admin@example.com / admin123' };
+      const hintEl = document.getElementById('credHint');
+      if (hintEl) hintEl.innerHTML = `<strong>Demo:</strong> ${hints[role]}`;
+    }
+
+    async function handleAuth(e) {
+      e.preventDefault();
+      const mode = window.JanSamadhanAuth.mode;
+      const role = window.JanSamadhanAuth.role;
+      console.log("🔐 Auth Submission:", mode, role);
+      
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const name = document.getElementById('loginFullName').value;
+
+      const btn = document.getElementById('authSubmitBtn');
+      if (!btn) return;
+      
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '⌛ Processing...';
+      btn.disabled = true;
+
+      try {
+        let response;
+        if (mode === 'signup') {
+          response = await window.JanSamadhanAPI.register({ name, email, password, role: role });
+          showToast('Account created successfully!', 'success');
+        } else {
+          response = await window.JanSamadhanAPI.login({ email, password });
+          showToast('Login successful!', 'success');
+        }
+
+        setTimeout(() => {
+          const userRole = response.role.toLowerCase();
+          if (userRole === 'citizen') window.location.href = 'citizen.html';
+          else if (userRole === 'officer') window.location.href = 'officer.html';
+          else if (userRole === 'admin') window.location.href = 'admin.html';
+        }, 800);
+      } catch (err) {
+        console.error("Auth Fail:", err);
+        showToast(err.message, 'error');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    }

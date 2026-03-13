@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JanSamadhan – Smart Public Grievance & Resolution System</title>
+  <meta name="description"
+    content="JanSamadhan – File, track, and resolve public grievances transparently. Transparent Governance. Faster Resolutions.">
+  <meta property="og:title" content="JanSamadhan – Smart Public Grievance System">
+  <meta property="og:description" content="Transparent Governance. Faster Resolutions.">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
+  <link rel="stylesheet" href="css/main.css">
+  <style>
+    /* ── Landing-specific styles ── */
+    .track-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 40px;
+      max-width: 640px;
+      margin: 0 auto;
+      box-shadow: var(--shadow-md);
+    }
+
+    .track-input-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    @media(max-width:500px) {
+      .track-input-row {
+        flex-direction: column;
+      }
+    }
+
+    .step-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 24px;
+    }
+
+    .step-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      text-align: center;
+      transition: all var(--transition);
+      position: relative;
+    }
+
+    .step-card:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .step-num {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-light), var(--accent));
+      color: #fff;
+      font-weight: 800;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+
+    .step-icon {
+      font-size: 2.2rem;
+      margin-bottom: 14px;
+    }
+
+    .step-arrow {
+      position: absolute;
+      right: -16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.5rem;
+      color: var(--text-muted);
+      z-index: 1;
+    }
+
+    @media(max-width:768px) {
+      .step-arrow {
+        display: none;
+      }
+    }
+
+    .login-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    @media(max-width:600px) {
+      .login-cards {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .login-role-card {
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .login-role-card:hover {
+      border-color: var(--primary-light);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .login-role-card.citizen:hover {
+      border-color: var(--primary-light);
+    }
+
+    .login-role-card.officer:hover {
+      border-color: var(--success);
+    }
+
+    .login-role-card.admin:hover {
+      border-color: var(--accent);
+    }
+
+    .role-emoji {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+
+    .role-name {
+      font-weight: 800;
+      font-size: 1.05rem;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .role-desc {
+      font-size: .8rem;
+      color: var(--text-muted);
+    }
+
+    .role-badge {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: .75rem;
+      font-weight: 700;
+    }
+
+    .rb-citizen {
+      background: rgba(37, 99, 235, .1);
+      color: var(--primary-light);
+    }
+
+    .rb-officer {
+      background: rgba(22, 163, 74, .1);
+      color: var(--success);
+    }
+
+    .rb-admin {
+      background: rgba(249, 115, 22, .1);
+      color: var(--accent);
+    }
+
+    /* Stats section */
+    .live-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 40px;
+    }
+
+    /* Quick announcement cards on landing */
+    #announcementsList {
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    /* Track result */
+    #trackResult {
+      margin-top: 20px;
+      display: none;
+      background: var(--bg);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      padding: 20px;
+    }
+
+    #trackResult.visible {
+      display: block;
+      animation: fade-up .3s ease;
+    }
+
+    @keyframes fade-up {
+      from {
+        opacity: 0;
+        transform: translateY(10px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    /* Footer */
+    .footer {
+      background: var(--primary-dark);
+      color: rgba(255, 255, 255, .65);
+      padding: 48px 0 24px;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 40px;
+    }
+
+    @media(max-width:768px) {
+      .footer-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+    }
+
+    @media(max-width:480px) {
+      .footer-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .footer h4 {
+      color: #fff;
+      font-size: .95rem;
+      margin-bottom: 16px;
+    }
+
+    .footer a {
+      display: block;
+      color: rgba(255, 255, 255, .55);
+      font-size: .85rem;
+      margin-bottom: 8px;
+      transition: color var(--transition);
+    }
+
+    .footer a:hover {
+      color: #fff;
+    }
+
+    .footer-bottom {
+      border-top: 1px solid rgba(255, 255, 255, .1);
+      padding-top: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: .82rem;
+    }
+
+    .footer-copy {
+      color: rgba(255, 255, 255, .4);
+    }
+
+    .gov-badges {
+      display: flex;
+      gap: 12px;
+    }
+
+    .gov-badge {
+      background: rgba(255, 255, 255, .08);
+      border-radius: 6px;
+      padding: 4px 12px;
+      font-size: .72rem;
+      color: rgba(255, 255, 255, .6);
+      border: 1px solid rgba(255, 255, 255, .1);
+    }
+
+    .page-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0f172a, #1e3a8a, #2563eb);
+      background-size: 200% 200%;
+      animation: gradientMove 6s ease infinite;
+      z-index: 9999;
+      transition: opacity 0.4s ease, visibility 0.4s;
+    }
+
+    @keyframes gradientMove {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .loader-logo {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      animation: bounce 2s infinite ease-in-out;
+    }
+
+    .loader-text {
+      color: #fff;
+      font-size: 2.2rem;
+      font-weight: 800;
+      font-family: var(--font-head);
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+
+    .loader-bar-wrap {
+      width: 240px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      margin-top: 24px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .loader-bar {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--primary-light), var(--accent));
+      animation: loadFull 2s cubic-bezier(0.1, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes loadFull {
+      0% { width: 0%; }
+      100% { width: 100%; }
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-15px); }
+    }
+
+    /* Ticker Styles */
+    .ticker-wrap {
+      background: var(--primary-dark);
+      padding: 12px 0;
+      overflow: hidden;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .ticker-inner {
+      display: flex;
+      white-space: nowrap;
+      animation: ticker-roll 40s linear infinite;
+    }
+
+    .ticker-item {
+      display: inline-block;
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 0 60px;
+    }
+
+    @keyframes ticker-roll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    /* Back to Top Button */
+    .back-to-top {
+      position: fixed;
+      bottom: 100px;
+      right: 30px;
+      width: 44px;
+      height: 44px;
+      background: var(--primary-light);
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      box-shadow: var(--shadow-md);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      z-index: 999;
+      cursor: pointer;
+    }
+
+    .back-to-top.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .back-to-top:hover {
+      transform: translateY(-5px);
+      background: var(--accent);
+    }
+
+    /* Pulse for Chatbot Toggle */
+    @keyframes pulse-ring {
+      0% { transform: scale(.8); opacity: .5; }
+      100% { transform: scale(1.2); opacity: 0; }
+    }
+
+    .chatbot-toggle::before {
+      content: '';
+      position: absolute;
+      inset: -5px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      z-index: -1;
+      animation: pulse-ring 2s infinite;
+    }
+
+    /* Enhanced Section Headers */
+    .section-eyebrow {
+      display: inline-block;
+      padding: 6px 14px;
+      background: rgba(37, 99, 235, 0.08);
+      color: var(--primary-light);
+      border-radius: 30px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      margin-bottom: 12px;
+    }
+
+    /* Scroll Indicator */
+    .scroll-indicator {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.7rem;
+      animation: bounce 2s infinite;
+      z-index: 10;
+    }
+
+    .mouse {
+      width: 20px;
+      height: 32px;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-radius: 12px;
+      position: relative;
+    }
+
+    .mouse::after {
+      content: '';
+      position: absolute;
+      top: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 4px;
+      height: 6px;
+      background: #fff;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- PAGE LOADER -->
+  <div class="page-loader" id="pageLoader">
+    <div class="loader-logo">🏛️</div>
+    <div class="loader-text">JanSamadhan</div>
+    <div class="loader-subtext">Transparent Governance. Faster Resolutions.</div>
+    <div class="loader-bar-wrap">
+      <div class="loader-bar"></div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div class="toast-container"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="mainNav">
+    <div class="nav-brand">
+      <div class="nav-logo">🏛️</div>
+      <div>
+        <div class="nav-title">JanSamadhan</div>
+        <div class="nav-tagline">Transparent Governance. Faster Resolutions.</div>
+      </div>
+    </div>
+    <div class="nav-links">
+      <a href="#home" class="active">Home</a>
+      <a href="#how-it-works">How It Works</a>
+      <a href="#track">Track</a>
+      <a href="#announcements">Notices</a>
+      <a href="#about">About</a>
+    </div>
+    <div class="nav-actions">
+      <button class="dark-toggle" onclick="toggleDark()" title="Toggle dark mode">🌙</button>
+      <button class="btn btn-ghost btn-sm" onclick="openLoginModal('citizen'); setAuthMode('signup')"
+        style="font-weight:600;color:var(--primary-light)">📝 Sign Up</button>
+      <button class="btn-nav-login" onclick="openLoginModal('citizen'); setAuthMode('login')">🔑 Login</button>
+      <button class="hamburger" onclick="toggleMobileNav()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MOBILE NAV -->
+  <div class="mobile-nav" id="mobileNav">
+    <a href="#home" onclick="toggleMobileNav()">🏠 Home</a>
+    <a href="#how-it-works" onclick="toggleMobileNav()">📖 How It Works</a>
+    <a href="#track" onclick="toggleMobileNav()">🔍 Track Grievance</a>
+    <a href="register.html">📝 Register Grievance</a>
+    <div style="padding:10px;display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-primary w-full"
+        onclick="openLoginModal('citizen'); setAuthMode('login'); toggleMobileNav()">🔑 Login</button>
+      <button class="btn btn-outline w-full"
+        onclick="openLoginModal('citizen'); setAuthMode('signup'); toggleMobileNav()">📝 Sign Up</button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+     HERO SECTION
+════════════════════════════════════════════ -->
+  <section class="hero" id="home">
+    <div class="hero-bg-pattern"></div>
+    <div class="container hero-container">
+      <div class="hero-text">
+        <div class="hero-badge">
+          <div class="dot" aria-hidden="true"></div>
+          System Active – 24/7 Digital Grievance Portal
+        </div>
+        <h1>JanSamadhan<br><span>Smart Grievance</span> Resolution</h1>
+        <p class="hero-sub" style="margin-left:0; margin-right:0; max-width: 580px;">Empowering citizens with a transparent, digital-first platform to file, track, and resolve
+          public grievances. Your voice matters. Justice, delivered faster.</p>
+        <div class="hero-actions" style="justify-content: flex-start;">
+          <a href="register.html" class="btn btn-accent btn-xl">📝 Register Grievance</a>
+          <button class="btn btn-xl"
+            style="background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.25);backdrop-filter:blur(8px);"
+            onclick="document.getElementById('track').scrollIntoView({behavior:'smooth'})">🔍 Track Complaint</button>
+        </div>
+        
+        <!-- INLINE STATS -->
+        <div class="hero-stats" style="border-top: none; padding-top: 20px; margin-top: 30px; justify-content: flex-start; gap: 40px; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 30px;">
+          <div class="hero-stat-item" style="text-align: left;">
+            <div class="hero-stat-value" id="heroTotal" data-counter="12" data-suffix="" style="font-size: 2rem;">0</div>
+            <div class="hero-stat-label">Total Cases</div>
+          </div>
+          <div class="hero-stat-item" style="text-align: left;">
+            <div class="hero-stat-value" id="heroResolved" data-counter="42" data-suffix="%" style="font-size: 2rem;">0</div>
+            <div class="hero-stat-label">Resolved</div>
+          </div>
+          <div class="hero-stat-item" style="text-align: left;">
+            <div class="hero-stat-value" id="heroHigh" data-counter="3" data-suffix="" style="font-size: 2rem; color: var(--accent);">0</div>
+            <div class="hero-stat-label">Emergency</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="hero-visual" id="heroVisual">
+        <img src="hero_illustration.png" alt="JanSamadhan Governance Illustration" loading="eager">
+        <!-- Floating Elements for depth -->
+        <div class="floating-card" style="top: 10%; right: -5%; animation-delay: 1s;">
+          <span>✅</span> Track Real-time
+        </div>
+        <div class="floating-card" style="bottom: 25%; left: -8%; animation-delay: 2s; background: rgba(249, 115, 22, 0.15);">
+          <span>🚨</span> High Priority
+        </div>
+        <div class="floating-card" style="top: 50%; right: -15%; animation-delay: 3s; font-size: 0.8rem; padding: 8px 15px;">
+          <span>🤖</span> AI Assistant
+        </div>
+      </div>
+    </div>
+    
+    <div class="scroll-indicator">
+      <div class="mouse"></div>
+      Scroll to explore
+    </div>
+  </section>
+
+  <!-- TICKER -->
+  <div class="ticker-wrap">
+    <div class="ticker-inner" id="tickerInner"></div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+     LIVE STATS DETAILED
+════════════════════════════════════════════ -->
+  <section class="section" id="stats">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">Real-Time Dashboard</div>
+        <h2 class="section-title">System Overview</h2>
+        <div class="section-divider"></div>
+      </div>
+      <div class="live-stats" id="liveStatsGrid">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════
+     HOW IT WORKS
+════════════════════════════════════════════ -->
+  <section class="section section-alt" id="how-it-works">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">Simple Process</div>
+        <h2 class="section-title">How JanSamadhan Works</h2>
+        <p class="section-desc">A streamlined, 4-step process to get your grievance registered and resolved
+          transparently.</p>
+        <div class="section-divider"></div>
+      </div>
+      <div class="step-cards">
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <div class="step-icon">📝</div>
+          <h4>Register</h4>
+          <p style="font-size:.88rem;margin-top:8px;">Fill the structured grievance form with your details, category,
+            and location. Upload supporting images.</p>
+          <div class="step-arrow">→</div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <div class="step-icon">🎯</div>
+          <h4>Auto-Prioritize</h4>
+          <p style="font-size:.88rem;margin-top:8px;">Our smart system automatically prioritizes your complaint.
+            Emergencies get instant escalation.</p>
+          <div class="step-arrow">→</div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <div class="step-icon">🧑‍💼</div>
+          <h4>Officer Review</h4>
+          <p style="font-size:.88rem;margin-top:8px;">Assigned to the relevant department. Officers take action and
+            update status in real-time.</p>
+          <div class="step-arrow">→</div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">4</div>
+          <div class="step-icon">✅</div>
+          <h4>Resolve &amp; Rate</h4>
+          <p style="font-size:.88rem;margin-top:8px;">Get notified when resolved. Share your feedback to help improve
+            governance quality.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════
+     KEY FEATURES
+════════════════════════════════════════════ -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">Platform Capabilities</div>
+        <h2 class="section-title">Why JanSamadhan?</h2>
+        <div class="section-divider"></div>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(37,99,235,.12)">🎯</div>
+          <div class="feature-title">Smart Priority Queue</div>
+          <p style="font-size:.88rem;margin-top:8px;">Emergency cases auto-escalate. Our queue ensures critical issues
+            reach officers first.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(22,163,74,.12)">📊</div>
+          <div class="feature-title">Real-Time Analytics</div>
+          <p style="font-size:.88rem;margin-top:8px;">Admins and officers get live dashboards with charts, region
+            heatmaps, and KPIs.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(249,115,22,.12)">🗺️</div>
+          <div class="feature-title">Location Mapping</div>
+          <p style="font-size:.88rem;margin-top:8px;">Pin your complaint on the map. View cluster of complaints by
+            region for better response.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(139,92,246,.12)">🤖</div>
+          <div class="feature-title">JanBot AI Assistant</div>
+          <p style="font-size:.88rem;margin-top:8px;">24/7 chatbot guides citizens through the process, answers FAQs,
+            and provides updates.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(217,119,6,.12)">🔔</div>
+          <div class="feature-title">Live Notifications</div>
+          <p style="font-size:.88rem;margin-top:8px;">Get notified at every stage — submission, review, resolution. Stay
+            informed always.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(14,165,233,.12)">🔐</div>
+          <div class="feature-title">Role-Based Access</div>
+          <p style="font-size:.88rem;margin-top:8px;">Separate portals for Citizens, Officers & Admins. Secure,
+            auditable, and transparent.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════
+     TRACK GRIEVANCE
+════════════════════════════════════════════ -->
+  <section class="section section-alt" id="track">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">Transparency First</div>
+        <h2 class="section-title">Track Your Grievance</h2>
+        <p class="section-desc">Enter your Grievance ID to get real-time status updates on your complaint.</p>
+        <div class="section-divider"></div>
+      </div>
+      <div class="track-section">
+        <div class="track-input-row">
+          <input type="text" class="form-control" id="trackInput" placeholder="Enter Grievance ID (e.g. JSM-2026-0001)"
+            style="flex:1" onkeydown="if(event.key==='Enter') trackComplaint()">
+          <button class="btn btn-primary" onclick="trackComplaint()">🔍 Track</button>
+        </div>
+        <p style="margin-top:12px;font-size:.82rem;color:var(--text-muted)">
+          💡 Try: <span id="sampleIDs" style="font-weight:600;color:var(--primary-light);cursor:pointer"></span>
+        </p>
+        <!-- Track Result -->
+        <div id="trackResult"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════
+     ANNOUNCEMENTS
+════════════════════════════════════════════ -->
+  <section class="section" id="announcements">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">Official Notices</div>
+        <h2 class="section-title">Government Announcements</h2>
+        <p class="section-desc">Latest notices, public announcements, and system updates from JanSamadhan.</p>
+        <div class="section-divider"></div>
+      </div>
+      <div id="announcementsList" class="announce-list"><!-- Populated by JS --></div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════
+     ROLE-BASED LOGIN SECTION
+════════════════════════════════════════════ -->
+  <section class="section section-dark" id="about">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">Access Portal</div>
+        <h2 class="section-title" style="color:#fff">Choose Your Role</h2>
+        <p class="section-desc" style="color:rgba(255,255,255,.6)">Select your profile to access the appropriate
+          dashboard and features.</p>
+        <div class="section-divider"></div>
+      </div>
+      <div class="login-cards">
+        <div class="login-role-card citizen" onclick="openLoginModal('citizen')">
+          <div class="role-emoji">👤</div>
+          <div class="role-name">Citizen</div>
+          <div class="role-desc">File complaints, track status, provide feedback after resolution</div>
+          <div class="role-badge rb-citizen">Public Portal</div>
+        </div>
+        <div class="login-role-card officer" onclick="openLoginModal('officer')">
+          <div class="role-emoji">🧑‍💼</div>
+          <div class="role-name">Field Officer</div>
+          <div class="role-desc">Review complaints, update status, manage assigned cases by department</div>
+          <div class="role-badge rb-officer">Officer Portal</div>
+        </div>
+        <div class="login-role-card admin" onclick="openLoginModal('admin')">
+          <div class="role-emoji">🛡️</div>
+          <div class="role-name">Administrator</div>
+          <div class="role-desc">System analytics, user management, escalation monitoring, announcements</div>
+          <div class="role-badge rb-admin">Admin Portal</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════ -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+            <div
+              style="background:linear-gradient(135deg,var(--primary-light),var(--accent));width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem">
+              🏛️</div>
+            <div>
+              <div style="color:#fff;font-weight:800;font-family:var(--font-head)">JanSamadhan</div>
+              <div style="font-size:.7rem;opacity:.5">Transparent Governance</div>
+            </div>
+          </div>
+          <p style="font-size:.85rem;line-height:1.7;max-width:280px">A digital initiative to bring transparency and
+            efficiency to public grievance redressal in India.</p>
+          <div style="margin-top:16px;display:flex;gap:10px">
+            <div class="gov-badge">🇮🇳 Govt. Initiative</div>
+            <div class="gov-badge">🔒 Secure</div>
+          </div>
+        </div>
+        <div>
+          <h4>Quick Links</h4>
+          <a href="register.html">📝 File Grievance</a>
+          <a href="#track">🔍 Track Complaint</a>
+          <a href="#announcements">📢 Notices</a>
+          <a href="#how-it-works">📖 How It Works</a>
+        </div>
+        <div>
+          <h4>Portals</h4>
+          <a href="#" onclick="openLoginModal('citizen')">👤 Citizen Portal</a>
+          <a href="#" onclick="openLoginModal('officer')">🧑‍💼 Officer Portal</a>
+          <a href="#" onclick="openLoginModal('admin')">🛡️ Admin Portal</a>
+        </div>
+        <div>
+          <h4>Help &amp; Support</h4>
+          <a href="#">📞 1800-XXX-XXXX</a>
+          <a href="#">📧 support@jansamadhan.gov.in</a>
+          <a href="#">🔒 Privacy Policy</a>
+          <a href="#">📄 Terms of Service</a>
+          <a href="#">❓ FAQs</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div class="footer-copy">© 2026 JanSamadhan. Government of India Initiative. All rights reserved.</div>
+        <div class="gov-badges">
+          <div class="gov-badge">🏛️ JanSamadhan 2026</div>
+          <div class="gov-badge">🚀 Startup India</div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ════════════════════════════════════════════
+     LOGIN MODAL
+════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="loginModal">
+    <div class="modal-box" style="max-width:440px">
+      <div class="modal-header">
+        <div>
+          <h3 id="authModalTitle">🔑 Login to JanSamadhan</h3>
+          <p id="authModalSub" style="font-size:.85rem;margin-top:4px">Select your role and enter credentials</p>
+        </div>
+        <button class="modal-close" onclick="closeLoginModal()">✕</button>
+      </div>
+
+      <!-- Auth Mode Toggle -->
+      <div style="display:flex;margin-bottom:20px;border-bottom:1px solid var(--border)">
+        <button class="auth-mode-tab active" id="modeLogin" onclick="setAuthMode('login')">Login</button>
+        <button class="auth-mode-tab" id="modeSignup" onclick="setAuthMode('signup')">Sign Up</button>
+      </div>
+
+      <div class="role-tabs">
+        <button class="role-tab active" data-role="citizen" onclick="setLoginRole('citizen')">👤 Citizen</button>
+        <button class="role-tab" data-role="officer" onclick="setLoginRole('officer')">🧑‍💼 Officer</button>
+        <button class="role-tab" data-role="admin" onclick="setLoginRole('admin')">🛡️ Admin</button>
+      </div>
+
+      <div class="cred-hint" id="credHint">
+        <strong>Demo:</strong> citizen@example.com / <strong>citizen123</strong>
+      </div>
+
+      <form id="authForm" onsubmit="handleAuth(event)">
+        <!-- Full Name (Only for signup) -->
+        <div class="form-group" id="fullNameGroup" style="display:none">
+          <label class="form-label">Full Name <span class="req">*</span></label>
+          <input type="text" class="form-control" id="loginFullName" placeholder="Enter your full name">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email Address <span class="req">*</span></label>
+          <input type="email" class="form-control" id="loginEmail" placeholder="e.g. citizen@example.com"
+            value="citizen@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password <span class="req">*</span></label>
+          <input type="password" class="form-control" id="loginPassword" placeholder="••••••••" value="citizen123"
+            required>
+        </div>
+
+        <button type="submit" id="authSubmitBtn" class="btn btn-primary w-full" style="justify-content:center">🔑 Login
+          &amp; Enter Portal</button>
+      </form>
+
+      <p style="text-align:center;font-size:.8rem;color:var(--text-muted);margin-top:14px" id="authSwitchPrompt">
+        No account? <a href="#" onclick="setAuthMode('signup')"
+          style="color:var(--primary-light);font-weight:600">Register as Citizen →</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+     CHATBOT
+════════════════════════════════════════════ -->
+  <button class="chatbot-toggle" id="chatbotToggle" title="Chat with JanBot">
+    🤖
+    <div class="chatbot-badge">1</div>
+  </button>
+  <div class="chatbot-window" id="chatbotWindow">
+    <div class="chat-header">
+      <div class="chat-avatar">🤖</div>
+      <div>
+        <div class="chat-name">JanBot</div>
+        <div class="chat-status">● Online – JanSamadhan Assistant</div>
+      </div>
+      <button class="chat-close" id="chatClose">✕</button>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-suggestions">
+      <button class="chat-suggestion">How to file grievance?</button>
+      <button class="chat-suggestion">How to track?</button>
+      <button class="chat-suggestion">Emergency process?</button>
+      <button class="chat-suggestion">Officer contact?</button>
+    </div>
+    <div class="chat-input-area">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Ask JanBot anything...">
+      <button class="chat-send" id="chatSend">➤</button>
+    </div>
+  </div>
+
+  <!-- BACK TO TOP -->
+  <div class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+    ↑
+  </div>
+
+  <!-- FIREBASE SDKS -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+
+  <!-- SCRIPTS -->
+  <script src="js/api.js"></script>
+  <script src="js/ledger.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/chatbot.js"></script>
+  <script>
+    // ── Initialize landing page ──
+    document.addEventListener('DOMContentLoaded', async () => {
+      let stats;
+      try {
+        if (window.JanSamadhanAPI) {
+          stats = await window.JanSamadhanAPI.getAnalytics();
+        } else {
+          throw new Error("API not loaded");
+        }
+      } catch (e) {
+        console.error("Failed to fetch real stats, using dummy data", e);
+        stats = await window.JanSamadhan.getStats();
+      }
+
+      // Update hero counters with real data
+      const heroTotal = document.getElementById('heroTotal');
+      const heroResolved = document.getElementById('heroResolved');
+      const heroPending = document.getElementById('heroPending');
+      const heroHigh = document.getElementById('heroHigh');
+
+      if (heroTotal) heroTotal.dataset.counter = stats.total_complaints || stats.total;
+      if (heroResolved) heroResolved.dataset.counter = stats.resolution_rate || stats.resolutionRate;
+      if (heroPending) heroPending.dataset.counter = stats.status_distribution?.submitted || stats.pending;
+      if (heroHigh) heroHigh.dataset.counter = stats.priority_distribution?.emergency || stats.emergency;
+
+      initCounters();
+
+      // Population ticker
+      const tickerInner = document.getElementById('tickerInner');
+      if (tickerInner) {
+        const notices = [
+          "🚨 Emergency grievance GS-8B2A resolved in record 4 hours in North Delhi.",
+          "📢 New portal for rural area grievances launching next week.",
+          "✅ 98% resolution rate achieved for Water Supply issues this month.",
+          "🛡️ System updated with latest security protocols for user data protection."
+        ];
+        tickerInner.innerHTML = notices.map(n => `<span class="ticker-item">${n}</span>`).join('');
+      }
+
+      // Sample IDs for track
+      const ids = ['JSM-2026-0001', 'JSM-2026-0002', 'JSM-2026-0007'];
+      const sampleIDs = document.getElementById('sampleIDs');
+      if (sampleIDs) {
+        sampleIDs.textContent = ids.join(' · ');
+        sampleIDs.onclick = () => {
+          document.getElementById('trackInput').value = ids[Math.floor(Math.random() * ids.length)];
+          trackComplaint();
+        };
+      }
+
+      // Live stats detailed
+      renderLiveStats(stats);
+    });
+
+    // ── Auth Modal State & Logic ──
+    window.JanSamadhanAuth = {
+      role: 'citizen',
+      mode: 'login'
+    };
+
+    function openLoginModal(role) {
+      console.log("🔓 Opening login modal for:", role);
+      window.JanSamadhanAuth.role = role;
+      const modal = document.getElementById('loginModal');
+      if (modal) {
+        modal.classList.add('show');
+        setLoginRole(role);
+      } else {
+        console.error("❌ Modal 'loginModal' not found!");
+      }
+    }
+
+    function closeLoginModal() {
+      document.getElementById('loginModal').classList.remove('show');
+    }
+
+    function setAuthMode(mode) {
+      console.log("🔄 Switching auth mode to:", mode);
+      window.JanSamadhanAuth.mode = mode;
+      
+      const mLogin = document.getElementById('modeLogin');
+      const mSignup = document.getElementById('modeSignup');
+      if (mLogin) mLogin.classList.toggle('active', mode === 'login');
+      if (mSignup) mSignup.classList.toggle('active', mode === 'signup');
+
+      const fullName = document.getElementById('fullNameGroup');
+      if (fullName) fullName.style.display = mode === 'signup' ? 'block' : 'none';
+      
+      const title = document.getElementById('authModalTitle');
+      if (title) title.innerText = mode === 'login' ? '🔑 Login to JanSamadhan' : '📝 Create Account';
+      
+      const btn = document.getElementById('authSubmitBtn');
+      if (btn) btn.innerText = mode === 'login' ? '🔑 Login & Enter Portal' : '📝 Sign Up & Register';
+    }
+
+    function setLoginRole(role) {
+      console.log("👤 Setting role to:", role);
+      window.JanSamadhanAuth.role = role;
+      document.querySelectorAll('.role-tab').forEach(t => t.classList.toggle('active', t.dataset.role === role));
+      const hints = { citizen: 'citizen@example.com / citizen123', officer: 'officer@example.com / officer123', admin: 'admin@example.com / admin123' };
+      const hintEl = document.getElementById('credHint');
+      if (hintEl) hintEl.innerHTML = `<strong>Demo:</strong> ${hints[role]}`;
+    }
+
+    async function handleAuth(e) {
+      e.preventDefault();
+      const mode = window.JanSamadhanAuth.mode;
+      const role = window.JanSamadhanAuth.role;
+      console.log("🔐 Auth Submission:", mode, role);
+      
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const name = document.getElementById('loginFullName').value;
+
+      const btn = document.getElementById('authSubmitBtn');
+      if (!btn) return;
+      
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '⌛ Processing...';
+      btn.disabled = true;
+
+      try {
+        let response;
+        if (mode === 'signup') {
+          response = await window.JanSamadhanAPI.register({ name, email, password, role: role });
+          showToast('Account created successfully!', 'success');
+        } else {
+          response = await window.JanSamadhanAPI.login({ email, password });
+          showToast('Login successful!', 'success');
+        }
+
+        setTimeout(() => {
+          if (!response || !response.role) {
+             console.error("No response role", response);
+             return;
+          }
+          const userRole = response.role.toLowerCase();
+          if (userRole === 'citizen') window.location.href = 'citizen.html';
+          else if (userRole === 'officer') window.location.href = 'officer.html';
+          else if (userRole === 'admin') window.location.href = 'admin.html';
+        }, 800);
+      } catch (err) {
+        console.error("Auth Fail:", err);
+        showToast(err.message, 'error');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    function renderLiveStats(apiStats) {
+      const grid = document.getElementById('liveStatsGrid');
+      if (!grid) return;
+
+      const stats = {
+        total: apiStats.total_complaints || 0,
+        resolutionRate: apiStats.resolution_rate || 0,
+        pending: apiStats.status_distribution?.submitted || 0,
+        emergency: apiStats.priority_distribution?.emergency || 0,
+        high: apiStats.priority_distribution?.high || 0,
+        resolved: apiStats.resolved_complaints || 0
+      };
+
+      const cards = [
+        { label: 'Total Complaints', value: stats.total, icon: '📋', color: 'var(--primary-light)', bg: 'rgba(37,99,235,.1)', trend: 'Live from Backend', up: true },
+        { label: 'Resolution Rate', value: stats.resolutionRate + '%', icon: '✅', color: 'var(--success)', bg: 'rgba(22,163,74,.1)', trend: 'Overall System Performance', up: true },
+        { label: 'Pending Cases', value: stats.pending, icon: '⏳', color: 'var(--warning)', bg: 'rgba(217,119,6,.1)', trend: 'Awaiting Action', up: false },
+        { label: 'Emergency Cases', value: stats.emergency, icon: '🚨', color: 'var(--danger)', bg: 'rgba(220,38,38,.1)', trend: 'Requires Immediate attention', up: false },
+        { label: 'High Priority', value: stats.high, icon: '🔴', color: '#c2410c', bg: 'rgba(194,65,12,.1)', trend: 'Critical Issues', up: false },
+        { label: 'Resolved Complaints', value: stats.resolved, icon: '🎯', color: '#0891b2', bg: 'rgba(8,145,178,.1)', trend: 'Total Success', up: true }
+      ];
+
+      grid.innerHTML = cards.map(c => `
+        <div class="stat-card card-hover" style="--stat-color:${c.color};--stat-bg:${c.bg}">
+          <div class="stat-icon">${c.icon}</div>
+          <div class="stat-value">${c.value}</div>
+          <div class="stat-label">${c.label}</div>
+          <div class="stat-trend ${c.up ? 'up' : 'down'}">${c.trend}</div>
+        </div>
+      `).join('');
+    }
+
+    // ── Track Grievance ──
+    function trackComplaint() {
+      const id = document.getElementById('trackInput')?.value.trim().toUpperCase();
+      const result = document.getElementById('trackResult');
+      if (!id) { showToast('Please enter a Grievance ID', 'warning'); return; }
+      const g = window.JanSamadhan.getGrievanceByID(id);
+      if (!g) {
+        result.className = 'visible';
+        result.innerHTML = `
+      <div style="text-align:center;padding:20px">
+        <div style="font-size:2rem;margin-bottom:8px">🔍</div>
+        <div style="font-weight:700;color:var(--danger)">Grievance Not Found</div>
+        <div style="font-size:.85rem;color:var(--text-muted);margin-top:6px">
+          Check the ID and try again. E.g., <strong>JSM-2026-0001</strong>
+        </div>
+      </div>
+    `;
+        return;
+      }
+      result.className = 'visible';
+      result.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <h3 style="color:var(--primary-light)">${g.grievanceID}</h3>
+      ${priorityBadge(g.priority)}
+      ${statusBadge(g.status)}
+      ${g.escalated ? '<span class="escalation-tag">🚨 ESCALATED</span>' : ''}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div><span style="font-size:.75rem;color:var(--text-muted)">FILED BY</span><br><strong>${g.name}</strong></div>
+      <div><span style="font-size:.75rem;color:var(--text-muted)">CATEGORY</span><br><strong>${categoryIcon(g.category)} ${g.category}</strong></div>
+      <div><span style="font-size:.75rem;color:var(--text-muted)">LOCATION</span><br><strong>📍 ${g.location.address}</strong></div>
+      <div><span style="font-size:.75rem;color:var(--text-muted)">FILED ON</span><br><strong>${formatDate(g.timestamp)}</strong></div>
+    </div>
+    <div style="margin-bottom:16px"><span style="font-size:.75rem;color:var(--text-muted)">DESCRIPTION</span><br>${g.description}</div>
+    ${g.officerRemarks ? `<div style="background:rgba(37,99,235,.06);border-left:3px solid var(--primary-light);padding:10px 14px;border-radius:6px;margin-bottom:16px"><span style="font-size:.75rem;font-weight:700;color:var(--primary-light)">OFFICER REMARKS</span><br>${g.officerRemarks}</div>` : ''}
+    <div style="font-weight:700;margin-bottom:8px;font-size:.88rem">Progress:</div>
+    ${renderProgressBar(g.progressStage)}
+    <div style="text-align:center;margin-top:12px">
+      <a href="citizen.html" class="btn btn-primary btn-sm">View Full Details →</a>
+    </div>
+  `;
+    }
+    window.addEventListener("load", function () {
+      const loader = document.getElementById("pageLoader");
+
+      // Keep loader visible for at least 2 seconds
+      setTimeout(() => {
+        loader.style.opacity = "0";
+
+        setTimeout(() => {
+          loader.style.display = "none";
+        }, 400);
+
+      }, 2000); // 2000 ms = 2 seconds
+    });
+
+    // ── Navbar Scroll ──
+    window.addEventListener('scroll', () => {
+      const nav = document.getElementById('mainNav');
+      if (window.scrollY > 50) nav.classList.add('scrolled');
+      else nav.classList.remove('scrolled');
+    });
+
+    // ── Mobile Nav Toggle ──
+    function toggleMobileNav() {
+      document.getElementById('mobileNav').classList.toggle('open');
+      document.querySelector('.hamburger').classList.toggle('active');
+    }
+
+    // ── Back to Top Visibility ──
+    window.addEventListener('scroll', () => {
+      const btn = document.getElementById('backToTop');
+      if (window.scrollY > 400) btn.classList.add('show');
+      else btn.classList.remove('show');
+    });
+
+  </script>
+</body>
+
+</html>
