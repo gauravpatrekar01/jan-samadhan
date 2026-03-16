@@ -43,6 +43,18 @@ function getSessionUser() {
     return user ? JSON.parse(user) : null;
 }
 
+function isOnline() {
+    return window.navigator.onLine;
+}
+
+window.addEventListener('online', () => {
+    showToast('You are back online! Syncing data...', 'success');
+});
+
+window.addEventListener('offline', () => {
+    showToast('You are currently offline. Some features may be unavailable.', 'warning');
+});
+
 function showToast(message, type = 'info') {
     const container = document.querySelector('.toast-container');
     if (!container) return;

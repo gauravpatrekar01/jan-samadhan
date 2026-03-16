@@ -870,8 +870,7 @@
         <button class="role-tab" data-role="admin" onclick="setLoginRole('admin')">🛡️ Admin</button>
       </div>
 
-      <div class="cred-hint" id="credHint">
-        <strong>Demo:</strong> citizen@example.com / <strong>citizen123</strong>
+      <div class="cred-hint" id="credHint" style="display:none">
       </div>
 
       <form id="authForm" onsubmit="handleAuth(event)">
@@ -883,14 +882,12 @@
 
         <div class="form-group">
           <label class="form-label">Email Address <span class="req">*</span></label>
-          <input type="email" class="form-control" id="loginEmail" placeholder="e.g. citizen@example.com"
-            value="citizen@example.com" required>
+          <input type="email" class="form-control" id="loginEmail" placeholder="e.g. citizen@example.com" required>
         </div>
 
         <div class="form-group">
           <label class="form-label">Password <span class="req">*</span></label>
-          <input type="password" class="form-control" id="loginPassword" placeholder="••••••••" value="citizen123"
-            required>
+          <input type="password" class="form-control" id="loginPassword" placeholder="••••••••" required>
         </div>
 
         <button type="submit" id="authSubmitBtn" class="btn btn-primary w-full" style="justify-content:center">🔑 Login
@@ -1050,9 +1047,6 @@
       console.log("👤 Setting role to:", role);
       window.JanSamadhanAuth.role = role;
       document.querySelectorAll('.role-tab').forEach(t => t.classList.toggle('active', t.dataset.role === role));
-      const hints = { citizen: 'citizen@example.com / citizen123', officer: 'officer@example.com / officer123', admin: 'admin@example.com / admin123' };
-      const hintEl = document.getElementById('credHint');
-      if (hintEl) hintEl.innerHTML = `<strong>Demo:</strong> ${hints[role]}`;
     }
 
     async function handleAuth(e) {

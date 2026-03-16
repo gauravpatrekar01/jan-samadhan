@@ -9,6 +9,7 @@ const JanSamadhanAPI = {
             const auth = window.auth;
             const db = window.db;
             if (!auth || !db) throw new Error("Firebase not initialized correctly.");
+            if (!window.navigator.onLine) throw new Error("You are offline. Please check your internet connection.");
 
             // 1. Create user in Firebase Auth
             const userCredential = await auth.createUserWithEmailAndPassword(userData.email, userData.password);
@@ -39,6 +40,7 @@ const JanSamadhanAPI = {
             const auth = window.auth;
             const db = window.db;
             if (!auth || !db) throw new Error("Firebase not initialized correctly.");
+            if (!window.navigator.onLine) throw new Error("You are offline. Please check your internet connection for login.");
 
             // 1. Sign in with Auth
             const userCredential = await auth.signInWithEmailAndPassword(credentials.email, credentials.password);
