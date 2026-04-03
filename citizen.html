@@ -322,9 +322,8 @@
                 grievances = await window.JanSamadhanAPI.getMyGrievances();
             } catch (e) {
                 console.warn("Failed to fetch from API, using dummy", e);
-                const myGrievances = window.JanSamadhan.getPriorityQueue({ citizenID: 'U001' });
-                const allForDemo = window.JanSamadhan.getPriorityQueue({}).slice(0, 12);
-                grievances = myGrievances.length ? myGrievances : allForDemo.slice(0, 3);
+                const allForDemo = await window.JanSamadhanAPI.getAllGrievances();
+                grievances = allForDemo.slice(0, 3);
             }
 
             // Stats
@@ -467,10 +466,10 @@
         let _feedbackGID = null;
         let _feedbackRating = 0;
 
-        function openFeedback(gid) {
+        async function openFeedback(gid) {
             _feedbackGID = gid;
             _feedbackRating = 0;
-            const g = window.JanSamadhan.getGrievanceByID(gid);
+            const g = await window.JanSamadhanAPI.getGrievanceByID(gid);
             document.getElementById('feedbackFormContent').innerHTML = `
     <div style="margin-bottom:16px">
       <div style="font-size:.88rem;color:var(--text-muted);margin-bottom:8px">${g.grievanceID} – ${g.category}</div>
@@ -513,8 +512,8 @@
         async function loadFeedbackPage() {
             const container = document.getElementById('feedbackList');
             if (!container) return;
-            let grievances = await window.JanSamadhan.getPriorityQueue({ citizenID: 'U001' });
-            if (!grievances.length) grievances = await window.JanSamadhan.getPriorityQueue({});
+            let grievances = [];
+            try { grievances = await window.JanSamadhanAPI.getMyGrievances(); } catch(e){}
             const resolved = grievances.filter(g => g.status === 'resolved' || g.status === 'closed');
 
             if (!resolved.length) {
@@ -546,7 +545,7 @@
 
         // ── Map ──
         async function initMapPage() {
-            const all = await window.JanSamadhan.getPriorityQueue({});
+            const all = await window.JanSamadhanAPI.getAllGrievances();
             renderDummyMap('citizenMap', all);
             const stats = await window.JanSamadhan.getStats();
             const container = document.getElementById('regionStats');
@@ -599,11 +598,20 @@
             const container = document.getElementById('lastSubmittedList');
             if (!container) return;
             const lastID = sessionStorage.getItem('lastGrievanceID');
-            let grievances = await window.JanSamadhan.getPriorityQueue({ citizenID: 'U001' });
+            let grievances = [];
+            try { grievances = await window.JanSamadhanAPI.getMyGrievances(); } catch(e){}
             
-            const showList = lastID
-                ? [await window.JanSamadhan.getGrievanceByID(lastID), ...grievances.slice(0, 2)].filter(Boolean)
-                : grievances.slice(0, 3);
+            let showList = [];
+            if (lastID) {
+               try {
+                  const fetchedGrievance = await window.JanSamadhanAPI.getGrievanceByID(lastID);
+                  showList = [fetchedGrievance, ...grievances.slice(0, 2)].filter(Boolean);
+               } catch(e) {
+                  showList = grievances.slice(0, 3);
+               }
+            } else {
+               showList = grievances.slice(0, 3);
+            }
 
             container.innerHTML = showList.map(g => `
     <div style="padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="viewDetail('${g.id}')">
