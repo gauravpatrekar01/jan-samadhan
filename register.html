@@ -299,14 +299,18 @@
                     <div class="form-group">
                         <label class="form-label">Region / Area</label>
                         <select class="form-control" id="fRegion">
-                            <option value="">-- Select Region --</option>
-                            <option>North Delhi</option>
-                            <option>South Delhi</option>
-                            <option>East Delhi</option>
-                            <option>West Delhi</option>
-                            <option>Central Delhi</option>
-                            <option>Noida</option>
-                            <option>Gurugram</option>
+                            <option value="">-- Select District --</option>
+                            <option>Mumbai City</option>
+                            <option>Mumbai Suburban</option>
+                            <option>Pune</option>
+                            <option>Nagpur</option>
+                            <option>Thane</option>
+                            <option>Nashik</option>
+                            <option>Aurangabad</option>
+                            <option>Solapur</option>
+                            <option>Amravati</option>
+                            <option>Kolhapur</option>
+                            <option>Latur</option>
                         </select>
                     </div>
                 </div>
@@ -754,7 +758,7 @@
                     subcategory: document.getElementById('fSubcategory').value || '',
                     priority: priority,
                     location: locationObj.address,
-                    region: document.getElementById('fRegion').value || 'Central Delhi',
+                    region: document.getElementById('fRegion').value || 'Mumbai',
                     latitude: locationObj.lat,
                     longitude: locationObj.lng
                 };

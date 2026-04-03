@@ -78,9 +78,21 @@ const JanSamadhanAPI = {
     },
 
     async updateGrievanceStatus(id, status, remarks) {
-        return await this._fetch(`/complaints/${id}/status`, {
-            method: 'PATCH',
-            body: JSON.stringify({ status, remarks })
+        return await this._fetch(`/complaints/${id}/status?status=${status}&remarks=${remarks}`, {
+            method: 'PATCH'
+        });
+    },
+
+    async submitFeedback(id, rating, comment) {
+        return await this._fetch(`/complaints/${id}/feedback?rating=${rating}&comment=${comment}`, {
+            method: 'PATCH'
+        });
+    },
+
+    async addNotice(notice) {
+        return await this._fetch('/admin/notices', {
+            method: 'POST',
+            body: JSON.stringify(notice)
         });
     },
 

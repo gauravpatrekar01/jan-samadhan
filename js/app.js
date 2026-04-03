@@ -34,7 +34,7 @@ window.JanSamadhan = {
 
     async submitFeedback(id, rating, comment) {
         console.log(`Feedback for ${id}: ${rating} stars, "${comment}"`);
-        return await window.JanSamadhanAPI.updateGrievanceStatus(id, 'closed', `User Feedback (${rating} stars): ${comment}`);
+        return await window.JanSamadhanAPI.submitFeedback(id, rating, comment);
     }
 };
 
