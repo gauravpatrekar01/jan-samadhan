@@ -30,6 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
             chatInput.value = '';
             setTimeout(() => addMessage("I'm JanBot, your digital assistant. I've received your query and will guide you through the process."), 600);
         };
+        if (chatInput) {
+            chatInput.addEventListener("keypress", function(e) {
+                if (e.key === "Enter") chatSend.onclick();
+            });
+        }
     }
 
     // Initial message
