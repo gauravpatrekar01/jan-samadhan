@@ -114,6 +114,10 @@ const JanSamadhanAPI = {
         }
     },
 
+    async toggleUserVerification(email) {
+        return await this._fetch(`/admin/users/${email}/verify`, { method: 'PATCH' });
+    },
+
     async getAllUsers() {
         return await this._fetch('/admin/users');
     }

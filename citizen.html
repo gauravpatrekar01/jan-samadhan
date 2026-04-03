@@ -36,7 +36,7 @@
         <nav class="sidebar-nav">
             <div class="nav-section-label">Main</div>
             <div class="nav-item active" onclick="showPage('overview', this)">
-                <span class="nav-icon">🏠</span> Overview
+                <span class="nav-icon">🌍</span> Public Grievances
             </div>
             <div class="nav-item" onclick="showPage('myGrievances', this)" id="navMyGrievances">
                 <span class="nav-icon">📋</span> My Grievances
@@ -93,22 +93,19 @@
 
         <div class="dash-content">
 
-            <!-- ─── PAGE: OVERVIEW ─── -->
+            <!-- ─── PAGE: PUBLIC GRIEVANCES ─── -->
             <div class="dash-page active" id="page-overview">
                 <div class="welcome-banner">
                     <div>
-                        <div class="wb-title" id="wbTitle">Welcome back, Citizen!</div>
-                        <div class="wb-sub">Track your grievances and stay updated on resolutions.</div>
+                        <div class="wb-title" id="wbTitle">Global Public Ledger</div>
+                        <div class="wb-sub">Transparent tracking of all public submissions across regions.</div>
                         <div class="wb-time" id="wbTime"></div>
                     </div>
-                    <a href="register.html" class="btn btn-accent">📝 File New Grievance</a>
                 </div>
-
 
                 <div
                     style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;margin-top:8px">
-                    <h3 style="font-size:1.05rem">Recent Grievances</h3>
-                    <button class="btn btn-ghost btn-sm" onclick="showPage('myGrievances',null)">View All →</button>
+                    <h3 style="font-size:1.05rem">Every Grievance (Live Feed)</h3>
                 </div>
                 <div class="grievance-list" id="recentList"></div>
             </div>
@@ -122,6 +119,8 @@
                     </div>
                     <a href="register.html" class="btn btn-primary">+ New Grievance</a>
                 </div>
+                <!-- Stats -->
+                <div class="stats-grid" id="citizenStats"></div>
 
                 <div class="filters-bar">
                     <div class="search-bar" style="flex:1;min-width:200px">
@@ -300,10 +299,9 @@
             }
             window._citizenUser = user;
 
-            document.getElementById('sbName').textContent = user.name || user.email.split('@')[0];
+            document.getElementById('sbName').innerHTML = `${user.name || user.email.split('@')[0]} ${user.verified || user.role !== 'citizen' ? '<span class="badge badge-success" style="padding:2px 6px;font-size:0.6rem">Verified</span>' : '<span class="badge badge-warning" style="padding:2px 6px;font-size:0.6rem">Pending</span>'}`;
             document.getElementById('sbAvatar').textContent = '👤';
-            document.getElementById('wbTitle').textContent = `Welcome, ${user.name ? user.name.split(' ')[0] : user.email.split('@')[0]}! 👋`;
-            document.getElementById('topbarUserName').textContent = user.name ? user.name.split(' ')[0] : 'Citizen';
+            document.getElementById('topbarUserName').innerHTML = `${user.name ? user.name.split(' ')[0] : 'Citizen'} ${user.verified || user.role !== 'citizen' ? '<span style="color:var(--success)">✔</span>' : ''}`;
             document.getElementById('wbTime').textContent = `📅 ${new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
 
             loadOverview();
@@ -323,10 +321,10 @@
                 grievances = allForDemo.slice(0, 3);
             }
 
-            // Recent 3
+            // Load all for public feed (max 10)
             const recentList = document.getElementById('recentList');
             if (recentList) {
-                const showList = grievances.slice(0, 3);
+                const showList = grievances.slice(0, 10);
                 recentList.innerHTML = showList.map(g => grievanceCard(g, true)).join('');
             }
         }
@@ -338,7 +336,7 @@
 
             let grievances = [];
             try {
-                grievances = await window.JanSamadhanAPI.getAllGrievances();
+                grievances = await window.JanSamadhanAPI.getMyGrievances();
 
                 // Client-side filtering for simplicity
                 if (search) {
@@ -357,6 +355,28 @@
                 }
             } catch (e) {
                 console.warn("API list failed", e);
+            }
+            
+            // Stats
+            const pending = grievances.filter(g => g.status !== 'resolved' && g.status !== 'closed').length;
+            const resolved = grievances.filter(g => g.status === 'resolved' || g.status === 'closed').length;
+            const emergency = grievances.filter(g => g.priority === 'emergency').length;
+            document.getElementById('pendingBadge').textContent = pending;
+
+            const statsEl = document.getElementById('citizenStats');
+            if (statsEl) {
+                statsEl.innerHTML = [
+                    { label: 'My Complaints', value: grievances.length, icon: '📋', color: 'var(--primary-light)', bg: 'rgba(37,99,235,.1)' },
+                    { label: 'Pending', value: pending, icon: '⏳', color: 'var(--warning)', bg: 'rgba(217,119,6,.1)' },
+                    { label: 'Resolved', value: resolved, icon: '✅', color: 'var(--success)', bg: 'rgba(22,163,74,.1)' },
+                    { label: 'Emergency', value: emergency, icon: '🚨', color: 'var(--danger)', bg: 'rgba(220,38,38,.1)' },
+                ].map(s => `
+                    <div class="stat-card card-hover" style="--stat-color:${s.color};--stat-bg:${s.bg}">
+                      <div class="stat-icon">${s.icon}</div>
+                      <div class="stat-value">${s.value}</div>
+                      <div class="stat-label">${s.label}</div>
+                    </div>
+                  `).join('');
             }
 
             const container = document.getElementById('allGrievanceList');

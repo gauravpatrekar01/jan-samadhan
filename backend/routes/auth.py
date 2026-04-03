@@ -35,5 +35,6 @@ def login(user: UserLogin):
     db_user.pop("_id", None)
     db_user.pop("password", None)
     db_user["token"] = token
+    db_user["verified"] = db_user.get("verified", False)
     
     return {"success": True, "data": db_user}
