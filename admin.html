@@ -536,8 +536,15 @@
         }
 
         // ── Users ──
-        function loadUsers() {
-            const users = window.JanSamadhan.users;
+        async function loadUsers() {
+            let users = [];
+            try {
+                users = await window.JanSamadhanAPI.getAllUsers();
+            } catch (err) {
+                console.warn("Failed to get users from API, using empty array or dummy data", err);
+                users = window.JanSamadhan.users || [];
+            }
+            
             const roleCounts = { citizen: 0, officer: 0, admin: 0 };
             users.forEach(u => roleCounts[u.role] = (roleCounts[u.role] || 0) + 1);
 

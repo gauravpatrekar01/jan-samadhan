@@ -96,6 +96,10 @@ const JanSamadhanAPI = {
                 priority_distribution: { emergency: 0, high: 0 }
             };
         }
+    },
+
+    async getAllUsers() {
+        return await this._fetch('/admin/users');
     }
 };
 
