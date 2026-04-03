@@ -1123,11 +1123,23 @@
     }
 
     // ── Track Grievance ──
-    function trackComplaint() {
+    async function trackComplaint() {
       const id = document.getElementById('trackInput')?.value.trim().toUpperCase();
       const result = document.getElementById('trackResult');
       if (!id) { showToast('Please enter a Grievance ID', 'warning'); return; }
-      const g = window.JanSamadhan.getGrievanceByID(id);
+      
+      const btn = document.querySelector('.track-input-row button');
+      const oldText = btn.innerText;
+      btn.innerText = '⏳ Tracking...';
+      
+      let g = null;
+      try {
+          g = await window.JanSamadhan.getGrievanceByID(id);
+      } catch (e) {
+          console.error(e);
+      }
+      
+      btn.innerText = oldText;
       if (!g) {
         result.className = 'visible';
         result.innerHTML = `

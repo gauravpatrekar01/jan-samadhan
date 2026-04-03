@@ -461,11 +461,25 @@
             showToast('Escalation logic to be implemented in backend', 'info');
         }
 
-        function loadAllComplaints() {
+        async function loadAllComplaints() {
             const search = document.getElementById('allSearch')?.value || '';
             const status = document.getElementById('allFilterStatus')?.value || '';
             const priority = document.getElementById('allFilterPriority')?.value || '';
-            const grievances = window.JanSamadhan.getPriorityQueue({ search: search || undefined, status: status || undefined, priority: priority || undefined });
+            
+            let grievances = [];
+            try {
+                grievances = await window.JanSamadhanAPI.getAllGrievances();
+            } catch (e) {
+                console.warn(e);
+            }
+            
+            if (search) {
+                const q = search.toLowerCase();
+                grievances = grievances.filter(g => g.id.toLowerCase().includes(q) || g.description.toLowerCase().includes(q) || (g.title && g.title.toLowerCase().includes(q)));
+            }
+            if (status) grievances = grievances.filter(g => g.status.toLowerCase() === status.toLowerCase().replace(' ', '_'));
+            if (priority) grievances = grievances.filter(g => g.priority.toLowerCase() === priority.toLowerCase());
+            
             const container = document.getElementById('allComplaintsList');
             if (!container) return;
             container.innerHTML = grievances.map(g => `
@@ -473,15 +487,15 @@
       <div class="gc-header">
         <div class="gc-icon" style="background:${categoryColor(g.category)}">${categoryIcon(g.category)}</div>
         <div style="flex:1">
-          <div class="gc-id">${g.grievanceID} | 👤 ${g.name}</div>
+          <div class="gc-id">${g.id} | 👤 ${g.citizen_id || 'Anonymous'}</div>
           <div class="gc-title">${g.category}</div>
-          <div class="gc-meta">${priorityBadge(g.priority)} ${statusBadge(g.status)} <span style="font-size:.78rem;color:var(--text-muted)">${g.region}</span></div>
+          <div class="gc-meta">${priorityBadge(g.priority.charAt(0).toUpperCase() + g.priority.slice(1))} ${statusBadge(g.status.charAt(0).toUpperCase() + g.status.slice(1).replace('_', ' '))} <span style="font-size:.78rem;color:var(--text-muted)">${g.region || 'N/A'}</span></div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <select class="status-select" onchange="quickStatusUpdate('${g.grievanceID}', this.value)">
-            ${window.JanSamadhan.STATUS_STAGES.map(s => `<option ${g.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+          <select class="status-select" onchange="quickStatusUpdate('${g.id}', this.value)">
+            ${window.JanSamadhan.STATUS_STAGES.map(s => `<option ${g.status.toLowerCase() === s.toLowerCase().replace(' ', '_') ? 'selected' : ''}>${s}</option>`).join('')}
           </select>
-          <button class="btn btn-ghost btn-sm" onclick="openUpdateModal('${g.grievanceID}')">✏️</button>
+          <button class="btn btn-ghost btn-sm" onclick="openUpdateModal('${g.id}')">✏️</button>
         </div>
       </div>
       <p style="font-size:.84rem;color:var(--text-muted)">${g.description.substring(0, 100)}...</p>
@@ -489,14 +503,24 @@
   `).join('');
         }
 
-        function quickStatusUpdate(gid, newStatus) {
-            window.JanSamadhan.updateGrievanceStatus(gid, newStatus);
-            showToast(`Updated ${gid} → ${newStatus}`, 'success');
-            loadOfficerStats();
+        async function quickStatusUpdate(gid, newStatus) {
+            newStatus = newStatus.toLowerCase().replace(' ', '_');
+            try {
+                await window.JanSamadhanAPI.updateGrievanceStatus(gid, newStatus, 'Status updated by field officer from quick menu.');
+                showToast(`Updated ${gid} → ${newStatus}`, 'success');
+                loadOfficerStats();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
         }
 
-        function loadEscalations() {
-            const escalated = window.JanSamadhan.getPriorityQueue({}).filter(g => g.escalated || g.priority === 'Emergency');
+        async function loadEscalations() {
+            let escalated = [];
+            try {
+                const queue = await window.JanSamadhanAPI.getAllGrievances();
+                escalated = queue.filter(g => g.escalated || g.priority?.toLowerCase() === 'emergency');
+            } catch (e) { console.warn(e); }
+            
             document.getElementById('escBadge').textContent = escalated.length;
             const container = document.getElementById('escalationList');
             if (!container) return;
@@ -508,11 +532,11 @@
     <div class="escalation-item">
       <div class="esc-icon">${categoryIcon(g.category)}</div>
       <div class="esc-info">
-        <div class="esc-id">🚨 ${g.grievanceID} – ${g.category}</div>
-        <div class="esc-desc">👤 ${g.name} | 📍 ${g.location.address} | ⏱ ${timeAgo(g.timestamp)}</div>
+        <div class="esc-id">🚨 ${g.id} – ${g.category}</div>
+        <div class="esc-desc">👤 ${g.citizen_id || 'Anonymous'} | 📍 ${g.location || 'N/A'} | ⏱ ${timeAgo(g.created_at)}</div>
         <div style="margin-top:4px;font-size:.8rem;color:#7f1d1d">${g.description.substring(0, 80)}...</div>
       </div>
-      <button class="btn btn-sm" style="background:#7f1d1d;color:#fff;flex-shrink:0" onclick="openUpdateModal('${g.grievanceID}')">Take Action</button>
+      <button class="btn btn-sm" style="background:#7f1d1d;color:#fff;flex-shrink:0" onclick="openUpdateModal('${g.id}')">Take Action</button>
     </div>
   `).join('');
         }

@@ -573,6 +573,16 @@
     <script src="js/chatbot.js"></script>
     <script>
         // ── Init map ──
+        window.addEventListener("load", function () {
+            const loader = document.getElementById("pageLoader");
+            if (loader) {
+                setTimeout(() => {
+                    loader.style.opacity = "0";
+                    setTimeout(() => { loader.style.display = "none"; }, 400);
+                }, 800);
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', () => {
             const user = getSessionUser();
             if (user && user.role === 'citizen') {

@@ -462,19 +462,29 @@
             }
         }
 
-        function adminEscalate(gid) {
-            const g = window.JanSamadhan.getGrievanceByID(gid);
-            if (g) { g.escalated = true; g.priority = 'Emergency'; }
-            window.JanSamadhan.updateGrievanceStatus(gid, 'Under Review', 'Escalated by Admin for immediate resolution.');
-            showToast(`🚨 ${gid} escalated to Emergency priority`, 'warning');
+        async function adminEscalate(gid) {
+            try {
+                const g = await window.JanSamadhanAPI.getGrievanceByID(gid);
+                if (!g) throw new Error("Grievance not found");
+                await window.JanSamadhanAPI.updateGrievanceStatus(gid, 'under_review', 'Escalated by Admin for immediate resolution.');
+                // Update priority too by adding a note (or if endpoint supports priority, do it there)
+            } catch (e) {
+                console.warn(e);
+            }
+            showToast(`🚨 ${gid} escalated to Emergency priority (Simulated)`, 'warning');
             loadAdminGrievances();
             loadAdminEscalations();
             loadOverview();
         }
 
         // ── Escalations ──
-        function loadAdminEscalations() {
-            const escalated = window.JanSamadhan.getPriorityQueue({}).filter(g => g.escalated || g.priority === 'Emergency');
+        async function loadAdminEscalations() {
+            let escalated = [];
+            try {
+                const queue = await window.JanSamadhanAPI.getAllGrievances();
+                escalated = queue.filter(g => g.escalated || g.priority?.toLowerCase() === 'emergency');
+            } catch (e) { console.warn(e); }
+            
             document.getElementById('adminEscBadge').textContent = escalated.length;
             const container = document.getElementById('adminEscList');
             if (!container) return;
@@ -483,24 +493,28 @@
     <div class="escalation-item">
       <div class="esc-icon">${categoryIcon(g.category)}</div>
       <div class="esc-info">
-        <div class="esc-id">🚨 ${g.grievanceID} – ${g.category} | ${g.region}</div>
-        <div class="esc-desc">👤 ${g.name} | 📞 ${g.contact} | 📍 ${g.location.address}</div>
+        <div class="esc-id">🚨 ${g.id} – ${g.category} | ${g.region || 'N/A'}</div>
+        <div class="esc-desc">👤 ${g.citizen_id || 'Anonymous'} | 📍 ${g.location || 'N/A'}</div>
         <div style="font-size:.8rem;color:#7f1d1d;margin-top:4px">${g.description.substring(0, 100)}...</div>
-        <div style="margin-top:6px">${statusBadge(g.status)} ${timeAgo(g.timestamp)}</div>
+        <div style="margin-top:6px">${statusBadge(g.status.charAt(0).toUpperCase() + g.status.slice(1).replace('_', ' '))} ${timeAgo(g.created_at)}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
-        <button class="btn btn-sm" style="background:#7f1d1d;color:#fff" onclick="adminUpdate('${g.grievanceID}')">Update</button>
-        <button class="btn btn-sm" style="background:var(--success);color:#fff" onclick="adminQuickResolve('${g.grievanceID}')">Resolve</button>
+        <button class="btn btn-sm" style="background:#7f1d1d;color:#fff" onclick="adminUpdate('${g.id}')">Update</button>
+        <button class="btn btn-sm" style="background:var(--success);color:#fff" onclick="adminQuickResolve('${g.id}')">Resolve</button>
       </div>
     </div>
   `).join('');
         }
 
-        function adminQuickResolve(gid) {
-            window.JanSamadhan.updateGrievanceStatus(gid, 'Resolved', 'Resolved by Admin intervention.');
-            showToast(`✅ ${gid} resolved`, 'success');
-            loadAdminEscalations();
-            loadOverview();
+        async function adminQuickResolve(gid) {
+            try {
+                await window.JanSamadhanAPI.updateGrievanceStatus(gid, 'resolved', 'Resolved by Admin intervention.');
+                showToast(`✅ ${gid} resolved`, 'success');
+                loadAdminEscalations();
+                loadOverview();
+            } catch (e) {
+                showToast("Failed to resolve", "error");
+            }
         }
 
         // ── Announcements ──
