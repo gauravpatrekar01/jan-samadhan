@@ -762,7 +762,8 @@
     }
 
     .topbar {
-        padding: 0 16px;
+        padding: 0 12px;
+        gap: 8px;
     }
 
     .topbar-hamburger {
@@ -780,6 +781,10 @@
     .topbar-user-name {
         display: none;
     }
+    
+    .topbar-actions .btn {
+        display: none;
+    }
 
     .dash-content {
         padding: 16px;
@@ -787,6 +792,10 @@
 
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+    
+    #overviewGrid, #kpiBars {
+        grid-template-columns: 1fr !important;
     }
 
     .charts-grid {
@@ -796,10 +805,11 @@
     .page-header {
         flex-direction: column;
         align-items: stretch;
+        gap: 12px;
     }
     
     .page-header .btn {
-        margin-top: 12px;
+        margin-top: 6px;
         width: 100%;
         text-align: center;
         justify-content: center;
@@ -824,6 +834,10 @@
         align-items: flex-start;
         gap: 6px;
     }
+    
+    .topbar-title {
+        font-size: 1rem;
+    }
 }
 
 @media(max-width: 480px) {
@@ -839,7 +853,11 @@
     }
     
     .topbar-title {
-        font-size: 0.95rem;
+        display: none;
+    }
+    
+    .table-wrap th, .table-wrap td {
+        white-space: nowrap;
     }
 }
 
