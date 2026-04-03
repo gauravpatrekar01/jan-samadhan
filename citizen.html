@@ -319,7 +319,7 @@
             let grievances = [];
 
             try {
-                grievances = await window.JanSamadhanAPI.getMyGrievances();
+                grievances = await window.JanSamadhanAPI.getAllGrievances();
             } catch (e) {
                 console.warn("Failed to fetch from API, using dummy", e);
                 const allForDemo = await window.JanSamadhanAPI.getAllGrievances();
@@ -363,7 +363,7 @@
 
             let grievances = [];
             try {
-                grievances = await window.JanSamadhanAPI.getMyGrievances();
+                grievances = await window.JanSamadhanAPI.getAllGrievances();
 
                 // Client-side filtering for simplicity
                 if (search) {
@@ -513,7 +513,7 @@
             const container = document.getElementById('feedbackList');
             if (!container) return;
             let grievances = [];
-            try { grievances = await window.JanSamadhanAPI.getMyGrievances(); } catch(e){}
+            try { grievances = await window.JanSamadhanAPI.getAllGrievances(); } catch(e){}
             const resolved = grievances.filter(g => g.status === 'resolved' || g.status === 'closed');
 
             if (!resolved.length) {
@@ -599,7 +599,7 @@
             if (!container) return;
             const lastID = sessionStorage.getItem('lastGrievanceID');
             let grievances = [];
-            try { grievances = await window.JanSamadhanAPI.getMyGrievances(); } catch(e){}
+            try { grievances = await window.JanSamadhanAPI.getAllGrievances(); } catch(e){}
             
             let showList = [];
             if (lastID) {

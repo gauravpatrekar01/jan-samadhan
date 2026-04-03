@@ -96,6 +96,10 @@ const JanSamadhanAPI = {
         });
     },
 
+    async getNotices() {
+        return await this._fetch('/admin/notices');
+    },
+
     async getAnalytics() {
         try {
             return await this._fetch('/admin/analytics');
