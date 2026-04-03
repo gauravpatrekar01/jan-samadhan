@@ -608,11 +608,21 @@
       <span class="badge ${roleBadge[u.role]}">${roleLabel[u.role]}</span>
       ${u.department ? `<span class="badge badge-muted">${u.department}</span>` : ''}
       <div style="margin-left:auto;display:flex;gap:8px">
-        <button class="btn btn-ghost btn-sm" onclick="showToast('User verification toggled','success')">Toggle Verification</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleVerification('${u.email}')">Toggle Verification</button>
         <button class="btn btn-ghost btn-sm" onclick="showToast('User management is demo only','info')">✏️ Edit</button>
       </div>
     </div>
   `).join('');
+        }
+
+        async function toggleVerification(email) {
+            try {
+                await window.JanSamadhanAPI.toggleUserVerification(email);
+                showToast(`Verification toggled for ${email}`, 'success');
+                loadUsers();
+            } catch(e) {
+                showToast(e.message, 'error');
+            }
         }
 
         async function initHeatmap() {

@@ -9,6 +9,16 @@ def get_users():
     users = list(collection.find({}, {"_id": 0, "password": 0}))
     return {"success": True, "data": users}
 
+@router.patch("/users/{email}/verify")
+def verify_user(email: str):
+    collection = db.get_collection("users")
+    user = collection.find_one({"email": email})
+    if not user:
+        return {"success": False, "message": "User not found"}
+    new_status = not user.get("verified", False)
+    collection.update_one({"email": email}, {"$set": {"verified": new_status}})
+    return {"success": True, "message": f"User verification toggled"}
+
 @router.get("/analytics")
 def get_analytics():
     collection = db.get_collection("complaints")
