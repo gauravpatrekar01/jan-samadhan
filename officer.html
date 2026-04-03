@@ -543,11 +543,19 @@
 
         // ── Analytics ──
         let _chartInstances = {};
-        function initAnalytics() {
-            const stats = window.JanSamadhan.getStats();
+        async function initAnalytics() {
+            let stats = { priority_distribution:{}, status_distribution:{}, byCategory:{} };
+            try {
+                stats = await window.JanSamadhanAPI.getAnalytics();
+                const allG = await window.JanSamadhanAPI.getAllGrievances();
+                const cats = {};
+                for(let g of allG) { cats[g.category] = (cats[g.category] || 0) + 1; }
+                stats.byCategory = cats;
+            } catch(e) {}
+            
             document.getElementById('analyticsStats').innerHTML = [
-                { label: 'Total', value: stats.total, icon: '📋', color: 'var(--primary-light)', bg: 'rgba(37,99,235,.1)' },
-                { label: 'Resolution Rate', value: stats.resolutionRate + '%', icon: '✅', color: 'var(--success)', bg: 'rgba(22,163,74,.1)' },
+                { label: 'Total', value: stats.total_complaints || 0, icon: '📋', color: 'var(--primary-light)', bg: 'rgba(37,99,235,.1)' },
+                { label: 'Resolution Rate', value: (stats.resolution_rate || 0) + '%', icon: '✅', color: 'var(--success)', bg: 'rgba(22,163,74,.1)' },
                 { label: 'Avg Time (est.)', value: '2.4 days', icon: '⚡', color: '#9333ea', bg: 'rgba(147,51,234,.1)' },
                 { label: 'Satisfaction', value: '4.1 ⭐', icon: '😊', color: 'var(--accent)', bg: 'rgba(249,115,22,.1)' },
             ].map(s => `<div class="stat-card card-hover" style="--stat-color:${s.color};--stat-bg:${s.bg}"><div class="stat-icon">${s.icon}</div><div class="stat-value">${s.value}</div><div class="stat-label">${s.label}</div></div>`).join('');
@@ -556,9 +564,9 @@
             if (_chartInstances.cat) _chartInstances.cat.destroy();
             if (_chartInstances.pri) _chartInstances.pri.destroy();
             if (_chartInstances.sta) _chartInstances.sta.destroy();
-            _chartInstances.cat = renderCategoryPie('offCatPie');
-            _chartInstances.pri = renderPriorityBar('offPriorityBar');
-            _chartInstances.sta = renderStatusPie('offStatusPie');
+            _chartInstances.cat = renderCategoryPie('offCatPie', stats);
+            _chartInstances.pri = renderPriorityBar('offPriorityBar', stats);
+            _chartInstances.sta = renderStatusPie('offStatusPie', stats);
 
             // Priority count table
             document.getElementById('priorityCountTable').innerHTML = `

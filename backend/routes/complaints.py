@@ -44,3 +44,15 @@ def update_status(id: str, status: str, remarks: str = ""):
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Complaint not found")
     return {"success": True, "message": f"Updated {id} status to {status}"}
+
+@router.patch("/{id}/feedback")
+def submit_feedback(id: str, rating: int, comment: str = ""):
+    collection = db.get_collection("complaints")
+    update_data = {
+        "$set": {"feedbackRating": rating, "feedbackComment": comment, "status": "closed", "updatedAt": datetime.utcnow().isoformat()},
+        "$push": {"history": {"status": "closed", "remarks": f"Citizen Feedback ({rating} Stars): {comment}", "timestamp": datetime.utcnow().isoformat()}}
+    }
+    result = collection.update_one({"id": id}, update_data)
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+    return {"success": True, "message": f"Feedback submitted for {id}"}
