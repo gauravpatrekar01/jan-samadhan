@@ -2074,7 +2074,17 @@ tbody tr {
    RESPONSIVE
    ============================================================ */
 @media(max-width: 768px) {
-  .nav-links {
+  .nav-links,
+  .nav-actions .btn-ghost,
+  .nav-actions .btn-nav-login {
+    display: none;
+  }
+  
+  .navbar {
+    padding: 0 16px;
+  }
+
+  .nav-tagline {
     display: none;
   }
 
@@ -2106,6 +2116,27 @@ tbody tr {
 }
 
 @media(max-width:480px) {
+  .nav-title {
+    font-size: 1.1rem;
+  }
+  
+  .nav-logo {
+    width: 38px;
+    height: 38px;
+    font-size: 1.1rem;
+  }
+
+  .dark-toggle {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
+
+  .hamburger {
+    width: 32px;
+    height: 32px;
+  }
+
   .btn-xl {
     padding: 14px 28px;
     font-size: 1rem;
