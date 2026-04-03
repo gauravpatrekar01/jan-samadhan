@@ -104,10 +104,7 @@
                     <a href="register.html" class="btn btn-accent">📝 File New Grievance</a>
                 </div>
 
-                <!-- Stats -->
-                <div class="stats-grid" id="citizenStats"></div>
 
-                <!-- Recent grievances -->
                 <div
                     style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;margin-top:8px">
                     <h3 style="font-size:1.05rem">Recent Grievances</h3>
@@ -324,28 +321,6 @@
                 console.warn("Failed to fetch from API, using dummy", e);
                 const allForDemo = await window.JanSamadhanAPI.getAllGrievances();
                 grievances = allForDemo.slice(0, 3);
-            }
-
-            // Stats
-            const pending = grievances.filter(g => g.status !== 'resolved' && g.status !== 'closed').length;
-            const resolved = grievances.filter(g => g.status === 'resolved' || g.status === 'closed').length;
-            const emergency = grievances.filter(g => g.priority === 'emergency').length;
-            document.getElementById('pendingBadge').textContent = pending;
-
-            const statsEl = document.getElementById('citizenStats');
-            if (statsEl) {
-                statsEl.innerHTML = [
-                    { label: 'My Complaints', value: grievances.length, icon: '📋', color: 'var(--primary-light)', bg: 'rgba(37,99,235,.1)' },
-                    { label: 'Pending', value: pending, icon: '⏳', color: 'var(--warning)', bg: 'rgba(217,119,6,.1)' },
-                    { label: 'Resolved', value: resolved, icon: '✅', color: 'var(--success)', bg: 'rgba(22,163,74,.1)' },
-                    { label: 'Emergency', value: emergency, icon: '🚨', color: 'var(--danger)', bg: 'rgba(220,38,38,.1)' },
-                ].map(s => `
-                    <div class="stat-card card-hover" style="--stat-color:${s.color};--stat-bg:${s.bg}">
-                      <div class="stat-icon">${s.icon}</div>
-                      <div class="stat-value">${s.value}</div>
-                      <div class="stat-label">${s.label}</div>
-                    </div>
-                  `).join('');
             }
 
             // Recent 3
