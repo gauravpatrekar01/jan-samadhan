@@ -1,197 +1,100 @@
-// JanSamadhan: Firebase-powered API Service
+// JanSamadhan: REST API Service connecting to Python Backend
 console.log("🚀 JanSamadhan: API Service Loading...");
 
+const API_BASE_URL = 'http://localhost:8000/api';
+
 const JanSamadhanAPI = {
-    // ── AUTHENTICATION ──
-    
-    async register(userData) {
+    async _fetch(endpoint, options = {}) {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
         try {
-            const auth = window.auth;
-            const db = window.db;
-            if (!auth || !db) throw new Error("Firebase not initialized correctly.");
-            if (!window.navigator.onLine) throw new Error("You are offline. Please check your internet connection.");
-
-            // 1. Create user in Firebase Auth
-            const userCredential = await auth.createUserWithEmailAndPassword(userData.email, userData.password);
-            const user = userCredential.user;
-
-            // 2. Store additional user info in Firestore
-            const profile = {
-                uid: user.uid,
-                name: userData.name,
-                email: userData.email,
-                role: (userData.role || 'citizen').toLowerCase(),
-                department: userData.department || null,
-                createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
-            };
-            await db.collection('users').doc(user.uid).set(profile);
-
-            // 3. Set local session
-            localStorage.setItem('js_user', JSON.stringify(profile));
-            return profile;
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                ...options,
+                headers: {
+                    ...headers,
+                    ...options.headers
+                }
+            });
+            const data = await response.json();
+            if (!response.ok || data.success === false) {
+                throw new Error(data.message || (data.error && data.error.message) || "API Request failed");
+            }
+            return data.data || data;
         } catch (error) {
-            console.error("Registration Error:", error);
-            throw new Error(error.message);
+            console.error(`API Error on ${endpoint}:`, error);
+            throw error;
         }
+    },
+
+    async register(userData) {
+        return await this._fetch('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify(userData)
+        });
     },
 
     async login(credentials) {
-        try {
-            const auth = window.auth;
-            const db = window.db;
-            if (!auth || !db) throw new Error("Firebase not initialized correctly.");
-            if (!window.navigator.onLine) throw new Error("You are offline. Please check your internet connection for login.");
-
-            // 1. Sign in with Auth
-            const userCredential = await auth.signInWithEmailAndPassword(credentials.email, credentials.password);
-            const user = userCredential.user;
-
-            // 2. Fetch profile from Firestore
-            const doc = await db.collection('users').doc(user.uid).get();
-            if (!doc.exists) throw new Error("User profile not found. Please register first.");
-            
-            const profile = doc.data();
-            localStorage.setItem('js_user', JSON.stringify(profile));
-            return profile;
-        } catch (error) {
-            console.error("Login Error:", error);
-            throw new Error(error.message);
+        const response = await this._fetch('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify(credentials)
+        });
+        if (response && response.token) {
+            localStorage.setItem('token', response.token);
+            // Store user profile info explicitly too if sent by the backend
+            localStorage.setItem('js_user', JSON.stringify(response));
         }
+        return response;
     },
 
     async logout() {
-        try {
-            if (window.auth) {
-                await window.auth.signOut();
-                localStorage.removeItem('js_user');
-            }
-        } catch (error) {
-            console.error("Logout Error:", error);
-        }
+        localStorage.removeItem('token');
+        localStorage.removeItem('js_user');
     },
 
-    // ── GRIEVANCES (Firestore) ──
-
     async createGrievance(grievanceData) {
-        try {
-            const db = window.db;
-            const user = JSON.parse(localStorage.getItem('js_user'));
-            const docRef = await db.collection('complaints').add({
-                ...grievanceData,
-                citizen_id: user ? user.uid : 'anonymous',
-                status: 'submitted',
-                createdAt: window.firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
-                history: [
-                    { status: 'submitted', remarks: 'Grievance filed by citizen', timestamp: new Date().toISOString() }
-                ]
-            });
-            return { id: docRef.id, ...grievanceData };
-        } catch (error) {
-            console.error("Create Grievance Error:", error);
-            throw new Error(error.message);
-        }
+        return await this._fetch('/complaints/', {
+            method: 'POST',
+            body: JSON.stringify(grievanceData)
+        });
     },
 
     async getMyGrievances() {
-        try {
-            const db = window.db;
-            const user = JSON.parse(localStorage.getItem('js_user'));
-            if (!user) throw new Error("Authentication required");
-
-            const snapshot = await db.collection('complaints')
-                .where('citizen_id', '==', user.uid)
-                .orderBy('createdAt', 'desc')
-                .get();
-            
-            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        } catch (error) {
-            console.error("Fetch User Grievances Error:", error);
-            return [];
-        }
+        return await this._fetch('/complaints/my');
     },
 
     async getAllGrievances() {
-        try {
-            const db = window.db;
-            const snapshot = await db.collection('complaints')
-                .orderBy('createdAt', 'desc')
-                .limit(100)
-                .get();
-            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        } catch (error) {
-            console.error("Fetch All Grievances Error:", error);
-            return [];
-        }
+        return await this._fetch('/complaints/');
     },
 
     async getAssignedGrievances() {
-        try {
-            const db = window.db;
-            const snapshot = await db.collection('complaints')
-                .where('status', 'in', ['submitted', 'under_review', 'in_progress'])
-                .get();
-            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        } catch (error) {
-            return this.getAllGrievances(); 
-        }
+        return await this._fetch('/complaints/assigned');
     },
 
     async getGrievanceByID(id) {
-        try {
-            const db = window.db;
-            const doc = await db.collection('complaints').doc(id).get();
-            if (!doc.exists) throw new Error("Grievance not found");
-            return { id: doc.id, ...doc.data() };
-        } catch (error) {
-            console.error("Fetch Grievance Detail Error:", error);
-            throw new Error(error.message);
-        }
+        return await this._fetch(`/complaints/${id}`);
     },
 
     async updateGrievanceStatus(id, status, remarks) {
-        try {
-            const db = window.db;
-            const update = {
-                status: status,
-                updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
-                history: window.firebase.firestore.FieldValue.arrayUnion({
-                    status: status,
-                    remarks: remarks,
-                    timestamp: new Date().toISOString()
-                })
-            };
-            await db.collection('complaints').doc(id).update(update);
-            return true;
-        } catch (error) {
-            console.error("Update Status Error:", error);
-            throw new Error(error.message);
-        }
+        return await this._fetch(`/complaints/${id}/status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status, remarks })
+        });
     },
 
     async getAnalytics() {
         try {
-            const db = window.db;
-            if (!db) return null;
-            const snapshot = await db.collection('complaints').get();
-            const grievances = snapshot.docs.map(doc => doc.data());
-            
-            const total = grievances.length;
-            const resolved = grievances.filter(g => g.status === 'resolved' || g.status === 'closed').length;
-            const emergency = grievances.filter(g => g.priority === 'emergency').length;
-            const high = grievances.filter(g => g.priority === 'high').length;
-            const submitted = grievances.filter(g => g.status === 'submitted' || g.status === 'Submitted').length;
-
+            return await this._fetch('/admin/analytics');
+        } catch(err) {
             return {
-                total_complaints: total,
-                resolved_complaints: resolved,
-                resolution_rate: total > 0 ? Math.round((resolved / total) * 100) : 0,
-                status_distribution: { submitted: submitted },
-                priority_distribution: { emergency: emergency, high: high }
+                total_complaints: 0,
+                resolved_complaints: 0,
+                resolution_rate: 0,
+                status_distribution: { submitted: 0 },
+                priority_distribution: { emergency: 0, high: 0 }
             };
-        } catch (error) {
-            console.error("Fetch Analytics Error:", error);
-            return null;
         }
     }
 };
