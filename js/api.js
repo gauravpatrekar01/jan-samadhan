@@ -1,7 +1,7 @@
 // JanSamadhan: REST API Service connecting to Python Backend
 console.log("🚀 JanSamadhan: API Service Loading...");
 
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = `http://${window.location.hostname}:8000/api`;
 
 const JanSamadhanAPI = {
     async _fetch(endpoint, options = {}) {
