@@ -57,5 +57,16 @@ def get_analytics():
         "priority_distribution": priority_dist,
         "byRegion": regions
     }
-    
     return {"success": True, "data": stats}
+
+@router.post("/notices")
+def add_notice(notice: dict):
+    collection = db.get_collection("announcements")
+    collection.insert_one(notice)
+    return {"success": True, "message": "Notice added"}
+
+@router.get("/notices")
+def get_notices():
+    collection = db.get_collection("announcements")
+    notices = list(collection.find({}, {"_id": 0}))
+    return {"success": True, "data": notices}

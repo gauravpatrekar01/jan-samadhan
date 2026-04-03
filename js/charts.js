@@ -33,7 +33,7 @@ function renderCategoryPie(id, stats) {
                 borderWidth: 0
             }]
         },
-        options: { cutout: '70%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } } }
+        options: { maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } } }
     });
 }
 
@@ -51,7 +51,7 @@ function renderPriorityBar(id, stats) {
                 backgroundColor: ['#7f1d1d', '#dc2626', '#d97706', '#16a34a']
             }]
         },
-        options: { scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+        options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
     });
 }
 
@@ -68,7 +68,7 @@ function renderStatusPie(id, stats) {
                 backgroundColor: ['#64748b', '#3b82f6', '#16a34a']
             }]
         },
-        options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } } }
+        options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } } }
     });
 }
 

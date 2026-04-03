@@ -386,7 +386,7 @@
                 { label: 'Resolution Progress', val: stats.resolution_rate || 0, color: 'var(--success)', subtext: 'Overall system performance' },
                 { label: 'High Priority Load', val: Math.round(((stats.priority_distribution?.high || 0) / (stats.total_complaints || 1)) * 100), color: '#dc2626', subtext: 'High priority complaints share' },
             ].map(k => `
-                <div class="card">
+                <div class="card card-hover" style="cursor:pointer" onclick="showToast('Quick Info: ${k.label} is ${k.val}%. ${k.subtext}', 'info')">
                   <div class="kpi-bar">
                     <div class="kpi-label"><span style="font-weight:600">${k.label}</span><span style="color:var(--text-muted)">${k.subtext}</span></div>
                     <div class="progress-bar-wrap" style="height:10px">
@@ -437,14 +437,21 @@
                   <td>${priorityBadge(g.priority.charAt(0).toUpperCase() + g.priority.slice(1))}</td>
                   <td>${statusBadge(g.status.charAt(0).toUpperCase() + g.status.slice(1).replace('_', ' '))}</td>
                   <td>${g.region || 'N/A'}</td>
-                  <td style="font-size:.8rem">${new Date(g.created_at).toLocaleDateString()}</td>
+                  <td style="font-size:.8rem">${new Date(g.created_at || g.timestamp || Date.now()).toLocaleDateString()}</td>
                   <td>
                     <div style="display:flex;gap:6px">
                       <button class="btn btn-ghost btn-sm" onclick="adminUpdate('${g.id}')">✏️</button>
+                      <button class="btn btn-ghost btn-sm" onclick="alert('View Details '+ '${g.id}')">👁️</button>
                     </div>
                   </td>
                 </tr>
               `).join('');
+        }
+
+        function adminUpdate(gid) {
+            _adminUpdateGID = gid;
+            document.getElementById('adminUpdateInfo').innerText = 'System ID: ' + gid;
+            openModal('adminUpdateModal');
         }
 
         async function confirmAdminUpdate() {
@@ -517,11 +524,11 @@
             }
         }
 
-        // ── Announcements ──
         function loadAdminAnnouncements() {
             const container = document.getElementById('adminAnnList');
             if (!container) return;
-            container.innerHTML = window.JanSamadhan.getAnnouncements().map(a => `
+            const announcements = window.JanSamadhan.getAnnouncements();
+            container.innerHTML = announcements.map(a => `
     <div class="announce-card ${a.pinned ? 'pinned' : ''}">
       <div class="announce-icon">${a.pinned ? '📌' : '📣'}</div>
       <div style="flex:1">
@@ -533,9 +540,17 @@
   `).join('') || '<div style="text-align:center;padding:32px;color:var(--text-muted)">No announcements yet</div>';
         }
 
-        function addAnnouncement() {
+        async function addAnnouncement() {
             const text = document.getElementById('newAnnText')?.value.trim();
             if (!text) { showToast('Please enter announcement text', 'warning'); return; }
+            const notice = {
+                text: text,
+                date: new Date().toISOString().split('T')[0],
+                pinned: true
+            };
+            try {
+                await window.JanSamadhanAPI.addNotice(notice);
+            } catch(e) {}
             window.JanSamadhan.addAnnouncement(text);
             document.getElementById('newAnnText').value = '';
             closeModal('addAnnModal');
@@ -594,6 +609,27 @@
   `).join('');
         }
 
+        async function initHeatmap() {
+            const all = await window.JanSamadhanAPI.getAllGrievances();
+            renderDummyMap('adminHeatMap', all);
+            const stats = await window.JanSamadhanAPI.getAnalytics();
+            
+            const cats = {};
+            for(let g of all) {
+               cats[g.region || 'Mumbai City'] = (cats[g.region || 'Mumbai City'] || 0) + 1;
+            }
+            
+            const container = document.getElementById('heatmapGrid');
+            if (container) {
+                container.innerHTML = Object.entries(cats).map(([r, c]) => `
+      <div class="stat-card" style="--stat-color:var(--primary-light);--stat-bg:rgba(37,99,235,.08); display:inline-block; margin: 10px; width: 220px;">
+        <div class="stat-icon">📍</div>
+        <div class="stat-value">${c}</div>
+        <div class="stat-label">${r}</div>
+      </div>
+    `).join('');
+            }
+        }
         function logoutUser() {
             window.JanSamadhan.logout();
             sessionStorage.removeItem('js_user');

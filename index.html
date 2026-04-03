@@ -969,16 +969,28 @@
 
       initCounters();
 
-      // Population ticker
+      // Populate ticker
       const tickerInner = document.getElementById('tickerInner');
       if (tickerInner) {
         const notices = [
-          "🚨 Emergency grievance GS-8B2A resolved in record 4 hours in North Delhi.",
+          "🚨 Emergency grievance GS-8B2A resolved in record 4 hours in North Mumbai.",
           "📢 New portal for rural area grievances launching next week.",
           "✅ 98% resolution rate achieved for Water Supply issues this month.",
           "🛡️ System updated with latest security protocols for user data protection."
         ];
         tickerInner.innerHTML = notices.map(n => `<span class="ticker-item">${n}</span>`).join('');
+      }
+      
+      // Populate Announcements list
+      const list = document.getElementById('announcementsList');
+      if (list) {
+          const fetchedNotices = window.JanSamadhan.getAnnouncements();
+          list.innerHTML = fetchedNotices.map(n => `
+              <div class="notice-card" style="padding: 16px; border-bottom: 1px solid var(--border); ${n.pinned ? 'background: rgba(249, 115, 22, 0.05);' : ''}">
+                  <div style="font-size: .8rem; color: var(--text-muted); margin-bottom: 4px;">📅 ${formatDate(n.date)} ${n.pinned ? '📌 Pinned' : ''}</div>
+                  <div style="font-weight: 600; font-size: .95rem;">${n.text}</div>
+              </div>
+          `).join('');
       }
 
       // Sample IDs for track
@@ -1134,7 +1146,7 @@
       
       let g = null;
       try {
-          g = await window.JanSamadhan.getGrievanceByID(id);
+          g = await window.JanSamadhanAPI.getGrievanceByID(id);
       } catch (e) {
           console.error(e);
       }
