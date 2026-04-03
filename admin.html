@@ -524,10 +524,15 @@
             }
         }
 
-        function loadAdminAnnouncements() {
+        async function loadAdminAnnouncements() {
             const container = document.getElementById('adminAnnList');
             if (!container) return;
-            const announcements = window.JanSamadhan.getAnnouncements();
+            let announcements = [];
+            try { 
+                announcements = await window.JanSamadhanAPI.getNotices(); 
+            } catch(e) {
+                announcements = window.JanSamadhan.getAnnouncements();
+            }
             container.innerHTML = announcements.map(a => `
     <div class="announce-card ${a.pinned ? 'pinned' : ''}">
       <div class="announce-icon">${a.pinned ? '📌' : '📣'}</div>
@@ -597,12 +602,13 @@
     <div class="user-row">
       <div class="user-row-av">${u.avatar || u.name[0]}</div>
       <div class="user-row-info">
-        <div class="user-row-name">${u.name}</div>
+        <div class="user-row-name">${u.name} ${u.verified || u.role !== 'citizen' ? '<span style="color:var(--success);font-size:.8rem" title="Verified User">✔</span>' : '<span style="color:var(--warning);font-size:.8rem" title="Pending Verification">⚠</span>'}</div>
         <div class="user-row-eml">${u.email}</div>
       </div>
       <span class="badge ${roleBadge[u.role]}">${roleLabel[u.role]}</span>
       ${u.department ? `<span class="badge badge-muted">${u.department}</span>` : ''}
       <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="showToast('User verification toggled','success')">Toggle Verification</button>
         <button class="btn btn-ghost btn-sm" onclick="showToast('User management is demo only','info')">✏️ Edit</button>
       </div>
     </div>
