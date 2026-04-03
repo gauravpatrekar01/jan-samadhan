@@ -1063,8 +1063,10 @@
       try {
         let response;
         if (mode === 'signup') {
-          response = await window.JanSamadhanAPI.register({ name, email, password, role: role });
-          showToast('Account created successfully!', 'success');
+          await window.JanSamadhanAPI.register({ name, email, password, role: role });
+          // Auto-login after successful registration to get the token
+          response = await window.JanSamadhanAPI.login({ email, password });
+          showToast('Account created and logged in successfully!', 'success');
         } else {
           response = await window.JanSamadhanAPI.login({ email, password });
           showToast('Login successful!', 'success');
