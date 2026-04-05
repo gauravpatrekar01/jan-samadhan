@@ -556,10 +556,11 @@
         }
 
         // ── Announcements ──
-        function loadAnnouncementsPage() {
+        async function loadAnnouncementsPage() {
             const container = document.getElementById('dashAnnouncements');
             if (!container) return;
-            container.innerHTML = window.JanSamadhan.getAnnouncements().map(a => `
+            const announcements = await window.JanSamadhan.getAnnouncements();
+            container.innerHTML = announcements.map(a => `
     <div class="announce-card ${a.pinned ? 'pinned' : ''}">
       <div class="announce-icon">${a.pinned ? '📌' : '📣'}</div>
       <div><div class="announce-text">${a.text}</div><div class="announce-date">📅 ${a.date}</div></div>

@@ -984,7 +984,7 @@
       // Populate Announcements list
       const list = document.getElementById('announcementsList');
       if (list) {
-          const fetchedNotices = window.JanSamadhan.getAnnouncements();
+          const fetchedNotices = await window.JanSamadhan.getAnnouncements();
           list.innerHTML = fetchedNotices.map(n => `
               <div class="notice-card" style="padding: 16px; border-bottom: 1px solid var(--border); ${n.pinned ? 'background: rgba(249, 115, 22, 0.05);' : ''}">
                   <div style="font-size: .8rem; color: var(--text-muted); margin-bottom: 4px;">📅 ${formatDate(n.date)} ${n.pinned ? '📌 Pinned' : ''}</div>
