@@ -1075,40 +1075,72 @@
       const aadhar = document.getElementById('loginAadhar').value;
 
       const btn = document.getElementById('authSubmitBtn');
-      if (!btn) return;
+      if (!btn) {
+        console.error("❌ Submit button not found!");
+        return;
+      }
       
       const originalText = btn.innerHTML;
       btn.innerHTML = '⌛ Processing...';
       btn.disabled = true;
 
       try {
+        console.log("📡 Contacting backend at:", window.API_BASE_URL || 'unknown');
+        
         let response;
         if (mode === 'signup') {
           if (role !== 'citizen') {
             throw new Error('Officers must be created by the admin. Please login instead.');
           }
+          console.log("📝 Registering new user:", email);
           await window.JanSamadhanAPI.register({ name, email, password, role: role, aadhar });
           // Auto-login after successful registration to get the token
+          console.log("🔑 Auto-logging in after registration...");
           response = await window.JanSamadhanAPI.login({ email, password });
           showToast('Account created and logged in successfully!', 'success');
         } else {
+          console.log("🔑 Attempting login for:", email);
           response = await window.JanSamadhanAPI.login({ email, password });
           showToast('Login successful!', 'success');
         }
 
+        console.log("✅ Auth response received:", response);
+        
+        if (!response) {
+          console.error("❌ Empty response from auth endpoint!");
+          showToast('Server returned empty response. Please try again.', 'error');
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+          return;
+        }
+
+        if (!response.role) {
+          console.error("❌ No role in response:", response);
+          showToast('Invalid response from server - missing role. Please contact support.', 'error');
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+          return;
+        }
+
+        console.log("👤 User role:", response.role);
+        
         setTimeout(() => {
-          if (!response || !response.role) {
-             console.error("No response role", response);
-             return;
-          }
           const userRole = response.role.toLowerCase();
+          console.log("🚀 Redirecting to:", userRole === 'citizen' ? 'citizen.html' : userRole === 'officer' ? 'officer.html' : 'admin.html');
+          
           if (userRole === 'citizen') window.location.href = 'citizen.html';
           else if (userRole === 'officer') window.location.href = 'officer.html';
           else if (userRole === 'admin') window.location.href = 'admin.html';
+          else {
+            console.error("❌ Unknown role:", userRole);
+            showToast('Unknown user role: ' + userRole, 'error');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+          }
         }, 800);
       } catch (err) {
-        console.error("Auth Fail:", err);
-        showToast(err.message, 'error');
+        console.error("❌ Auth Error:", err.message, err);
+        showToast((err.message || 'Login failed') + ' · Check browser console for details', 'error');
         btn.innerHTML = originalText;
         btn.disabled = false;
       }

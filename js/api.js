@@ -1,7 +1,17 @@
 // JanSamadhan: REST API Service connecting to Python Backend
 console.log("🚀 JanSamadhan: API Service Loading...");
 
-const API_BASE_URL = `http://${window.location.hostname}:8000`;
+// Determine API base URL - handle both local file:// and http:// serving
+const API_BASE_URL = (() => {
+    if (!window.location.hostname || window.location.hostname === '') {
+        // Local file (file://) - default to localhost:8000
+        return 'http://localhost:8000';
+    }
+    // Normal web serving - use current hostname
+    return `http://${window.location.hostname}:8000`;
+})();
+
+console.log("📡 API Base URL:", API_BASE_URL);
 
 const JanSamadhanAPI = {
     async _fetch(endpoint, options = {}) {
@@ -14,23 +24,84 @@ const JanSamadhanAPI = {
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
 
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-            ...options,
-            headers: { ...headers, ...options.headers }
-        });
+        try {
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                ...options,
+                headers: { ...headers, ...options.headers }
+            });
 
-        const data = await response.json();
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                console.error("Failed to parse JSON response:", e);
+                throw new Error(`Invalid response from server (${response.status})`);
+            }
 
-        if (!response.ok || data.success === false) {
-            throw new Error(
-                data.detail ||
-                data.message ||
-                (data.error && data.error.message) ||
-                `Request failed (${response.status})`
-            );
+            console.log(`📨 ${options.method || 'GET'} ${endpoint} → ${response.status}`, data);
+
+            // Handle token expiration (401 with TOKEN_EXPIRED code)
+            if (response.status === 401 && data.error?.code === 'TOKEN_EXPIRED') {
+                const refreshToken = userRaw ? JSON.parse(userRaw).refresh_token : null;
+                if (refreshToken) {
+                    const newTokens = await this.refreshAccessToken(refreshToken);
+                    if (newTokens) {
+                        // Retry original request with new token
+                        const user = JSON.parse(sessionStorage.getItem('js_user') || localStorage.getItem('js_user'));
+                        user.token = newTokens.token;
+                        user.refresh_token = newTokens.refresh_token;
+                        sessionStorage.setItem('js_user', JSON.stringify(user));
+                        localStorage.setItem('js_user', JSON.stringify(user));
+                        return this._fetch(endpoint, options);
+                    }
+                }
+                // Refresh failed, redirect to login
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // Check for errors
+            if (!response.ok) {
+                const errorMsg = data.detail ||
+                    data.error?.message ||
+                    data.message ||
+                    `Request failed: ${response.status}`;
+                console.error("❌ API Error:", errorMsg, data);
+                throw new Error(errorMsg);
+            }
+
+            // If response has success: false, treat as error
+            if (data.success === false) {
+                const errorMsg = data.error?.message || data.message || "Request failed";
+                console.error("❌ API Error (success=false):", errorMsg, data);
+                throw new Error(errorMsg);
+            }
+
+            // Return the data payload
+            const result = data.data !== undefined ? data.data : data;
+            return result;
+        } catch (err) {
+            console.error("🔥 Fetch error:", err);
+            throw err;
         }
+    },
 
-        return data.data !== undefined ? data.data : data;
+    async refreshAccessToken(refreshToken) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: refreshToken })
+            });
+            const data = await response.json();
+            if (data.success) {
+                return data.data;
+            }
+            return null;
+        } catch (err) {
+            console.error('Token refresh failed:', err);
+            return null;
+        }
     },
 
     async register(userData) {
@@ -44,7 +115,6 @@ const JanSamadhanAPI = {
         });
         if (response && response.token) {
             sessionStorage.setItem('js_user', JSON.stringify(response));
-            // Keep localStorage in sync for pages that read from it
             localStorage.setItem('js_user', JSON.stringify(response));
         }
         return response;
@@ -71,20 +141,42 @@ const JanSamadhanAPI = {
         return this._fetch('/api/complaints/', { method: 'POST', body: JSON.stringify(grievanceData) });
     },
 
-    async getMyGrievances() {
-        return this._fetch('/api/complaints/my');
+    async getMyGrievances(status = null, priority = null, skip = 0, limit = 50) {
+        const params = new URLSearchParams();
+        if (status) params.append('status', status);
+        if (priority) params.append('priority', priority);
+        params.append('skip', skip);
+        params.append('limit', limit);
+        return this._fetch(`/api/complaints/my?${params}`);
     },
 
-    async getAllGrievances() {
-        return this._fetch('/api/complaints/');
+    async getAllGrievances(status = null, priority = null, category = null, region = null, search = null, skip = 0, limit = 50) {
+        const params = new URLSearchParams();
+        if (status) params.append('status', status);
+        if (priority) params.append('priority', priority);
+        if (category) params.append('category', category);
+        if (region) params.append('region', region);
+        if (search) params.append('search', search);
+        params.append('skip', skip);
+        params.append('limit', limit);
+        return this._fetch(`/api/complaints/?${params}`);
     },
 
-    async getAssignedGrievances() {
-        return this._fetch('/api/complaints/assigned');
+    async getAssignedGrievances(status = null, priority = null, skip = 0, limit = 50) {
+        const params = new URLSearchParams();
+        if (status) params.append('status', status);
+        if (priority) params.append('priority', priority);
+        params.append('skip', skip);
+        params.append('limit', limit);
+        return this._fetch(`/api/complaints/assigned?${params}`);
     },
 
     async getGrievanceByID(id) {
         return this._fetch(`/api/complaints/${id}`);
+    },
+
+    async assignComplaint(id, officerEmail) {
+        return this._fetch(`/api/complaints/${id}/assign?officer_email=${officerEmail}`, { method: 'PATCH' });
     },
 
     async updateGrievanceStatus(id, status, remarks = '') {
@@ -154,6 +246,14 @@ const JanSamadhanAPI = {
 
     async governmentVerifyUser(email) {
         return this._fetch(`/api/admin/users/${email}/verify-government`, { method: 'POST' });
+    },
+
+    async getAuditLog(actorEmail = null, action = null, limit = 100) {
+        const params = new URLSearchParams();
+        if (actorEmail) params.append('actor_email', actorEmail);
+        if (action) params.append('action', action);
+        params.append('limit', limit);
+        return this._fetch(`/api/admin/audit-log?${params}`);
     }
 };
 

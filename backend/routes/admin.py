@@ -1,38 +1,25 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends
 from schemas.user import UserCreate
 from db import db
-from security import decode_token, hash_password
+from security import hash_password
+from dependencies import require_admin
 from datetime import datetime, timezone
 from government_registry import verify_citizen_record
+from audit import log_audit, get_audit_log
+from errors import ValidationError, NotFoundError, ConflictError
 import uuid
 
 router = APIRouter()
 
 
-def get_current_user(authorization: str = Header(None)) -> dict:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    token = authorization.split(" ", 1)[1]
-    payload = decode_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    return payload
-
-
-def require_admin(user: dict = Depends(get_current_user)) -> dict:
-    if user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
-    return user
-
-
 @router.post("/users", status_code=201)
 def create_user(user: UserCreate, admin: dict = Depends(require_admin)):
     if user.role not in {"officer", "admin"}:
-        raise HTTPException(status_code=400, detail="Admin may only create officer or admin accounts")
+        raise ValidationError("Admin may only create officer or admin accounts")
 
     collection = db.get_collection("users")
     if collection.find_one({"email": user.email}):
-        raise HTTPException(status_code=400, detail="User already exists")
+        raise ConflictError("User already exists")
 
     user_dict = user.model_dump()
     user_dict["password"] = hash_password(user.password)
@@ -42,6 +29,16 @@ def create_user(user: UserCreate, admin: dict = Depends(require_admin)):
     collection.insert_one(user_dict)
     user_dict.pop("_id", None)
     user_dict.pop("password", None)
+
+    log_audit(
+        action="user_created",
+        actor_email=admin["sub"],
+        actor_role=admin["role"],
+        resource_type="user",
+        resource_id=user.email,
+        details={"name": user.name, "role": user.role},
+    )
+
     return {"success": True, "data": user_dict}
 
 
@@ -57,10 +54,25 @@ def verify_user(email: str, admin: dict = Depends(require_admin)):
     collection = db.get_collection("users")
     user = collection.find_one({"email": email})
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise NotFoundError("User")
+
     new_status = not user.get("verified", False)
     collection.update_one({"email": email}, {"$set": {"verified": new_status}})
-    return {"success": True, "message": f"User {'verified' if new_status else 'unverified'}", "verified": new_status}
+
+    log_audit(
+        action="user_verified",
+        actor_email=admin["sub"],
+        actor_role=admin["role"],
+        resource_type="user",
+        resource_id=email,
+        details={"verified": new_status},
+    )
+
+    return {
+        "success": True,
+        "message": f"User {'verified' if new_status else 'unverified'}",
+        "verified": new_status,
+    }
 
 
 @router.post("/users/{email}/verify-government")
@@ -68,16 +80,30 @@ def verify_user_government(email: str, admin: dict = Depends(require_admin)):
     collection = db.get_collection("users")
     user = collection.find_one({"email": email})
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    if user.get("role") != "citizen":
-        raise HTTPException(status_code=400, detail="Government verification only applies to citizen accounts")
-    if not user.get("aadhar"):
-        raise HTTPException(status_code=400, detail="Aadhar number is required for government verification")
+        raise NotFoundError("User")
 
-    if not verify_citizen_record(user.get("name"), user.get("email"), user.get("aadhar")):
-        raise HTTPException(status_code=400, detail="No matching government record found")
+    if user.get("role") != "citizen":
+        raise ValidationError("Government verification only applies to citizen accounts")
+
+    if not user.get("aadhar"):
+        raise ValidationError("Aadhar number is required for government verification")
+
+    if not verify_citizen_record(
+        user.get("name"), user.get("email"), user.get("aadhar")
+    ):
+        raise ValidationError("No matching government record found")
 
     collection.update_one({"email": email}, {"$set": {"verified": True}})
+
+    log_audit(
+        action="citizen_verified_government",
+        actor_email=admin["sub"],
+        actor_role=admin["role"],
+        resource_type="user",
+        resource_id=email,
+        details={"method": "government_record"},
+    )
+
     return {"success": True, "message": "Citizen verified against government records"}
 
 
@@ -90,7 +116,13 @@ def get_analytics(admin: dict = Depends(require_admin)):
     resolved = sum(1 for c in complaints if c.get("status") in {"resolved", "closed"})
     resolution_rate = round((resolved / total * 100), 1) if total > 0 else 0
 
-    status_dist = {"submitted": 0, "under_review": 0, "in_progress": 0, "resolved": 0, "closed": 0}
+    status_dist = {
+        "submitted": 0,
+        "under_review": 0,
+        "in_progress": 0,
+        "resolved": 0,
+        "closed": 0,
+    }
     priority_dist = {"emergency": 0, "high": 0, "medium": 0, "low": 0}
     regions: dict[str, int] = {}
 
@@ -123,21 +155,36 @@ def get_analytics(admin: dict = Depends(require_admin)):
 @router.post("/notices", status_code=201)
 def add_notice(notice: dict, admin: dict = Depends(require_admin)):
     if not notice.get("text", "").strip():
-        raise HTTPException(status_code=400, detail="Notice text is required")
+        raise ValidationError("Notice text is required")
+
     collection = db.get_collection("announcements")
-    notice["id"] = str(uuid.uuid4())
-    notice["date"] = datetime.now(timezone.utc).isoformat().split("T")[0]
-    notice["createdBy"] = admin["sub"]
-    collection.insert_one(notice)
-    notice.pop("_id", None)
-    return {"success": True, "message": "Notice added", "data": notice}
+    notice_doc = {
+        "id": str(uuid.uuid4()),
+        "text": notice.get("text"),
+        "date": datetime.now(timezone.utc).isoformat().split("T")[0],
+        "createdBy": admin["sub"],
+        "pinned": notice.get("pinned", False),
+    }
+    collection.insert_one(notice_doc)
+
+    log_audit(
+        action="notice_created",
+        actor_email=admin["sub"],
+        actor_role=admin["role"],
+        resource_type="notice",
+        resource_id=notice_doc["id"],
+        details={"text": notice.get("text")[:100]},
+    )
+
+    notice_doc.pop("_id", None)
+    return {"success": True, "message": "Notice added", "data": notice_doc}
 
 
 @router.get("/notices")
 def get_notices():
     # Public — citizens can see announcements
     collection = db.get_collection("announcements")
-    notices = list(collection.find({}, {"_id": 0}))
+    notices = list(collection.find({}, {"_id": 0}).sort("date", -1))
     return {"success": True, "data": notices}
 
 
@@ -146,5 +193,26 @@ def delete_notice(notice_id: str, admin: dict = Depends(require_admin)):
     collection = db.get_collection("announcements")
     result = collection.delete_one({"id": notice_id})
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Notice not found")
+        raise NotFoundError("Notice")
+
+    log_audit(
+        action="notice_deleted",
+        actor_email=admin["sub"],
+        actor_role=admin["role"],
+        resource_type="notice",
+        resource_id=notice_id,
+    )
+
     return {"success": True, "message": "Notice deleted"}
+
+
+@router.get("/audit-log")
+def fetch_audit_log(
+    actor_email: str = None,
+    action: str = None,
+    limit: int = 100,
+    admin: dict = Depends(require_admin),
+):
+    """Retrieve admin/officer audit log"""
+    entries = get_audit_log(actor_email=actor_email, action=action, limit=limit)
+    return {"success": True, "data": entries}
