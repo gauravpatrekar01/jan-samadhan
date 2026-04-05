@@ -567,6 +567,10 @@
             <div class="hero-stat-label">Resolved</div>
           </div>
           <div class="hero-stat-item" style="text-align: left;">
+            <div class="hero-stat-value" id="heroSatisfaction" data-counter="4.5" data-suffix=" ⭐" style="font-size: 2rem;">0</div>
+            <div class="hero-stat-label">Satisfaction</div>
+          </div>
+          <div class="hero-stat-item" style="text-align: left;">
             <div class="hero-stat-value" id="heroHigh" data-counter="3" data-suffix="" style="font-size: 2rem; color: var(--accent);">0</div>
             <div class="hero-stat-label">Emergency</div>
           </div>
@@ -956,10 +960,12 @@
       const heroResolved = document.getElementById('heroResolved');
       const heroPending = document.getElementById('heroPending');
       const heroHigh = document.getElementById('heroHigh');
+      const heroSatisfaction = document.getElementById('heroSatisfaction');
 
       if (heroTotal) heroTotal.dataset.counter = stats.total_complaints || stats.total;
       if (heroResolved) heroResolved.dataset.counter = stats.resolution_rate || stats.resolutionRate;
       if (heroPending) heroPending.dataset.counter = stats.status_distribution?.submitted || stats.pending;
+      if (heroSatisfaction) heroSatisfaction.dataset.counter = stats.average_satisfaction || 0;
       if (heroHigh) heroHigh.dataset.counter = stats.priority_distribution?.emergency || stats.emergency;
 
       initCounters();
@@ -1182,6 +1188,7 @@
     async function trackComplaint() {
       const id = document.getElementById('trackInput')?.value.trim().toUpperCase();
       const result = document.getElementById('trackResult');
+      
       if (!id) { showToast('Please enter a Grievance ID', 'warning'); return; }
       
       const btn = document.querySelector('.track-input-row button');
@@ -1199,35 +1206,37 @@
       if (!g) {
         result.className = 'visible';
         result.innerHTML = `
-      <div style="text-align:center;padding:20px">
-        <div style="font-size:2rem;margin-bottom:8px">🔍</div>
-        <div style="font-weight:700;color:var(--danger)">Grievance Not Found</div>
-        <div style="font-size:.85rem;color:var(--text-muted);margin-top:6px">
-          Check the ID and try again. E.g., <strong>JSM-2026-0001</strong>
+      <div style="text-align:center;padding:40px;background:rgba(220,38,38,.05);border-radius:12px;border:2px dashed var(--danger)">
+        <div style="font-size:3rem;margin-bottom:12px">❌</div>
+        <div style="font-weight:700;color:var(--danger);font-size:1.1rem">Grievance Not Found</div>
+        <div style="font-size:.9rem;color:var(--text-muted);margin-top:12px;line-height:1.6">
+          We could not find a grievance with ID <strong>${id}</strong>.<br>
+          Please verify the ID and try again.<br>
+          <span style="font-size:.85rem;margin-top:8px;display:block">ID Format: <strong>JSM-YYYY-XXXX</strong> (e.g., JSM-2026-A1B2C3D4)</span>
         </div>
+        <button class="btn btn-ghost" onclick="document.getElementById('trackInput').focus()" style="margin-top:16px">Try Again</button>
       </div>
     `;
         return;
       }
+      
       result.className = 'visible';
       result.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-      <h3 style="color:var(--primary-light)">${g.grievanceID}</h3>
+      <h3 style="color:var(--primary-light)">${g.grievanceID || g.id}</h3>
       ${priorityBadge(g.priority)}
       ${statusBadge(g.status)}
       ${g.escalated ? '<span class="escalation-tag">🚨 ESCALATED</span>' : ''}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-      <div><span style="font-size:.75rem;color:var(--text-muted)">FILED BY</span><br><strong>${g.name}</strong></div>
+      <div><span style="font-size:.75rem;color:var(--text-muted)">FILED BY</span><br><strong>${g.name || 'Citizen'}</strong></div>
       <div><span style="font-size:.75rem;color:var(--text-muted)">CATEGORY</span><br><strong>${categoryIcon(g.category)} ${g.category}</strong></div>
-      <div><span style="font-size:.75rem;color:var(--text-muted)">LOCATION</span><br><strong>📍 ${g.location.address}</strong></div>
-      <div><span style="font-size:.75rem;color:var(--text-muted)">FILED ON</span><br><strong>${formatDate(g.timestamp)}</strong></div>
+      <div><span style="font-size:.75rem;color:var(--text-muted)">LOCATION</span><br><strong>📍 ${g.region || 'N/A'}</strong></div>
+      <div><span style="font-size:.75rem;color:var(--text-muted)">FILED ON</span><br><strong>${new Date(g.createdAt).toLocaleDateString('en-IN')}</strong></div>
     </div>
-    <div style="margin-bottom:16px"><span style="font-size:.75rem;color:var(--text-muted)">DESCRIPTION</span><br>${g.description}</div>
-    ${g.officerRemarks ? `<div style="background:rgba(37,99,235,.06);border-left:3px solid var(--primary-light);padding:10px 14px;border-radius:6px;margin-bottom:16px"><span style="font-size:.75rem;font-weight:700;color:var(--primary-light)">OFFICER REMARKS</span><br>${g.officerRemarks}</div>` : ''}
-    <div style="font-weight:700;margin-bottom:8px;font-size:.88rem">Progress:</div>
-    ${renderProgressBar(g.progressStage)}
-    <div style="text-align:center;margin-top:12px">
+    <div style="margin-bottom:16px"><span style="font-size:.75rem;color:var(--text-muted)">DESCRIPTION</span><br>${g.description || 'No description'}</div>
+    ${g.assigned_officer && g.assigned_officer !== 'null' ? `<div style="background:rgba(37,99,235,.06);border-left:3px solid var(--primary-light);padding:10px 14px;border-radius:6px;margin-bottom:16px"><span style="font-size:.75rem;font-weight:700;color:var(--primary-light)">ASSIGNED TO</span><br>${g.assigned_officer}</div>` : '<div style="background:rgba(217,119,6,.06);border-left:3px solid var(--warning);padding:10px 14px;border-radius:6px;margin-bottom:16px"><span style="font-size:.75rem;font-weight:700;color:var(--warning)">STATUS</span><br>Pending Assignment</div>'}
+    <div style="text-align:center;margin-top:16px">
       <a href="citizen.html" class="btn btn-primary btn-sm">View Full Details →</a>
     </div>
   `;

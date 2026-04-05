@@ -9,6 +9,7 @@ class UserCreate(BaseModel):
     password: str
     aadhar: Optional[str] = ""
     phone: Optional[str] = ""
+    district: Optional[str] = ""
     role: Literal["citizen", "officer", "admin"] = "citizen"
 
     @field_validator("name")
@@ -23,20 +24,21 @@ class UserCreate(BaseModel):
     def password_rules(cls, v: str) -> str:
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters")
-        if not re.search(r"[A-Z]", v) or not re.search(r"[a-z]", v) or not re.search(r"[0-9]", v) or not re.search(r"[!@#$%^&*(),.?\":{}|<>]", v):
-            raise ValueError("Password must include uppercase, lowercase, number, and special character")
         return v
 
     @model_validator(mode="after")
-    def validate_aadhar(self):
+    def validate_user(self):
         if self.role == "citizen":
             if not self.aadhar:
                 raise ValueError("Aadhar number is required for citizens")
             if not re.fullmatch(r"\d{12}", self.aadhar):
                 raise ValueError("Aadhar must be a 12-digit number")
+            if not re.search(r"[A-Z]", self.password) or not re.search(r"[a-z]", self.password) or not re.search(r"[0-9]", self.password) or not re.search(r"[!@#$%^&*(),.?\":{}|<>]", self.password):
+                raise ValueError("Citizen password must include uppercase, lowercase, number, and special character")
         elif self.aadhar:
             if not re.fullmatch(r"\d{12}", self.aadhar):
                 raise ValueError("Aadhar must be a 12-digit number")
+
         return self
 
 

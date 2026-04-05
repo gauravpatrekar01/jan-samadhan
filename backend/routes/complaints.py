@@ -16,6 +16,21 @@ from search import search_complaints, get_complaint_count
 router = APIRouter()
 
 
+def find_officer_for_region(region: str) -> str | None:
+    """Return the least loaded officer for a given district."""
+    if not region:
+        return None
+    officer_cursor = db.get_collection("users").find({"role": "officer", "district": region}, {"email": 1})
+    officers = list(officer_cursor)
+    if not officers:
+        return None
+    complaints = db.get_collection("complaints")
+    def load_count(officer):
+        return complaints.count_documents({"assigned_officer": officer["email"]})
+    officer = min(officers, key=load_count)
+    return officer["email"]
+
+
 @router.get("/")
 def get_complaints(
     status: str = Query(None),
@@ -33,16 +48,13 @@ def get_complaints(
     Officers see their assigned complaints and others
     Admins see all complaints
     """
-    # Determine if this is an officer viewing their assigned complaints
-    assigned_to = user.get("sub") if user.get("role") == "officer" else None
-    
+    # Officers should be able to view all complaints in the all complaints tab.
     complaints = search_complaints(
         status=status,
         priority=priority,
         category=category,
         region=region,
         search=search,
-        assigned_to=assigned_to,  # Only filters for officers
         skip=skip,
         limit=limit,
     )
@@ -53,7 +65,6 @@ def get_complaints(
         priority=priority,
         category=category,
         region=region,
-        assigned_to=assigned_to,
     )
 
     return {"success": True, "data": complaints, "total": total}
@@ -128,8 +139,23 @@ def create_complaint(complaint: ComplaintCreate, user: dict = Depends(require_ci
                     "timestamp": now,
                 }
             ],
+            "feedback": [],
+            "feedbackAverage": 0,
+            "feedbackCount": 0,
         }
     )
+
+    # Auto-assign complaints to the officer responsible for the district
+    assigned_officer = find_officer_for_region(c_dict.get("region"))
+    if assigned_officer:
+        c_dict["assigned_officer"] = assigned_officer
+        c_dict["history"].append(
+            {
+                "status": "submitted",
+                "remarks": f"Auto-assigned to officer {assigned_officer} for district {c_dict.get('region')}",
+                "timestamp": now,
+            }
+        )
 
     collection.insert_one(c_dict)
     c_dict.pop("_id", None)
@@ -153,9 +179,10 @@ def get_complaint(id: str, user: dict = Depends(get_current_user)):
     if not complaint:
         raise NotFoundError("Complaint")
 
-    # Verify access: citizen can only see their own, officer/admin can see any
-    if user.get("role") == "citizen" and complaint.get("citizen_email") != user["sub"]:
-        raise AuthorizationError("You can only view your own complaints")
+    if user.get("role") == "citizen":
+        if complaint.get("citizen_email") != user["sub"]:
+            # Public feed complaints should remain viewable, but hide private identifiers.
+            complaint = {k: v for k, v in complaint.items() if k not in {"citizen_email", "email"}}
 
     return {"success": True, "data": complaint}
 
@@ -269,31 +296,43 @@ def submit_feedback(
         raise ValidationError("Rating must be between 1 and 5")
 
     collection = db.get_collection("complaints")
-    complaint = collection.find_one({"id": id}, {"_id": 0, "citizen_email": 1, "email": 1})
+    complaint = collection.find_one({"id": id}, {"_id": 0, "status": 1, "feedback": 1, "feedbackAverage": 1, "feedbackCount": 1})
     if not complaint:
         raise NotFoundError("Complaint")
 
-    # Only allow complaint owner to submit feedback
-    citizen_email = complaint.get("citizen_email") or complaint.get("email")
-    if citizen_email != user["sub"]:
-        raise AuthorizationError("You can only submit feedback on your own complaints")
+    if complaint.get("status") not in {"resolved", "closed"}:
+        raise ValidationError("Only resolved or closed complaints can be rated")
+
+    feedback_entries = complaint.get("feedback") or []
+    if any(entry.get("user_email") == user["sub"] for entry in feedback_entries):
+        raise ValidationError("You have already rated this complaint")
 
     now = datetime.now(timezone.utc).isoformat()
+    total_count = len(feedback_entries) + 1
+    total_sum = sum(entry.get("rating", 0) for entry in feedback_entries) + rating
+    average = round(total_sum / total_count, 2)
+
     collection.update_one(
         {"id": id},
         {
-            "$set": {
-                "feedbackRating": rating,
-                "feedbackComment": comment,
-                "status": "closed",
-                "updatedAt": now,
-            },
             "$push": {
+                "feedback": {
+                    "user_email": user["sub"],
+                    "rating": rating,
+                    "comment": comment,
+                    "timestamp": now,
+                },
                 "history": {
                     "status": "closed",
                     "remarks": f"Citizen Feedback ({rating}/5): {comment}",
                     "timestamp": now,
                 }
+            },
+            "$set": {
+                "status": "closed",
+                "updatedAt": now,
+                "feedbackAverage": average,
+                "feedbackCount": total_count,
             },
         },
     )

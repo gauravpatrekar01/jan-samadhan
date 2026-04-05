@@ -202,6 +202,7 @@
                                 <th>Status</th>
                                 <th>Region</th>
                                 <th>Filed</th>
+                                <th>Satisfaction</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -349,12 +350,55 @@
             <div class="form-group">
                 <label class="form-label">Password</label>
                 <input class="form-control" id="newUserPassword" type="password" placeholder="Strong password" />
+                <div style="font-size:.8rem;color:var(--text-muted);margin-top:4px">Password must be at least 8 characters. Citizen passwords require stronger complexity.</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Role</label>
-                <select class="form-control" id="newUserRole">
+                <select class="form-control" id="newUserRole" onchange="toggleUserDistrictField()">
                     <option value="officer">Officer</option>
                     <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div class="form-group" id="newUserDistrictGroup">
+                <label class="form-label">Officer District</label>
+                <select class="form-control" id="newUserDistrict">
+                    <option value="">-- Select District --</option>
+                    <option>Ahmednagar</option>
+                    <option>Akola</option>
+                    <option>Amravati</option>
+                    <option>Aurangabad</option>
+                    <option>Beed</option>
+                    <option>Bhandara</option>
+                    <option>Buldhana</option>
+                    <option>Chandrapur</option>
+                    <option>Dhule</option>
+                    <option>Gadchiroli</option>
+                    <option>Gondia</option>
+                    <option>Hingoli</option>
+                    <option>Jalgaon</option>
+                    <option>Jalna</option>
+                    <option>Kolhapur</option>
+                    <option>Latur</option>
+                    <option>Mumbai City</option>
+                    <option>Mumbai Suburban</option>
+                    <option>Nagpur</option>
+                    <option>Nanded</option>
+                    <option>Nandurbar</option>
+                    <option>Nashik</option>
+                    <option>Osmanabad</option>
+                    <option>Palghar</option>
+                    <option>Parbhani</option>
+                    <option>Pune</option>
+                    <option>Raigad</option>
+                    <option>Ratnagiri</option>
+                    <option>Sangli</option>
+                    <option>Satara</option>
+                    <option>Sindhudurg</option>
+                    <option>Solapur</option>
+                    <option>Thane</option>
+                    <option>Wardha</option>
+                    <option>Washim</option>
+                    <option>Yavatmal</option>
                 </select>
             </div>
             <button class="btn btn-primary" onclick="createUserAccount()">Create Account</button>
@@ -506,9 +550,13 @@
             document.getElementById('adminEscBadge').textContent = stats.priority_distribution?.emergency || 0;
 
             // Main stats
+            const satisfactionColor = stats.average_satisfaction >= 4 ? 'var(--success)' : stats.average_satisfaction >= 3 ? 'var(--warning)' : '#dc2626';
+            const satisfactionBg = stats.average_satisfaction >= 4 ? 'rgba(22,163,74,.1)' : stats.average_satisfaction >= 3 ? 'rgba(217,119,6,.1)' : 'rgba(220,38,38,.1)';
+            
             document.getElementById('adminStats').innerHTML = [
                 { label: 'Total Complaints', value: stats.total_complaints, icon: '📋', color: 'var(--primary-light)', bg: 'rgba(37,99,235,.1)', trend: 'System Data' },
                 { label: 'Resolution Rate', value: stats.resolution_rate + '%', icon: '✅', color: 'var(--success)', bg: 'rgba(22,163,74,.1)', trend: '↑ Live Tracking' },
+                { label: 'Satisfaction', value: stats.average_satisfaction ? stats.average_satisfaction + ' ⭐' : 'N/A', icon: '😊', color: satisfactionColor, bg: satisfactionBg, trend: stats.rated_complaints + ' ratings' },
                 { label: 'Emergency Cases', value: stats.priority_distribution?.emergency || 0, icon: '⚠️', color: '#c2410c', bg: 'rgba(194,65,12,.1)', trend: 'Auto-escalated' },
                 { label: 'In Progress', value: stats.status_distribution?.in_progress || 0, icon: '⚙️', color: 'var(--warning)', bg: 'rgba(217,119,6,.1)', trend: 'Needs Resolution' },
             ].map(s => `
@@ -577,6 +625,7 @@
                   <td>${statusBadge(g.status.charAt(0).toUpperCase() + g.status.slice(1).replace('_', ' '))}</td>
                   <td>${g.region || 'N/A'}</td>
                   <td style="font-size:.8rem">${new Date(g.created_at || g.timestamp || Date.now()).toLocaleDateString()}</td>
+                  <td>${g.feedbackCount ? `<span class="badge badge-success">⭐ ${g.feedbackAverage || g.feedbackRating}/5 · ${g.feedbackCount}</span>` : '<span style="color:var(--text-muted);font-size:.8rem">—</span>'}</td>
                   <td>
                     <div style="display:flex;gap:6px">
                       <button class="btn btn-ghost btn-sm" onclick="adminUpdate('${g.id}')">✏️</button>
@@ -757,6 +806,7 @@
         <div class="user-row-eml">${u.email}</div>
       </div>
       <span class="badge ${roleBadge[u.role]}">${roleLabel[u.role]}</span>
+      ${u.role === 'officer' && u.district ? `<span class="badge badge-muted">${u.district}</span>` : ''}
       ${u.department ? `<span class="badge badge-muted">${u.department}</span>` : ''}
       <div style="margin-left:auto;display:flex;gap:8px">
         ${u.role === 'citizen' && !u.verified ? `<button class="btn btn-ghost btn-sm" onclick="verifyCitizenGov('${u.email}')">Auto Verify</button>` : ''}
@@ -777,29 +827,48 @@
             }
         }
 
-        async function createUserAccount() {
-            const name = document.getElementById('newUserName')?.value.trim();
-            const email = document.getElementById('newUserEmail')?.value.trim();
-            const password = document.getElementById('newUserPassword')?.value;
-            const role = document.getElementById('newUserRole')?.value;
-
-            if (!name || !email || !password) {
-                showToast('Please fill in all fields to create the account.', 'warning');
-                return;
+function toggleUserDistrictField() {
+                const role = document.getElementById('newUserRole')?.value;
+                const group = document.getElementById('newUserDistrictGroup');
+                if (group) {
+                    group.style.display = role === 'officer' ? 'block' : 'none';
+                }
             }
 
-            try {
-                await window.JanSamadhanAPI.createUser({ name, email, password, role });
-                showToast('User account created successfully.', 'success');
-                closeModal('createUserModal');
-                document.getElementById('newUserName').value = '';
-                document.getElementById('newUserEmail').value = '';
-                document.getElementById('newUserPassword').value = '';
-                loadUsers();
-            } catch (e) {
-                showToast(e.message || 'Failed to create user', 'error');
+            async function createUserAccount() {
+                const name = document.getElementById('newUserName')?.value.trim();
+                const email = document.getElementById('newUserEmail')?.value.trim();
+                const password = document.getElementById('newUserPassword')?.value;
+                const role = document.getElementById('newUserRole')?.value;
+                const district = document.getElementById('newUserDistrict')?.value;
+
+                if (!name || !email || !password) {
+                    showToast('Please fill in all fields to create the account.', 'warning');
+                    return;
+                }
+                if (role === 'officer' && !district) {
+                    showToast('Please assign a district to the officer.', 'warning');
+                    return;
+                }
+
+                const userPayload = { name, email, password, role };
+                if (role === 'officer') {
+                    userPayload.district = district;
+                }
+
+                try {
+                    await window.JanSamadhanAPI.createUser(userPayload);
+                    showToast('User account created successfully.', 'success');
+                    closeModal('createUserModal');
+                    document.getElementById('newUserName').value = '';
+                    document.getElementById('newUserEmail').value = '';
+                    document.getElementById('newUserPassword').value = '';
+                    document.getElementById('newUserDistrict').value = '';
+                    loadUsers();
+                } catch (e) {
+                    showToast(e.message || 'Failed to create user', 'error');
+                }
             }
-        }
 
         async function initHeatmap() {
             const all = await window.JanSamadhanAPI.getAllGrievances();
@@ -885,7 +954,7 @@
 
             const select = document.getElementById('assignOfficerSelect');
             select.innerHTML = '<option value="">Choose Officer...</option>' + 
-                _cachedOfficers.map(o => `<option value="${o.email}">${o.name} (${o.email})</option>`).join('');
+                _cachedOfficers.map(o => `<option value="${o.email}">${o.name} (${o.district || 'No district'})</option>`).join('');
             
             openModal('assignComplaintModal');
         }
@@ -958,17 +1027,34 @@
             try {
                 const complaint = await window.JanSamadhanAPI.getGrievanceByID(complaintId);
                 if (!complaint) {
-                    showToast('Complaint not found', 'error');
+                    document.getElementById('complaintDetailsTitle').textContent = `❌ Complaint Not Found`;
+                    document.getElementById('complaintDetailsContent').innerHTML = `
+      <div style="text-align:center;padding:40px;background:rgba(220,38,38,.05);border-radius:12px">
+        <div style="font-size:2.5rem;margin-bottom:12px">❌</div>
+        <div style="font-weight:700;color:var(--danger);font-size:1.1rem">Complaint Not Found</div>
+        <div style="font-size:.9rem;color:var(--text-muted);margin-top:12px;line-height:1.6">
+          We could not find a complaint with ID: <strong>${complaintId}</strong><br>
+          It may have been deleted or the ID is incorrect.
+        </div>
+        <button class="btn btn-ghost" onclick="closeModal('complaintDetailsModal')" style="margin-top:16px">Close</button>
+      </div>
+    `;
+                    openModal('complaintDetailsModal');
                     return;
                 }
 
-                document.getElementById('complaintDetailsTitle').textContent = `📋 ${complaint.id}`;
+                document.getElementById('complaintDetailsTitle').textContent = `📋 ${complaint.grievanceID || complaint.id}`;
                 
                 const html = `
     <div style="font-size:.88rem;line-height:1.6">
       <div style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:12px">
+        <div style="color:var(--text-muted);font-size:.8rem;margin-bottom:2px">GRIEVANCE ID</div>
+        <div style="font-weight:600;font-family:monospace">${complaint.grievanceID || complaint.id}</div>
+      </div>
+
+      <div style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:12px">
         <div style="color:var(--text-muted);font-size:.8rem;margin-bottom:2px">CITIZEN INFO</div>
-        <div style="font-weight:600">${complaint.name} (${complaint.citizen_email})</div>
+        <div style="font-weight:600">${complaint.name || 'Unknown'} (${complaint.citizen_email || 'N/A'})</div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
@@ -989,7 +1075,7 @@
         </div>
         <div>
           <div style="color:var(--text-muted);font-size:.8rem;margin-bottom:2px">ASSIGNED OFFICER</div>
-          <div>${complaint.assigned_officer ? `<strong>${complaint.assigned_officer}</strong>` : '<span style="color:var(--warning)">Not Assigned</span>'}</div>
+          <div>${complaint.assigned_officer && complaint.assigned_officer !== 'null' ? `<strong>${complaint.assigned_officer}</strong>` : '<span style="color:var(--warning)">Not Assigned</span>'}</div>
         </div>
       </div>
 
@@ -1000,7 +1086,7 @@
 
       <div style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:12px">
         <div style="color:var(--text-muted);font-size:.8rem;margin-bottom:4px">DESCRIPTION</div>
-        <div>${complaint.description}</div>
+        <div>${complaint.description || 'No description provided'}</div>
       </div>
 
       ${complaint.history && complaint.history.length ? `
@@ -1014,7 +1100,7 @@
           </div>
         `).join('')}
       </div>
-      ` : ''}
+      ` : '<div style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:12px;color:var(--text-muted);font-size:.85rem">No history available</div>'}
 
       <div style="display:flex;gap:8px;margin-top:16px">
         ${!complaint.assigned_officer || complaint.assigned_officer === 'null' ? `
@@ -1029,6 +1115,9 @@
                 openModal('complaintDetailsModal');
             } catch (err) {
                 showToast('Failed to load complaint details: ' + err.message, 'error');
+                document.getElementById('complaintDetailsTitle').textContent = `⚠️ Error Loading`;
+                document.getElementById('complaintDetailsContent').innerHTML = `<div style="text-align:center;padding:20px;color:var(--danger)">Unable to load complaint details. Please try again.</div>`;
+                openModal('complaintDetailsModal');
             }
         }
 
