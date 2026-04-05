@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Charts & Maps Sizing Test</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body { 
+            padding: 20px; 
+            background: var(--bg);
+            font-family: var(--font-main);
+        }
+        .test-section { 
+            margin: 30px 0; 
+            padding: 20px; 
+            border: 1px solid var(--border); 
+            border-radius: 12px; 
+            background: var(--bg-card);
+        }
+        .test-title { 
+            font-size: 1.3rem; 
+            font-weight: 700; 
+            margin-bottom: 20px; 
+            color: var(--text);
+        }
+        .test-description {
+            font-size: .9rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+        .sizing-info {
+            background: rgba(37, 99, 235, .1);
+            border-left: 3px solid var(--primary-light);
+            padding: 12px 16px;
+            margin: 15px 0;
+            font-size: .85rem;
+            color: var(--text);
+        }
+        .resize-demo {
+            border: 2px dashed var(--primary-light);
+            padding: 20px;
+            margin: 15px 0;
+            text-align: center;
+            color: var(--primary-light);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <h1>📊 Charts & Maps Responsive Sizing Test</h1>
+    
+    <div class="sizing-info">
+        <strong>🔧 Enhanced Features:</strong>
+        <ul>
+            <li>✅ Charts now use min/max heights instead of fixed heights</li>
+            <li>✅ Responsive breakpoints for different screen sizes</li>
+            <li>✅ Dynamic font sizing based on container width</li>
+            <li>✅ Maps scale proportionally with viewport</li>
+            <li>✅ Heatmaps adapt to screen size with better spacing</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2 class="test-title">📈 Chart Responsiveness</h2>
+        <div class="test-description">
+            Charts now adapt to container size with dynamic font sizing and spacing.
+            Resize your browser window to see the responsive behavior.
+        </div>
+        
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="chart-title">🗂️ Category Distribution</div>
+                <div class="chart-wrap"><canvas id="testCatPie"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">🎯 Priority Distribution</div>
+                <div class="chart-wrap"><canvas id="testPriorityBar"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">📈 Status Breakdown</div>
+                <div class="chart-wrap"><canvas id="testStatusPie"></canvas></div>
+            </div>
+        </div>
+        
+        <div class="resize-demo">
+            🔄 Try resizing your browser window to see responsive behavior
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2 class="test-title">🗺️ Map Responsiveness</h2>
+        <div class="test-description">
+            Maps now use min/max heights and scale proportionally across different screen sizes.
+        </div>
+        
+        <div class="dummy-map" id="testMap" style="margin: 20px 0;">
+            <div class="map-grid"></div>
+            <div class="map-label">
+                <div style="font-size:2rem">🗺️</div>
+                <div style="font-weight:600;color:var(--text-muted)">Interactive Map Component</div>
+                <div style="font-size:.78rem;color:var(--text-light);margin-top:4px">Responsive Sizing Test</div>
+            </div>
+        </div>
+        
+        <div class="resize-demo">
+            📱 Map height: 300px (mobile) → 450px (desktop)
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2 class="test-title">🌡️ Heatmap Responsiveness</h2>
+        <div class="test-description">
+            Heatmap cells now have better proportions and spacing across screen sizes.
+        </div>
+        
+        <div class="heatmap-grid" id="testHeatmap">
+            <!-- Will be populated by JavaScript -->
+        </div>
+        
+        <div class="resize-demo">
+            🎯 Cell size: 140px → 180px based on screen width
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2 class="test-title">📱 Breakpoint Information</h2>
+        <div class="test-description">
+            Current responsive breakpoints applied:
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+            <div style="padding: 16px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border);">
+                <strong>📱 Mobile (< 768px)</strong>
+                <ul style="margin: 8px 0; font-size: .85rem; color: var(--text-muted);">
+                    <li>Charts: Single column</li>
+                    <li>Map: 300px min height</li>
+                    <li>Heatmap: 2 columns</li>
+                    <li>Fonts: Smaller</li>
+                </ul>
+            </div>
+            
+            <div style="padding: 16px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border);">
+                <strong>💻 Tablet (768px - 1024px)</strong>
+                <ul style="margin: 8px 0; font-size: .85rem; color: var(--text-muted);">
+                    <li>Charts: 2 columns</li>
+                    <li>Map: 350px min height</li>
+                    <li>Heatmap: Auto columns</li>
+                    <li>Fonts: Medium</li>
+                </ul>
+            </div>
+            
+            <div style="padding: 16px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border);">
+                <strong>🖥️ Desktop (1024px - 1200px)</strong>
+                <ul style="margin: 8px 0; font-size: .85rem; color: var(--text-muted);">
+                    <li>Charts: 2-3 columns</li>
+                    <li>Map: 400px min height</li>
+                    <li>Heatmap: 160px min width</li>
+                    <li>Fonts: Normal</li>
+                </ul>
+            </div>
+            
+            <div style="padding: 16px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border);">
+                <strong>🖥️ Large (> 1200px)</strong>
+                <ul style="margin: 8px 0; font-size: .85rem; color: var(--text-muted);">
+                    <li>Charts: 3+ columns</li>
+                    <li>Map: 450px min height</li>
+                    <li>Heatmap: 180px min width</li>
+                    <li>Fonts: Larger</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/charts.js"></script>
+    <script>
+        // Sample data for testing
+        const testStats = {
+            byCategory: {
+                'Infrastructure': 45,
+                'Water Supply': 32,
+                'Electricity': 28,
+                'Sanitation': 19,
+                'Transport': 15,
+                'Healthcare': 12,
+                'Other': 8
+            },
+            priority_distribution: {
+                emergency: 12,
+                high: 28,
+                medium: 45,
+                low: 67
+            },
+            status_distribution: {
+                submitted: 52,
+                in_progress: 38,
+                resolved: 112
+            }
+        };
+
+        // Initialize charts
+        document.addEventListener('DOMContentLoaded', () => {
+            // Render test charts
+            if (window.renderCategoryPie) {
+                window.testCatChart = renderCategoryPie('testCatPie', testStats);
+            }
+            if (window.renderPriorityBar) {
+                window.testPriChart = renderPriorityBar('testPriorityBar', testStats);
+            }
+            if (window.renderStatusPie) {
+                window.testStatChart = renderStatusPie('testStatusPie', testStats);
+            }
+
+            // Create test heatmap
+            const heatmapGrid = document.getElementById('testHeatmap');
+            if (heatmapGrid) {
+                const regions = ['North', 'South', 'East', 'West', 'Central', 'Suburban'];
+                const values = [23, 45, 18, 67, 34, 29];
+                
+                heatmapGrid.innerHTML = regions.map((region, i) => `
+                    <div class="heatmap-cell" style="
+                        background: rgba(37, 99, 235, ${0.1 + (values[i] / 100)});
+                        color: ${values[i] > 50 ? '#1e40af' : '#3b82f6'};
+                    ">
+                        <div class="heatmap-value">${values[i]}</div>
+                        <div class="heatmap-label">${region}</div>
+                    </div>
+                `).join('');
+            }
+
+            // Add resize observer for testing
+            const resizeObserver = new ResizeObserver(entries => {
+                for (let entry of entries) {
+                    console.log('Container resized:', {
+                        width: entry.contentRect.width,
+                        height: entry.contentRect.height
+                    });
+                }
+            });
+
+            // Observe chart containers
+            document.querySelectorAll('.chart-card').forEach(card => {
+                resizeObserver.observe(card);
+            });
+        });
+
+        // Window resize info
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                console.log('Window resized to:', window.innerWidth + 'x' + window.innerHeight);
+            }, 250);
+        });
+    </script>
+</body>
+</html>

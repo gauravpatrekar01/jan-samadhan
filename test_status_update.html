@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Status Update Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 8px; }
+        .error { color: red; }
+        .success { color: green; }
+        .warning { color: orange; }
+        button { padding: 8px 16px; margin: 5px; }
+        input, select, textarea { padding: 8px; margin: 5px; width: 300px; }
+    </style>
+</head>
+<body>
+    <h1>Emergency Complaint Status Update Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Authentication</h2>
+        <div>
+            <input type="email" id="testEmail" placeholder="Officer email" value="officer@example.com">
+            <input type="password" id="testPassword" placeholder="Password" value="password123">
+            <button onclick="testLogin()">Login as Officer</button>
+            <button onclick="testAdminLogin()">Login as Admin</button>
+        </div>
+        <div id="authStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Status Update</h2>
+        <div>
+            <input type="text" id="complaintId" placeholder="Complaint ID" value="JSM-2026-0001">
+            <select id="newStatus">
+                <option value="submitted">Submitted</option>
+                <option value="under_review">Under Review</option>
+                <option value="in_progress">In Progress</option>
+                <option value="resolved">Resolved</option>
+                <option value="closed">Closed</option>
+            </select>
+            <textarea id="remarks" placeholder="Remarks...">Test status update</textarea>
+            <button onclick="testStatusUpdate()">Update Status</button>
+        </div>
+        <div id="updateStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Emergency Complaint Fetch</h2>
+        <button onclick="testEmergencyFetch()">Fetch Emergency Complaints</button>
+        <div id="emergencyList"></div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        let currentUser = null;
+
+        async function testLogin() {
+            const email = document.getElementById('testEmail').value;
+            const password = document.getElementById('testPassword').value;
+            const status = document.getElementById('authStatus');
+            
+            try {
+                const response = await window.JanSamadhanAPI.login({ email, password });
+                currentUser = response;
+                status.innerHTML = `<div class="success">✅ Logged in as ${response.role} - ${response.name}</div>`;
+                console.log('Login response:', response);
+            } catch (error) {
+                status.innerHTML = `<div class="error">❌ Login failed: ${error.message}</div>`;
+                console.error('Login error:', error);
+            }
+        }
+
+        async function testAdminLogin() {
+            const email = document.getElementById('testEmail').value;
+            const password = document.getElementById('testPassword').value;
+            const status = document.getElementById('authStatus');
+            
+            try {
+                const response = await window.JanSamadhanAPI.adminLogin({ email, password });
+                currentUser = response;
+                status.innerHTML = `<div class="success">✅ Admin login successful - ${response.name}</div>`;
+                console.log('Admin login response:', response);
+            } catch (error) {
+                status.innerHTML = `<div class="error">❌ Admin login failed: ${error.message}</div>`;
+                console.error('Admin login error:', error);
+            }
+        }
+
+        async function testStatusUpdate() {
+            const complaintId = document.getElementById('complaintId').value;
+            const newStatus = document.getElementById('newStatus').value;
+            const remarks = document.getElementById('remarks').value;
+            const status = document.getElementById('updateStatus');
+            
+            if (!currentUser) {
+                status.innerHTML = `<div class="warning">⚠️ Please login first</div>`;
+                return;
+            }
+            
+            try {
+                console.log(`Attempting to update ${complaintId} to ${newStatus}`);
+                const response = await window.JanSamadhanAPI.updateGrievanceStatus(complaintId, newStatus, remarks);
+                status.innerHTML = `<div class="success">✅ Status updated successfully</div>`;
+                console.log('Status update response:', response);
+            } catch (error) {
+                status.innerHTML = `<div class="error">❌ Status update failed: ${error.message}</div>`;
+                console.error('Status update error:', error);
+            }
+        }
+
+        async function testEmergencyFetch() {
+            const list = document.getElementById('emergencyList');
+            
+            try {
+                const complaints = await window.JanSamadhanAPI.getAllGrievances();
+                const emergency = complaints.filter(g => g.priority?.toLowerCase() === 'emergency');
+                
+                list.innerHTML = `
+                    <div class="success">Found ${emergency.length} emergency complaints:</div>
+                    ${emergency.map(g => `
+                        <div style="border: 1px solid #ccc; padding: 10px; margin: 10px 0;">
+                            <strong>ID:</strong> ${g.id}<br>
+                            <strong>Priority:</strong> ${g.priority}<br>
+                            <strong>Status:</strong> ${g.status}<br>
+                            <strong>Category:</strong> ${g.category}<br>
+                            <strong>Description:</strong> ${g.description}<br>
+                            <button onclick="testEmergencyUpdate('${g.id}')">Test Update This</button>
+                        </div>
+                    `).join('')}
+                `;
+            } catch (error) {
+                list.innerHTML = `<div class="error">❌ Failed to fetch: ${error.message}</div>`;
+                console.error('Fetch error:', error);
+            }
+        }
+
+        async function testEmergencyUpdate(complaintId) {
+            try {
+                await window.JanSamadhanAPI.updateGrievanceStatus(complaintId, 'in_progress', 'Emergency action taken');
+                alert(`✅ Emergency complaint ${complaintId} updated successfully`);
+                testEmergencyFetch(); // Refresh list
+            } catch (error) {
+                alert(`❌ Failed to update emergency complaint: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

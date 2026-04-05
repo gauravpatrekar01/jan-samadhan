@@ -250,18 +250,27 @@ def update_status(
     if not complaint:
         raise NotFoundError("Complaint")
 
-    # Officer can only update their assigned complaints
+    # Officer can only update their assigned complaints, EXCEPT for emergency cases
     if (
         user.get("role") == "officer"
         and complaint.get("assigned_officer") != user["sub"]
+        and complaint.get("priority", "").lower() != "emergency"
     ):
-        raise AuthorizationError("You can only update your assigned complaints")
+        raise AuthorizationError("You can only update your assigned complaints (except emergency cases)")
 
     now = datetime.now(timezone.utc).isoformat()
+    
+    # Auto-assign emergency complaints to the officer updating them
+    update_fields = {"status": status, "updatedAt": now}
+    if user.get("role") == "officer" and complaint.get("priority", "").lower() == "emergency":
+        if complaint.get("assigned_officer") != user["sub"]:
+            update_fields["assigned_officer"] = user["sub"]
+            remarks = f"[AUTO-ASSIGNED] {remarks}" if remarks else "Emergency complaint auto-assigned to responding officer"
+    
     collection.update_one(
         {"id": id},
         {
-            "$set": {"status": status, "updatedAt": now},
+            "$set": update_fields,
             "$push": {
                 "history": {
                     "status": status,

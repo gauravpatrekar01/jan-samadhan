@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KPI Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .kpi { border: 1px solid #ccc; padding: 10px; margin: 10px; display: inline-block; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>KPI Test Page</h1>
+    <div id="status">Testing...</div>
+    
+    <h2>Hero KPIs:</h2>
+    <div class="kpi">Total Cases: <span id="heroTotal">-</span></div>
+    <div class="kpi">Resolved: <span id="heroResolved">-</span></div>
+    <div class="kpi">Satisfaction: <span id="heroSatisfaction">-</span></div>
+    <div class="kpi">Emergency: <span id="heroHigh">-</span></div>
+    
+    <h2>Live Stats:</h2>
+    <div id="liveStatsGrid"></div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const status = document.getElementById('status');
+            
+            try {
+                status.innerHTML = '<div class="success">✓ API loaded successfully</div>';
+                
+                // Test API call
+                const stats = await window.JanSamadhanAPI.getAnalytics();
+                console.log('Stats received:', stats);
+                
+                // Update hero counters
+                document.getElementById('heroTotal').textContent = stats.total_complaints || stats.total || 0;
+                document.getElementById('heroResolved').textContent = stats.resolution_rate || stats.resolutionRate || 0;
+                document.getElementById('heroSatisfaction').textContent = stats.average_satisfaction || 0;
+                document.getElementById('heroHigh').textContent = stats.priority_distribution?.emergency || stats.emergency || 0;
+                
+                status.innerHTML += '<div class="success">✓ KPIs updated successfully</div>';
+                
+                // Render live stats
+                const grid = document.getElementById('liveStatsGrid');
+                const cards = [
+                    { label: 'Total Complaints', value: stats.total_complaints || 0 },
+                    { label: 'Resolution Rate', value: (stats.resolution_rate || 0) + '%' },
+                    { label: 'Pending', value: stats.status_distribution?.submitted || 0 },
+                    { label: 'Emergency', value: stats.priority_distribution?.emergency || 0 }
+                ];
+                
+                grid.innerHTML = cards.map(c => 
+                    `<div class="kpi"><strong>${c.label}:</strong> ${c.value}</div>`
+                ).join('');
+                
+                status.innerHTML += '<div class="success">✓ Live stats rendered successfully</div>';
+                
+            } catch (error) {
+                console.error('Error:', error);
+                status.innerHTML += `<div class="error">✗ Error: ${error.message}</div>`;
+            }
+        });
+    </script>
+</body>
+</html>
