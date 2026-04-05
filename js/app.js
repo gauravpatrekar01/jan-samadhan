@@ -8,9 +8,24 @@ window.JanSamadhan = {
 
     async getStats() {
         try {
-            return await window.JanSamadhanAPI.getAnalytics();
+            const data = await window.JanSamadhanAPI.getAnalytics();
+            // Normalise both shapes (public /api/stats and admin /api/admin/analytics)
+            return {
+                total: data.total_complaints || 0,
+                resolved: data.resolved_complaints || 0,
+                resolutionRate: data.resolution_rate || 0,
+                pending: data.pending || data.status_distribution?.submitted || 0,
+                emergency: data.emergency || data.priority_distribution?.emergency || 0,
+                high: data.high || data.priority_distribution?.high || 0,
+                // Pass through the raw shape too so admin dashboard fallback works
+                total_complaints: data.total_complaints || 0,
+                resolved_complaints: data.resolved_complaints || 0,
+                resolution_rate: data.resolution_rate || 0,
+                status_distribution: data.status_distribution || {},
+                priority_distribution: data.priority_distribution || {},
+            };
         } catch (e) {
-            return { total: 0, resolved: 0, resolutionRate: 0 };
+            return { total: 0, resolved: 0, resolutionRate: 0, pending: 0, emergency: 0, high: 0 };
         }
     },
 
@@ -18,9 +33,10 @@ window.JanSamadhan = {
         return await window.JanSamadhanAPI.getGrievanceByID(id);
     },
 
-    async getPriorityQueue(filter) {
-        // Now returns all grievances for the dashboard to filter
-        return await window.JanSamadhanAPI.getAllGrievances();
+    getPriorityQueue(filter) {
+        // Returns an empty array synchronously — the admin dashboard
+        // will populate urgentList/recentResolved from the API separately.
+        return [];
     },
 
     getAnnouncements() {
