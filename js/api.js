@@ -50,6 +50,18 @@ const JanSamadhanAPI = {
         return response;
     },
 
+    async adminLogin(credentials) {
+        const response = await this._fetch('/api/auth/admin-login', {
+            method: 'POST',
+            body: JSON.stringify(credentials)
+        });
+        if (response && response.token) {
+            sessionStorage.setItem('js_user', JSON.stringify(response));
+            localStorage.setItem('js_user', JSON.stringify(response));
+        }
+        return response;
+    },
+
     logout() {
         sessionStorage.removeItem('js_user');
         localStorage.removeItem('js_user');

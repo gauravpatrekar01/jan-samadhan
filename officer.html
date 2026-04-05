@@ -311,7 +311,12 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            let user = getSessionUser() || { name: 'Amit Singh', department: 'Infrastructure', role: 'officer' };
+            const user = getSessionUser();
+            if (!user || user.role !== 'officer') {
+                showToast('Access denied. Officer login required.', 'error');
+                setTimeout(() => window.location.href = 'index.html', 900);
+                return;
+            }
             document.getElementById('sbName').textContent = user.name || 'Officer';
             document.getElementById('sbDept').textContent = user.department || 'Field Officer';
             document.getElementById('topbarName').textContent = (user.name || 'Officer').split(' ')[0];
