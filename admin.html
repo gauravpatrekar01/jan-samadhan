@@ -47,9 +47,12 @@
                 <span class="nav-icon">🚨</span> Escalations
                 <span class="nav-badge" id="adminEscBadge" style="background:var(--danger)">0</span>
             </div>
+            <div class="nav-item" onclick="showPage('assignments',this)"><span class="nav-icon">🎯</span> Assignments</div>
             <div class="nav-item" onclick="showPage('announcements',this)"><span class="nav-icon">📢</span>
                 Announcements</div>
             <div class="nav-item" onclick="showPage('users',this)"><span class="nav-icon">👥</span> User Management
+            </div>
+            <div class="nav-item" onclick="showPage('audit',this)"><span class="nav-icon">📋</span> Audit Log
             </div>
         </nav>
         <div class="sidebar-footer">
@@ -241,6 +244,75 @@
                 <div class="users-list" id="usersList"></div>
             </div>
 
+            <!-- ─── ASSIGNMENTS ─── -->
+            <div class="dash-page" id="page-assignments">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">🎯 Complaint Assignment</div>
+                        <div class="page-subtitle">Assign unassigned grievances to field officers</div>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:20px">
+                    <div>
+                        <label class="form-label">Priority</label>
+                        <select class="form-control" id="assignFilter-priority" onchange="loadAssignmentQueue()">
+                            <option value="">All</option>
+                            <option value="emergency">🚨 Emergency</option>
+                            <option value="high">🔴 High</option>
+                            <option value="medium">🟡 Medium</option>
+                            <option value="low">🟢 Low</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Status</label>
+                        <select class="form-control" id="assignFilter-status" onchange="loadAssignmentQueue()">
+                            <option value="">All</option>
+                            <option value="submitted">Submitted</option>
+                            <option value="under_review">Under Review</option>
+                            <option value="in_progress">In Progress</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Assign To Officer</label>
+                        <select class="form-control" id="assignFilter-officer">
+                            <option value="">Select Officer...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="assignment-queue" id="assignmentQueue"></div>
+            </div>
+
+            <!-- ─── AUDIT LOG ─── -->
+            <div class="dash-page" id="page-audit">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">📋 Audit Log</div>
+                        <div class="page-subtitle">Track all admin and officer actions</div>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px">
+                    <div>
+                        <label class="form-label">Action Type</label>
+                        <select class="form-control" id="auditFilter-action" onchange="loadAuditLog()">
+                            <option value="">All Actions</option>
+                            <option value="complaint_created">Complaint Created</option>
+                            <option value="complaint_assigned">Complaint Assigned</option>
+                            <option value="complaint_status_updated">Status Updated</option>
+                            <option value="user_verified">User Verified</option>
+                            <option value="notice_created">Notice Created</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Actor Email (filter)</label>
+                        <input type="text" class="form-control" id="auditFilter-actor" placeholder="Email or leave blank" />
+                    </div>
+                    <div style="display:flex;align-items:flex-end">
+                        <button class="btn btn-primary" onclick="loadAuditLog()">Search</button>
+                    </div>
+                </div>
+                <div class="audit-list" id="auditList"></div>
+            </div>
+
         </div>
     </div>
 
@@ -314,6 +386,35 @@
                     placeholder="Admin action note..."></textarea>
             </div>
             <button class="btn btn-primary" onclick="confirmAdminUpdate()">Confirm</button>
+        </div>
+    </div>
+
+    <!-- COMPLAINT DETAILS MODAL -->
+    <div class="modal-overlay" id="complaintDetailsModal" style="max-height:90vh;overflow-y:auto">
+        <div class="modal-box" style="max-width:600px;max-height:90vh;overflow-y:auto">
+            <div class="modal-header">
+                <h3 id="complaintDetailsTitle">📋 Complaint Details</h3>
+                <button class="modal-close" onclick="closeModal('complaintDetailsModal')">✕</button>
+            </div>
+            <div id="complaintDetailsContent"></div>
+        </div>
+    </div>
+
+    <!-- ASSIGN COMPLAINT MODAL -->
+    <div class="modal-overlay" id="assignComplaintModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>🎯 Assign Complaint to Officer</h3>
+                <button class="modal-close" onclick="closeModal('assignComplaintModal')">✕</button>
+            </div>
+            <div id="assignComplaintInfo" style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:16px;font-size:.88rem"></div>
+            <div class="form-group">
+                <label class="form-label">Select Officer</label>
+                <select class="form-control" id="assignOfficerSelect">
+                    <option value="">Choose Officer...</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="confirmAssignment()">🎯 Assign</button>
         </div>
     </div>
 
@@ -715,6 +816,219 @@
             showToast('Logged out', 'success');
             setTimeout(() => window.location.href = 'index.html', 700);
         }
+
+        // ── ASSIGNMENT MANAGEMENT ──
+        let _selectedComplaintForAssignment = null;
+        let _cachedOfficers = [];
+
+        async function loadAssignmentQueue() {
+            const priority = document.getElementById('assignFilter-priority')?.value || '';
+            const status = document.getElementById('assignFilter-status')?.value || '';
+
+            try {
+                const data = await window.JanSamadhanAPI.getAllGrievances(status, priority, null, null, null, 0, 100);
+                const unassigned = data.filter(g => !g.assigned_officer || g.assigned_officer === 'null');
+                
+                const container = document.getElementById('assignmentQueue');
+                if (!unassigned.length) {
+                    container.innerHTML = `<div style="text-align:center;padding:40px"><span style="font-size:2rem">✅</span><p>All complaints assigned!</p></div>`;
+                    return;
+                }
+
+                container.innerHTML = unassigned.map(g => `
+    <div class="card" style="padding:14px;margin-bottom:12px;border-left:3px solid ${g.priority === 'emergency' ? 'var(--danger)' : g.priority === 'high' ? 'var(--warning)' : 'var(--primary-light)'}">
+      <div style="display:flex;justify-content:space-between;align-items:start">
+        <div style="flex:1">
+          <div style="font-weight:600;color:var(--primary-light)">${g.id} – ${g.category}</div>
+          <div style="font-size:.85rem;color:var(--text-muted);margin-top:4px">👤 ${g.name || 'Citizen'} | 📍 ${g.region || 'N/A'}</div>
+          <div style="font-size:.85rem;margin-top:4px;line-height:1.4">${g.description?.substring(0,80) || 'No description'}...</div>
+          <div style="margin-top:6px;display:flex;gap:6px">
+            ${priorityBadge((g.priority || 'medium').charAt(0).toUpperCase() + (g.priority || 'medium').slice(1))}
+            ${statusBadge((g.status || 'submitted').charAt(0).toUpperCase() + (g.status || 'submitted').slice(1))}
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openAssignModal('${g.id}')">🎯 Assign</button>
+      </div>
+    </div>
+                `).join('');
+            } catch (err) {
+                showToast('Failed to load assignment queue: ' + err.message, 'error');
+            }
+        }
+
+        async function openAssignModal(complaintId) {
+            _selectedComplaintForAssignment = complaintId;
+            document.getElementById('assignComplaintInfo').textContent = `Complaint ID: ${complaintId}`;
+            
+            // Load officers if not cached
+            if (!_cachedOfficers.length) {
+                try {
+                    const users = await window.JanSamadhanAPI.getAllUsers();
+                    _cachedOfficers = users.filter(u => u.role === 'officer');
+                } catch (err) {
+                    showToast('Failed to load officers', 'error');
+                    return;
+                }
+            }
+
+            const select = document.getElementById('assignOfficerSelect');
+            select.innerHTML = '<option value="">Choose Officer...</option>' + 
+                _cachedOfficers.map(o => `<option value="${o.email}">${o.name} (${o.email})</option>`).join('');
+            
+            openModal('assignComplaintModal');
+        }
+
+        async function confirmAssignment() {
+            const officerEmail = document.getElementById('assignOfficerSelect').value;
+            if (!officerEmail) {
+                showToast('Please select an officer', 'warning');
+                return;
+            }
+
+            try {
+                await window.JanSamadhanAPI.assignComplaint(_selectedComplaintForAssignment, officerEmail);
+                showToast(`✅ Complaint assigned to ${officerEmail}`, 'success');
+                closeModal('assignComplaintModal');
+                loadAssignmentQueue();
+            } catch (err) {
+                showToast('Assignment failed: ' + err.message, 'error');
+            }
+        }
+
+        // ── AUDIT LOG  ──
+        async function loadAuditLog() {
+            const action = document.getElementById('auditFilter-action')?.value || '';
+            const actor = document.getElementById('auditFilter-actor')?.value?.trim() || '';
+
+            try {
+                const logs = await window.JanSamadhanAPI.getAuditLog(actor || null, action || null, 200);
+                
+                const container = document.getElementById('auditList');
+                if (!logs || !logs.length) {
+                    container.innerHTML = `<div style="text-align:center;padding:40px">No audit logs found</div>`;
+                    return;
+                }
+
+                container.innerHTML = logs.map(log => `
+    <div class="card" style="padding:12px;margin-bottom:10px;border-left:3px solid ${log.status === 'success' ? 'var(--success)' : 'var(--danger)'}">
+      <div style="display:flex;justify-content:space-between;align-items:start">
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:.95rem">
+            <span style="background:${log.status === 'success' ? 'rgba(22,163,74,.15)' : 'rgba(220,38,38,.15)'};padding:2px 8px;border-radius:4px;color:${log.status === 'success' ? 'var(--success)' : 'var(--danger)'}">
+              ${log.action}
+            </span>
+          </div>
+          <div style="font-size:.85rem;color:var(--text-muted);margin-top:4px">
+            👤 ${log.actor_email} (${log.actor_role})
+          </div>
+          <div style="font-size:.85rem;margin-top:4px">
+            📦 ${log.resource_type} <strong>${log.resource_id}</strong>
+          </div>
+          ${log.details && Object.keys(log.details).length ? `
+          <div style="font-size:.8rem;color:var(--text-muted);margin-top:4px;max-height:40px;overflow:hidden">
+            <strong>Details:</strong> ${JSON.stringify(log.details).substring(0, 80)}...
+          </div>
+          ` : ''}
+          <div style="font-size:.75rem;color:var(--text-muted);margin-top:4px">
+            🕐 ${new Date(log.timestamp).toLocaleString('en-IN')}
+          </div>
+        </div>
+      </div>
+    </div>
+                `).join('');
+            } catch (err) {
+                showToast('Failed to load audit log: ' + err.message, 'error');
+            }
+        }
+
+        // ── COMPLAINT DETAILS ──
+        async function showComplaintDetails(complaintId) {
+            try {
+                const complaint = await window.JanSamadhanAPI.getGrievanceByID(complaintId);
+                if (!complaint) {
+                    showToast('Complaint not found', 'error');
+                    return;
+                }
+
+                document.getElementById('complaintDetailsTitle').textContent = `📋 ${complaint.id}`;
+                
+                const html = `
+    <div style="font-size:.88rem;line-height:1.6">
+      <div style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:12px">
+        <div style="color:var(--text-muted);font-size:.8rem;margin-bottom:2px">CITIZEN INFO</div>
+        <div style="font-weight:600">${complaint.name} (${complaint.citizen_email})</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <div style="color:var(--text-muted);font-size:.8rem;margin-bottom:2px">CATEGORY</div>
+          <div>${categoryIcon(complaint.category)} ${complaint.category}</div>
+        </div>
+        <div>
+          <div style="color:var(--text-muted);font-size:.8rem;margin-bottom:2px">PRIORITY</div>
+          <div>${priorityBadge(complaint.priority.charAt(0).toUpperCase() + complaint.priority.slice(1))}</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <div style="color:var(--text-muted);font-size:.8rem;margin-bottom:2px">STATUS</div>
+          <div>${statusBadge(complaint.status.charAt(0).toUpperCase() + complaint.status.slice(1).replace('_', ' '))}</div>
+        </div>
+        <div>
+          <div style="color:var(--text-muted);font-size:.8rem;margin-bottom:2px">ASSIGNED OFFICER</div>
+          <div>${complaint.assigned_officer ? `<strong>${complaint.assigned_officer}</strong>` : '<span style="color:var(--warning)">Not Assigned</span>'}</div>
+        </div>
+      </div>
+
+      <div style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:12px">
+        <div style="color:var(--text-muted);font-size:.8rem;margin-bottom:4px">REGION</div>
+        <div>📍 ${complaint.region || 'Not specified'}</div>
+      </div>
+
+      <div style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:12px">
+        <div style="color:var(--text-muted);font-size:.8rem;margin-bottom:4px">DESCRIPTION</div>
+        <div>${complaint.description}</div>
+      </div>
+
+      ${complaint.history && complaint.history.length ? `
+      <div style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:12px">
+        <div style="color:var(--text-muted);font-size:.8rem;margin-bottom:6px"><strong>HISTORY</strong></div>
+        ${complaint.history.map((h, i) => `
+          <div style="padding:8px;border-bottom:1px solid var(--border);${i === complaint.history.length - 1 ? 'border-bottom:none' : ''}">
+            <div style="font-weight:600;color:var(--primary-light)">${h.status.toUpperCase()}</div>
+            <div style="font-size:.8rem;color:var(--text-muted);margin-top:2px">${h.remarks || 'No remarks'}</div>
+            <div style="font-size:.75rem;color:var(--text-muted);margin-top:2px">🕐 ${new Date(h.timestamp).toLocaleString('en-IN')}</div>
+          </div>
+        `).join('')}
+      </div>
+      ` : ''}
+
+      <div style="display:flex;gap:8px;margin-top:16px">
+        ${!complaint.assigned_officer || complaint.assigned_officer === 'null' ? `
+          <button class="btn btn-primary" onclick="openAssignModal('${complaint.id}')">🎯 Assign to Officer</button>
+        ` : ''}
+        <button class="btn btn-ghost" onclick="closeModal('complaintDetailsModal')">Close</button>
+      </div>
+    </div>
+                `;
+                
+                document.getElementById('complaintDetailsContent').innerHTML = html;
+                openModal('complaintDetailsModal');
+            } catch (err) {
+                showToast('Failed to load complaint details: ' + err.message, 'error');
+            }
+        }
+
+    </script>
+    <script>
+        // Override showPage after all scripts load to add assignment and audit logic
+        const originalShowPage = showPage;
+        window.showPage = function(id, navEl) {
+            originalShowPage(id, navEl);
+            if (id === 'assignments') loadAssignmentQueue();
+            if (id === 'audit') loadAuditLog();
+        };
     </script>
 </body>
 
