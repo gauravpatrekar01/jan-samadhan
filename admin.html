@@ -531,7 +531,7 @@
             try { 
                 announcements = await window.JanSamadhanAPI.getNotices(); 
             } catch(e) {
-                announcements = window.JanSamadhan.getAnnouncements();
+                announcements = await window.JanSamadhan.getAnnouncements();
             }
             container.innerHTML = announcements.map(a => `
     <div class="announce-card ${a.pinned ? 'pinned' : ''}">

@@ -39,13 +39,27 @@ window.JanSamadhan = {
         return [];
     },
 
-    getAnnouncements() {
-        // Temporarily keeps dummy announcements until Firestore migration is fully verified
-        return [
-            { id: '1', text: "System maintenance scheduled for March 15th, 2 AM to 4 AM.", date: "2026-03-12", pinned: true },
-            { id: '2', text: "New 'JanBot' AI assistant launched to help with grievance filing!", date: "2026-03-10", pinned: false },
-            { id: '3', text: "Monsoon preparedness drive: Report drainage issues early.", date: "2026-03-08", pinned: false }
-        ];
+    async getAnnouncements() {
+        try {
+            const data = await window.JanSamadhanAPI.getNotices();
+            // If API returns data and it's not empty, use it; otherwise use dummy
+            if (data && data.length > 0) {
+                return data;
+            } else {
+                return [
+                    { id: '1', text: "System maintenance scheduled for March 15th, 2 AM to 4 AM.", date: "2026-03-12", pinned: true },
+                    { id: '2', text: "New 'JanBot' AI assistant launched to help with grievance filing!", date: "2026-03-10", pinned: false },
+                    { id: '3', text: "Monsoon preparedness drive: Report drainage issues early.", date: "2026-03-08", pinned: false }
+                ];
+            }
+        } catch (e) {
+            // Fallback to dummy data if API fails
+            return [
+                { id: '1', text: "System maintenance scheduled for March 15th, 2 AM to 4 AM.", date: "2026-03-12", pinned: true },
+                { id: '2', text: "New 'JanBot' AI assistant launched to help with grievance filing!", date: "2026-03-10", pinned: false },
+                { id: '3', text: "Monsoon preparedness drive: Report drainage issues early.", date: "2026-03-08", pinned: false }
+            ];
+        }
     },
 
     async submitFeedback(id, rating, comment) {
