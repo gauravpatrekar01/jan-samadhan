@@ -17,12 +17,17 @@ def create_user(user: UserCreate, admin: dict = Depends(require_admin)):
     if user.role not in {"officer", "admin"}:
         raise ValidationError("Admin may only create officer or admin accounts")
 
+    if user.role == "officer" and not user.district:
+        raise ValidationError("Officer district is required")
+
     collection = db.get_collection("users")
     if collection.find_one({"email": user.email}):
         raise ConflictError("User already exists")
 
     user_dict = user.model_dump()
     user_dict["password"] = hash_password(user.password)
+    if user.role == "officer":
+        user_dict["district"] = user.district
     user_dict["createdAt"] = datetime.now(timezone.utc).isoformat()
     user_dict["verified"] = True
 
@@ -110,11 +115,27 @@ def verify_user_government(email: str, admin: dict = Depends(require_admin)):
 @router.get("/analytics")
 def get_analytics(admin: dict = Depends(require_admin)):
     collection = db.get_collection("complaints")
-    complaints = list(collection.find({}, {"_id": 0, "status": 1, "priority": 1, "region": 1}))
+    complaints = list(collection.find({}, {"_id": 0, "status": 1, "priority": 1, "region": 1, "feedback": 1, "feedbackAverage": 1, "feedbackCount": 1}))
 
     total = len(complaints)
     resolved = sum(1 for c in complaints if c.get("status") in {"resolved", "closed"})
     resolution_rate = round((resolved / total * 100), 1) if total > 0 else 0
+
+    # Calculate satisfaction rating
+    total_ratings = 0
+    total_rating_sum = 0
+    rated_complaints = 0
+    for c in complaints:
+        count = c.get("feedbackCount") if c.get("feedbackCount") is not None else len(c.get("feedback", []) or [])
+        if count > 0:
+            rated_complaints += 1
+            if c.get("feedbackAverage") is not None:
+                total_rating_sum += c.get("feedbackAverage", 0) * count
+            else:
+                total_rating_sum += sum(item.get("rating", 0) for item in (c.get("feedback") or []))
+            total_ratings += count
+
+    average_satisfaction = round((total_rating_sum / total_ratings), 2) if total_ratings > 0 else 0
 
     status_dist = {
         "submitted": 0,
@@ -145,6 +166,8 @@ def get_analytics(admin: dict = Depends(require_admin)):
             "total_complaints": total,
             "resolved_complaints": resolved,
             "resolution_rate": resolution_rate,
+            "average_satisfaction": average_satisfaction,
+            "rated_complaints": len(rated_complaints),
             "status_distribution": status_dist,
             "priority_distribution": priority_dist,
             "byRegion": regions,

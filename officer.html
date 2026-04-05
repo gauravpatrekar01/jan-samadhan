@@ -124,17 +124,42 @@
                     </select>
                     <select class="filter-select" id="offFilterRegion" onchange="loadQueue()">
                         <option value="">All Regions</option>
-                        <option>Mumbai City</option>
-                        <option>Mumbai Suburban</option>
-                        <option>Pune</option>
-                        <option>Nagpur</option>
-                        <option>Thane</option>
-                        <option>Nashik</option>
-                        <option>Aurangabad</option>
-                        <option>Solapur</option>
+                        <option>Ahmednagar</option>
+                        <option>Akola</option>
                         <option>Amravati</option>
+                        <option>Aurangabad</option>
+                        <option>Beed</option>
+                        <option>Bhandara</option>
+                        <option>Buldhana</option>
+                        <option>Chandrapur</option>
+                        <option>Dhule</option>
+                        <option>Gadchiroli</option>
+                        <option>Gondia</option>
+                        <option>Hingoli</option>
+                        <option>Jalgaon</option>
+                        <option>Jalna</option>
                         <option>Kolhapur</option>
                         <option>Latur</option>
+                        <option>Mumbai City</option>
+                        <option>Mumbai Suburban</option>
+                        <option>Nagpur</option>
+                        <option>Nanded</option>
+                        <option>Nandurbar</option>
+                        <option>Nashik</option>
+                        <option>Osmanabad</option>
+                        <option>Palghar</option>
+                        <option>Parbhani</option>
+                        <option>Pune</option>
+                        <option>Raigad</option>
+                        <option>Ratnagiri</option>
+                        <option>Sangli</option>
+                        <option>Satara</option>
+                        <option>Sindhudurg</option>
+                        <option>Solapur</option>
+                        <option>Thane</option>
+                        <option>Wardha</option>
+                        <option>Washim</option>
+                        <option>Yavatmal</option>
                     </select>
                     <select class="filter-select" id="offFilterPriority" onchange="loadQueue()">
                         <option value="">All Priorities</option>
@@ -442,7 +467,7 @@
 
             const container = document.getElementById('queueList');
             if (!container) return;
-            if (!grievances.length) { container.innerHTML = `<div class="card" style="text-align:center;padding:40px"><div style="font-size:2rem">✅</div><h4>No complaints match filters</h4></div>`; return; }
+            if (!grievances.length) { container.innerHTML = `<div class="card" style="text-align:center;padding:40px"><div style="font-size:3rem">📭</div><h4>No Assigned Complaints</h4><p style="color:var(--text-muted);margin-top:8px">Check the \"All Complaints\" tab to view all grievances</p></div>`; return; }
 
             container.innerHTML = grievances.map((g, i) => `
                 <div class="grievance-card priority-${g.priority}" id="ogc-${g.id}">
@@ -450,7 +475,7 @@
                   <div class="gc-header">
                     <div class="gc-icon" style="background:${categoryColor(g.category)}">${categoryIcon(g.category)}</div>
                     <div style="flex:1">
-                      <div class="gc-id">${g.id} &nbsp;|&nbsp; 📋 ${g.title}</div>
+                      <div class="gc-id">${g.grievanceID || g.id}</div>
                       <div class="gc-title">${g.category}${g.subcategory ? ' – ' + g.subcategory : ''}</div>
                       <div class="gc-meta">
                         ${priorityBadge(g.priority.charAt(0).toUpperCase() + g.priority.slice(1))} 
@@ -467,42 +492,65 @@
                   <div class="gc-actions" style="margin-top:14px">
                     <button class="btn btn-primary btn-sm" onclick="openUpdateModal('${g.id}')">🔄 Update Status</button>
                     <button class="btn btn-ghost btn-sm" onclick="quickResolve('${g.id}')">✅ Quick Resolve</button>
+                    ${g.feedbackCount ? `<span class="badge badge-success">⭐ ${g.feedbackAverage || g.feedbackRating}/5 · ${g.feedbackCount} ratings</span>` : ''}
                   </div>
                 </div>
               `).join('');
         }
 
-        function openUpdateModal(gid) {
+        async function openUpdateModal(gid) {
             _updateGID = gid;
-            // Fetch from local cache or API if needed. Simplified for now.
-            document.getElementById('updateModalGrievanceInfo').innerHTML = `<strong>Updating Grievance: ${gid}</strong>`;
-            openModal('updateModal');
+            try {
+                // Verify grievance exists before opening modal
+                const grievance = await window.JanSamadhanAPI.getGrievanceByID(gid);
+                if (!grievance) {
+                    showToast(`❌ Grievance ${gid} not found`, 'error');
+                    return;
+                }
+                const displayID = grievance.grievanceID || grievance.id;
+                document.getElementById('updateModalGrievanceInfo').innerHTML = `<strong>Updating Grievance:</strong> <span style="font-family:monospace;color:var(--primary-light)">${displayID}</span>`;
+                openModal('updateModal');
+            } catch (err) {
+                showToast(`Error loading grievance ${gid}: ${err.message}`, 'error');
+            }
         }
 
         async function confirmUpdate() {
             const newStatus = document.getElementById('newStatusSelect').value.toLowerCase().replace(' ', '_');
             const remarks = document.getElementById('newRemarksInput').value.trim();
 
+            if (!_updateGID) {
+                showToast('No grievance selected', 'error');
+                return;
+            }
+
             try {
                 await window.JanSamadhanAPI.updateGrievanceStatus(_updateGID, newStatus, remarks);
                 closeModal('updateModal');
-                showToast(`✅ ${_updateGID} updated successfully`, 'success');
+                showToast(`✅ Grievance ${_updateGID} updated successfully`, 'success');
                 loadQueue();
                 loadOfficerStats();
                 if (document.getElementById('page-allComplaints').classList.contains('active')) loadAllComplaints();
             } catch (err) {
-                showToast(err.message || 'Update failed', 'error');
+                showToast(err.message || `Failed to update grievance ${_updateGID}`, 'error');
             }
         }
 
         async function quickResolve(gid) {
             try {
+                // Verify grievance exists before updating
+                const grievance = await window.JanSamadhanAPI.getGrievanceByID(gid);
+                if (!grievance) {
+                    showToast(`❌ Grievance ${gid} not found`, 'error');
+                    return;
+                }
+                
                 await window.JanSamadhanAPI.updateGrievanceStatus(gid, 'resolved', 'Issue resolved by field officer.');
-                showToast(`✅ ${gid} marked as Resolved`, 'success');
+                showToast(`✅ Grievance ${gid} marked as Resolved`, 'success');
                 loadQueue();
                 loadOfficerStats();
             } catch (err) {
-                showToast(err.message, 'error');
+                showToast(err.message || `Failed to resolve grievance ${gid}`, 'error');
             }
         }
 
@@ -521,23 +569,39 @@
                 grievances = await window.JanSamadhanAPI.getAllGrievances();
             } catch (e) {
                 console.warn(e);
+                showToast('Failed to load complaints', 'error');
             }
             
             if (search) {
                 const q = search.toLowerCase();
-                grievances = grievances.filter(g => g.id.toLowerCase().includes(q) || g.description.toLowerCase().includes(q) || (g.title && g.title.toLowerCase().includes(q)));
+                grievances = grievances.filter(g => (g.grievanceID || g.id).toLowerCase().includes(q) || g.description.toLowerCase().includes(q) || (g.category && g.category.toLowerCase().includes(q)));
             }
             if (status) grievances = grievances.filter(g => g.status.toLowerCase() === status.toLowerCase().replace(' ', '_'));
             if (priority) grievances = grievances.filter(g => g.priority.toLowerCase() === priority.toLowerCase());
             
             const container = document.getElementById('allComplaintsList');
             if (!container) return;
+            
+            if (!grievances || grievances.length === 0) {
+                container.innerHTML = `<div style="text-align:center;padding:60px 20px;background:rgba(107,114,128,.05);border-radius:12px;border:2px dashed var(--border)">
+                    <div style="font-size:3rem;margin-bottom:16px">🔍</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:var(--text-muted)">No Complaints Found</div>
+                    <div style="font-size:.9rem;color:var(--text-muted);margin-top:8px;line-height:1.6">
+                        ${search ? `No complaints match "<strong>${search}</strong>"<br>` : ''}
+                        ${status ? `Status: <strong>${status}</strong><br>` : ''}
+                        ${priority ? `Priority: <strong>${priority}</strong><br>` : ''}
+                        Try adjusting your filters.
+                    </div>
+                </div>`;
+                return;
+            }
+            
             container.innerHTML = grievances.map(g => `
     <div class="grievance-card priority-${g.priority.toLowerCase()}">
       <div class="gc-header">
         <div class="gc-icon" style="background:${categoryColor(g.category)}">${categoryIcon(g.category)}</div>
         <div style="flex:1">
-          <div class="gc-id">${g.id} | 👤 ${g.citizen_id || 'Anonymous'}</div>
+          <div class="gc-id">${g.grievanceID || g.id}</div>
           <div class="gc-title">${g.category}</div>
           <div class="gc-meta">${priorityBadge(g.priority.charAt(0).toUpperCase() + g.priority.slice(1))} ${statusBadge(g.status.charAt(0).toUpperCase() + g.status.slice(1).replace('_', ' '))} <span style="font-size:.78rem;color:var(--text-muted)">${g.region || 'N/A'}</span></div>
         </div>
