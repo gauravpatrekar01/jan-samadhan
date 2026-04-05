@@ -12,9 +12,13 @@ def register(user: UserCreate):
     collection = db.get_collection("users")
 
     if collection.find_one({"email": user.email}):
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="User already exists")
+
+    if user.role != "citizen":
+        raise HTTPException(status_code=400, detail="Signup is only available for citizens")
 
     user_dict = user.model_dump()
+    user_dict["role"] = "citizen"
     user_dict["password"] = hash_password(user.password)
     user_dict["createdAt"] = datetime.now(timezone.utc).isoformat()
     user_dict["verified"] = False
@@ -32,7 +36,30 @@ def login(user: UserLogin):
     db_user = collection.find_one({"email": user.email})
 
     if not db_user or not verify_password(user.password, db_user["password"]):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    if db_user.get("role") == "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized access")
+
+    token = create_access_token({"sub": db_user["email"], "role": db_user["role"]})
+
+    db_user.pop("_id", None)
+    db_user.pop("password", None)
+    db_user["token"] = token
+
+    return {"success": True, "data": db_user}
+
+
+@router.post("/admin-login")
+def admin_login(user: UserLogin):
+    collection = db.get_collection("users")
+    db_user = collection.find_one({"email": user.email})
+
+    if not db_user or not verify_password(user.password, db_user["password"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    if db_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Unauthorized access")
 
     token = create_access_token({"sub": db_user["email"], "role": db_user["role"]})
 

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JanSamadhan Admin Login</title>
+  <link rel="stylesheet" href="css/main.css">
+  <style>
+    body { min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--bg); color:var(--text); }
+    .login-panel { width:100%; max-width:420px; padding:32px; border:1px solid var(--border); border-radius:16px; background:var(--bg-card); box-shadow:var(--shadow-lg); }
+    .login-panel h1 { margin-bottom:16px; font-size:1.8rem; }
+    .login-panel .form-group { margin-bottom:16px; }
+    .login-panel .form-label { display:block; margin-bottom:8px; font-weight:700; }
+    .login-panel .form-control { width:100%; padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:var(--bg); color:var(--text); }
+    .login-panel .btn { width:100%; margin-top:12px; }
+    .login-panel .hint { margin-top:16px; font-size:.9rem; color:var(--text-muted); }
+  </style>
+</head>
+<body>
+  <div class="login-panel">
+    <h1>Admin Login</h1>
+    <p class="hint">This page is hidden from the public UI. Use only for administrator access.</p>
+    <form id="adminLoginForm">
+      <div class="form-group">
+        <label class="form-label" for="adminEmail">Email</label>
+        <input id="adminEmail" class="form-control" type="email" placeholder="admin@example.com" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="adminPassword">Password</label>
+        <input id="adminPassword" class="form-control" type="password" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="btn btn-primary">🔐 Admin Login</button>
+    </form>
+    <p class="hint">If you are not an admin, please use the normal citizen or officer login pages.</p>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.getElementById('adminLoginForm')?.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      const email = document.getElementById('adminEmail')?.value.trim();
+      const password = document.getElementById('adminPassword')?.value;
+      const btn = event.target.querySelector('button');
+      if (!email || !password) return;
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '⌛ Signing in...';
+      try {
+        const response = await window.JanSamadhanAPI.adminLogin({ email, password });
+        showToast('Admin authenticated successfully.', 'success');
+        if (response && response.role === 'admin') {
+          window.location.href = 'admin.html';
+        }
+      } catch (err) {
+        console.error('Admin login failed', err);
+        showToast(err.message || 'Invalid credentials', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -18,9 +18,21 @@ def get_current_user(authorization: str = Header(None)) -> dict:
     return payload
 
 
-def require_admin(user: dict = Depends(get_current_user)) -> dict:
-    if user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
+def require_citizen(user: dict = Depends(get_current_user)) -> dict:
+    if user.get("role") != "citizen":
+        raise HTTPException(status_code=403, detail="Citizen access required")
+    return user
+
+
+def require_officer_or_admin(user: dict = Depends(get_current_user)) -> dict:
+    if user.get("role") not in {"officer", "admin"}:
+        raise HTTPException(status_code=403, detail="Officer or admin access required")
+    return user
+
+
+def require_officer(user: dict = Depends(get_current_user)) -> dict:
+    if user.get("role") != "officer":
+        raise HTTPException(status_code=403, detail="Officer access required")
     return user
 
 
@@ -32,22 +44,22 @@ def get_complaints():
 
 
 @router.get("/my")
-def get_my_complaints(user: dict = Depends(get_current_user)):
+def get_my_complaints(user: dict = Depends(require_citizen)):
     collection = db.get_collection("complaints")
     complaints = list(collection.find({"email": user["sub"]}, {"_id": 0}))
     return {"success": True, "data": complaints}
 
 
 @router.get("/assigned")
-def get_assigned_complaints(user: dict = Depends(get_current_user)):
-    # Officers see all complaints; extend with assignment logic as needed
+def get_assigned_complaints(user: dict = Depends(require_officer_or_admin)):
+    # Officers and admins see all complaints; extend with assignment logic as needed
     collection = db.get_collection("complaints")
     complaints = list(collection.find({}, {"_id": 0}))
     return {"success": True, "data": complaints}
 
 
 @router.post("/", status_code=201)
-def create_complaint(complaint: ComplaintCreate, user: dict = Depends(get_current_user)):
+def create_complaint(complaint: ComplaintCreate, user: dict = Depends(require_citizen)):
     collection = db.get_collection("complaints")
     now = datetime.now(timezone.utc).isoformat()
     complaint_id = f"JSM-{datetime.now(timezone.utc).year}-{str(uuid.uuid4())[:8].upper()}"
@@ -95,7 +107,7 @@ def update_status(
     id: str,
     status: str,
     remarks: str = "",
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_officer_or_admin),
 ):
     allowed_statuses = {"submitted", "under_review", "in_progress", "resolved", "closed"}
     if status not in allowed_statuses:
@@ -120,7 +132,7 @@ def submit_feedback(
     id: str,
     rating: int,
     comment: str = "",
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_citizen),
 ):
     if not 1 <= rating <= 5:
         raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")

@@ -780,12 +780,6 @@
           <div class="role-desc">Review complaints, update status, manage assigned cases by department</div>
           <div class="role-badge rb-officer">Officer Portal</div>
         </div>
-        <div class="login-role-card admin" onclick="openLoginModal('admin')">
-          <div class="role-emoji">🛡️</div>
-          <div class="role-name">Administrator</div>
-          <div class="role-desc">System analytics, user management, escalation monitoring, announcements</div>
-          <div class="role-badge rb-admin">Admin Portal</div>
-        </div>
       </div>
     </div>
   </section>
@@ -824,7 +818,6 @@
           <h4>Portals</h4>
           <a href="#" onclick="openLoginModal('citizen')">👤 Citizen Portal</a>
           <a href="#" onclick="openLoginModal('officer')">🧑‍💼 Officer Portal</a>
-          <a href="#" onclick="openLoginModal('admin')">🛡️ Admin Portal</a>
         </div>
         <div>
           <h4>Help &amp; Support</h4>
@@ -867,10 +860,7 @@
       <div class="role-tabs">
         <button class="role-tab active" data-role="citizen" onclick="setLoginRole('citizen')">👤 Citizen</button>
         <button class="role-tab" data-role="officer" onclick="setLoginRole('officer')">🧑‍💼 Officer</button>
-        <button class="role-tab" data-role="admin" onclick="setLoginRole('admin')">🛡️ Admin</button>
-      </div>
 
-      <div class="cred-hint" id="credHint" style="display:none">
       </div>
 
       <form id="authForm" onsubmit="handleAuth(event)">
@@ -1031,6 +1021,11 @@
     }
 
     function setAuthMode(mode) {
+      if (window.JanSamadhanAuth.role === 'officer' && mode === 'signup') {
+        showToast('Officer accounts must be created by Admin. Please login.', 'warning');
+        mode = 'login';
+      }
+
       console.log("🔄 Switching auth mode to:", mode);
       window.JanSamadhanAuth.mode = mode;
       
@@ -1053,6 +1048,12 @@
       console.log("👤 Setting role to:", role);
       window.JanSamadhanAuth.role = role;
       document.querySelectorAll('.role-tab').forEach(t => t.classList.toggle('active', t.dataset.role === role));
+
+      const mSignup = document.getElementById('modeSignup');
+      if (mSignup) mSignup.disabled = role === 'officer';
+      if (role === 'officer') {
+        setAuthMode('login');
+      }
     }
 
     async function handleAuth(e) {
@@ -1075,6 +1076,9 @@
       try {
         let response;
         if (mode === 'signup') {
+          if (role !== 'citizen') {
+            throw new Error('Officers must be created by the admin. Please login instead.');
+          }
           await window.JanSamadhanAPI.register({ name, email, password, role: role });
           // Auto-login after successful registration to get the token
           response = await window.JanSamadhanAPI.login({ email, password });
