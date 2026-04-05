@@ -230,8 +230,11 @@
             <!-- ─── USERS ─── -->
             <div class="dash-page" id="page-users">
                 <div class="page-header">
-                    <div class="page-title">👥 User Management</div>
-                    <div class="page-subtitle">Registered citizens, officers and admin accounts</div>
+                    <div>
+                        <div class="page-title">👥 User Management</div>
+                        <div class="page-subtitle">Registered citizens, officers and admin accounts</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="openModal('createUserModal')">+ Add Officer</button>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px"
                     id="roleSummary"></div>
@@ -254,6 +257,35 @@
                     placeholder="Enter official announcement..."></textarea>
             </div>
             <button class="btn btn-primary" onclick="addAnnouncement()">📢 Publish Announcement</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="createUserModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>🧑‍💼 Create Officer Account</h3>
+                <button class="modal-close" onclick="closeModal('createUserModal')">✕</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input class="form-control" id="newUserName" placeholder="Officer name" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input class="form-control" id="newUserEmail" placeholder="officer@example.com" type="email" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input class="form-control" id="newUserPassword" type="password" placeholder="Strong password" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Role</label>
+                <select class="form-control" id="newUserRole">
+                    <option value="officer">Officer</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="createUserAccount()">Create Account</button>
         </div>
     </div>
 
@@ -614,6 +646,7 @@
       <span class="badge ${roleBadge[u.role]}">${roleLabel[u.role]}</span>
       ${u.department ? `<span class="badge badge-muted">${u.department}</span>` : ''}
       <div style="margin-left:auto;display:flex;gap:8px">
+        ${u.role === 'citizen' && !u.verified ? `<button class="btn btn-ghost btn-sm" onclick="verifyCitizenGov('${u.email}')">Auto Verify</button>` : ''}
         <button class="btn btn-ghost btn-sm" onclick="toggleVerification('${u.email}')">Toggle Verification</button>
         <button class="btn btn-ghost btn-sm" onclick="showToast('User management is demo only','info')">✏️ Edit</button>
       </div>
@@ -628,6 +661,30 @@
                 loadUsers();
             } catch(e) {
                 showToast(e.message, 'error');
+            }
+        }
+
+        async function createUserAccount() {
+            const name = document.getElementById('newUserName')?.value.trim();
+            const email = document.getElementById('newUserEmail')?.value.trim();
+            const password = document.getElementById('newUserPassword')?.value;
+            const role = document.getElementById('newUserRole')?.value;
+
+            if (!name || !email || !password) {
+                showToast('Please fill in all fields to create the account.', 'warning');
+                return;
+            }
+
+            try {
+                await window.JanSamadhanAPI.createUser({ name, email, password, role });
+                showToast('User account created successfully.', 'success');
+                closeModal('createUserModal');
+                document.getElementById('newUserName').value = '';
+                document.getElementById('newUserEmail').value = '';
+                document.getElementById('newUserPassword').value = '';
+                loadUsers();
+            } catch (e) {
+                showToast(e.message || 'Failed to create user', 'error');
             }
         }
 

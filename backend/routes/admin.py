@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
+from schemas.user import UserCreate
 from db import db
-from security import decode_token
+from security import decode_token, hash_password
 from datetime import datetime, timezone
+from government_registry import verify_citizen_record
 import uuid
 
 router = APIRouter()
@@ -23,6 +25,26 @@ def require_admin(user: dict = Depends(get_current_user)) -> dict:
     return user
 
 
+@router.post("/users", status_code=201)
+def create_user(user: UserCreate, admin: dict = Depends(require_admin)):
+    if user.role not in {"officer", "admin"}:
+        raise HTTPException(status_code=400, detail="Admin may only create officer or admin accounts")
+
+    collection = db.get_collection("users")
+    if collection.find_one({"email": user.email}):
+        raise HTTPException(status_code=400, detail="User already exists")
+
+    user_dict = user.model_dump()
+    user_dict["password"] = hash_password(user.password)
+    user_dict["createdAt"] = datetime.now(timezone.utc).isoformat()
+    user_dict["verified"] = True
+
+    collection.insert_one(user_dict)
+    user_dict.pop("_id", None)
+    user_dict.pop("password", None)
+    return {"success": True, "data": user_dict}
+
+
 @router.get("/users")
 def get_users(admin: dict = Depends(require_admin)):
     collection = db.get_collection("users")
@@ -39,6 +61,24 @@ def verify_user(email: str, admin: dict = Depends(require_admin)):
     new_status = not user.get("verified", False)
     collection.update_one({"email": email}, {"$set": {"verified": new_status}})
     return {"success": True, "message": f"User {'verified' if new_status else 'unverified'}", "verified": new_status}
+
+
+@router.post("/users/{email}/verify-government")
+def verify_user_government(email: str, admin: dict = Depends(require_admin)):
+    collection = db.get_collection("users")
+    user = collection.find_one({"email": email})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.get("role") != "citizen":
+        raise HTTPException(status_code=400, detail="Government verification only applies to citizen accounts")
+    if not user.get("aadhar"):
+        raise HTTPException(status_code=400, detail="Aadhar number is required for government verification")
+
+    if not verify_citizen_record(user.get("name"), user.get("email"), user.get("aadhar")):
+        raise HTTPException(status_code=400, detail="No matching government record found")
+
+    collection.update_one({"email": email}, {"$set": {"verified": True}})
+    return {"success": True, "message": "Citizen verified against government records"}
 
 
 @router.get("/analytics")
