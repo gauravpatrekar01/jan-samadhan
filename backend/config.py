@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
+
 
 class Settings(BaseSettings):
     MONGO_URI: str = "mongodb://localhost:27017"
@@ -7,8 +7,10 @@ class Settings(BaseSettings):
     JWT_SECRET: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     ALGORITHM: str = "HS256"
+    ALLOWED_ORIGINS: str = "*"
 
     class Config:
         env_file = ".env"
+
 
 settings = Settings()
