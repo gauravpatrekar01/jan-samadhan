@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from schemas.user import UserCreate, UserLogin
 from db import db
 from security import hash_password, verify_password, create_access_token
+from government_registry import verify_citizen_record
 from datetime import datetime, timezone
 
 router = APIRouter()
@@ -21,7 +22,7 @@ def register(user: UserCreate):
     user_dict["role"] = "citizen"
     user_dict["password"] = hash_password(user.password)
     user_dict["createdAt"] = datetime.now(timezone.utc).isoformat()
-    user_dict["verified"] = False
+    user_dict["verified"] = verify_citizen_record(user.name, user.email, user.aadhar)
 
     collection.insert_one(user_dict)
     user_dict.pop("_id", None)

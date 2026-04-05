@@ -109,6 +109,10 @@ const JanSamadhanAPI = {
         return this._fetch(`/api/admin/notices/${id}`, { method: 'DELETE' });
     },
 
+    async createUser(userData) {
+        return this._fetch('/api/admin/users', { method: 'POST', body: JSON.stringify(userData) });
+    },
+
     /**
      * Public stats — used by the landing page KPI cards.
      * Hits /api/stats which requires NO authentication.
@@ -146,6 +150,10 @@ const JanSamadhanAPI = {
 
     async getAllUsers() {
         return this._fetch('/api/admin/users');
+    },
+
+    async governmentVerifyUser(email) {
+        return this._fetch(`/api/admin/users/${email}/verify-government`, { method: 'POST' });
     }
 };
 

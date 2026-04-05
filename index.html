@@ -870,6 +870,11 @@
           <input type="text" class="form-control" id="loginFullName" placeholder="Enter your full name">
         </div>
 
+        <div class="form-group" id="aadharGroup" style="display:none">
+          <label class="form-label">Aadhaar Number <span class="req">*</span></label>
+          <input type="text" class="form-control" id="loginAadhar" placeholder="12-digit Aadhaar number" pattern="\d{12}">
+        </div>
+
         <div class="form-group">
           <label class="form-label">Email Address <span class="req">*</span></label>
           <input type="email" class="form-control" id="loginEmail" placeholder="e.g. citizen@example.com" required>
@@ -1035,7 +1040,9 @@
       if (mSignup) mSignup.classList.toggle('active', mode === 'signup');
 
       const fullName = document.getElementById('fullNameGroup');
+      const aadharGroup = document.getElementById('aadharGroup');
       if (fullName) fullName.style.display = mode === 'signup' ? 'block' : 'none';
+      if (aadharGroup) aadharGroup.style.display = mode === 'signup' ? 'block' : 'none';
       
       const title = document.getElementById('authModalTitle');
       if (title) title.innerText = mode === 'login' ? '🔑 Login to JanSamadhan' : '📝 Create Account';
@@ -1065,6 +1072,7 @@
       const email = document.getElementById('loginEmail').value;
       const password = document.getElementById('loginPassword').value;
       const name = document.getElementById('loginFullName').value;
+      const aadhar = document.getElementById('loginAadhar').value;
 
       const btn = document.getElementById('authSubmitBtn');
       if (!btn) return;
@@ -1079,7 +1087,7 @@
           if (role !== 'citizen') {
             throw new Error('Officers must be created by the admin. Please login instead.');
           }
-          await window.JanSamadhanAPI.register({ name, email, password, role: role });
+          await window.JanSamadhanAPI.register({ name, email, password, role: role, aadhar });
           // Auto-login after successful registration to get the token
           response = await window.JanSamadhanAPI.login({ email, password });
           showToast('Account created and logged in successfully!', 'success');
