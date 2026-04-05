@@ -732,7 +732,7 @@
           <button class="btn btn-primary" onclick="trackComplaint()">🔍 Track</button>
         </div>
         <p style="margin-top:12px;font-size:.82rem;color:var(--text-muted)">
-          💡 Try: <span id="sampleIDs" style="font-weight:600;color:var(--primary-light);cursor:pointer"></span>
+          Use your Complaint ID to monitor progress and stay updated on resolution status anytime <span id="sampleIDs" style="font-weight:600;color:var(--primary-light);cursor:pointer"></span>
         </p>
         <!-- Track Result -->
         <div id="trackResult"></div>
@@ -994,7 +994,7 @@
       }
 
       // Sample IDs for track
-      const ids = ['JSM-2026-0001', 'JSM-2026-0002', 'JSM-2026-0007'];
+      const ids = [];
       const sampleIDs = document.getElementById('sampleIDs');
       if (sampleIDs) {
         sampleIDs.textContent = ids.join(' · ');
