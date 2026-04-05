@@ -864,7 +864,6 @@
       <div class="role-tabs">
         <button class="role-tab active" data-role="citizen" onclick="setLoginRole('citizen')">👤 Citizen</button>
         <button class="role-tab" data-role="officer" onclick="setLoginRole('officer')">🧑‍💼 Officer</button>
-
       </div>
 
       <form id="authForm" onsubmit="handleAuth(event)">
@@ -1105,8 +1104,12 @@
           response = await window.JanSamadhanAPI.login({ email, password });
           showToast('Account created and logged in successfully!', 'success');
         } else {
-          console.log("🔑 Attempting login for:", email);
-          response = await window.JanSamadhanAPI.login({ email, password });
+          console.log("🔑 Attempting login for:", email, "as role:", role);
+          if (role === 'admin') {
+            response = await window.JanSamadhanAPI.adminLogin({ email, password });
+          } else {
+            response = await window.JanSamadhanAPI.login({ email, password });
+          }
           showToast('Login successful!', 'success');
         }
 

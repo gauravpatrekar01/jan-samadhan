@@ -33,7 +33,31 @@ function renderCategoryPie(id, stats) {
                 borderWidth: 0
             }]
         },
-        options: { maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } } }
+        options: { 
+            maintainAspectRatio: false, 
+            responsive: true,
+            cutout: '70%', 
+            plugins: { 
+                legend: { 
+                    position: 'bottom', 
+                    labels: { 
+                        boxWidth: 12, 
+                        font: { size: 10 },
+                        padding: 15
+                    } 
+                } 
+            },
+            // Enhanced responsive behavior
+            onResize: (chart, size) => {
+                if (size.width < 400) {
+                    chart.options.plugins.legend.labels.font.size = 8;
+                    chart.options.cutout = '60%';
+                } else if (size.width > 600) {
+                    chart.options.plugins.legend.labels.font.size = 12;
+                    chart.options.cutout = '70%';
+                }
+            }
+        }
     });
 }
 
@@ -51,7 +75,42 @@ function renderPriorityBar(id, stats) {
                 backgroundColor: ['#7f1d1d', '#dc2626', '#d97706', '#16a34a']
             }]
         },
-        options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+        options: { 
+            maintainAspectRatio: false, 
+            responsive: true,
+            scales: { 
+                y: { 
+                    beginAtZero: true,
+                    ticks: {
+                        font: {
+                            size: 10
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: {
+                            size: 10
+                        }
+                    }
+                }
+            }, 
+            plugins: { 
+                legend: { 
+                    display: false 
+                } 
+            },
+            // Enhanced responsive behavior
+            onResize: (chart, size) => {
+                if (size.width < 400) {
+                    chart.options.scales.y.ticks.font.size = 8;
+                    chart.options.scales.x.ticks.font.size = 8;
+                } else if (size.width > 600) {
+                    chart.options.scales.y.ticks.font.size = 12;
+                    chart.options.scales.x.ticks.font.size = 12;
+                }
+            }
+        }
     });
 }
 
@@ -68,7 +127,28 @@ function renderStatusPie(id, stats) {
                 backgroundColor: ['#64748b', '#3b82f6', '#16a34a']
             }]
         },
-        options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } } }
+        options: { 
+            maintainAspectRatio: false, 
+            responsive: true,
+            plugins: { 
+                legend: { 
+                    position: 'bottom', 
+                    labels: { 
+                        boxWidth: 12, 
+                        font: { size: 10 },
+                        padding: 15
+                    } 
+                } 
+            },
+            // Enhanced responsive behavior
+            onResize: (chart, size) => {
+                if (size.width < 400) {
+                    chart.options.plugins.legend.labels.font.size = 8;
+                } else if (size.width > 600) {
+                    chart.options.plugins.legend.labels.font.size = 12;
+                }
+            }
+        }
     });
 }
 

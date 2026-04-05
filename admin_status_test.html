@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Status Update Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 8px; }
+        .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .error { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .info { background: #d1ecf1; color: #0c5460; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        input, select, textarea { padding: 8px; margin: 5px; width: 300px; }
+        .complaint-item { border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🛡️ Admin Status Update Test</h1>
+    
+    <div class="info">
+        <strong>FIXES APPLIED:</strong>
+        <ul>
+            <li>✅ Admin login now uses correct /api/auth/admin-login endpoint</li>
+            <li>✅ Admin role tab added to login modal</li>
+            <li>✅ Officers can update emergency complaints without assignment</li>
+            <li>✅ Emergency complaints auto-assign to updating officer</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 1: Admin Login</h2>
+        <div>
+            <input type="email" id="adminEmail" placeholder="Admin email" value="admin@example.com">
+            <input type="password" id="adminPassword" placeholder="Password" value="admin123">
+            <button onclick="adminLogin()">Login as Admin</button>
+        </div>
+        <div id="adminLoginResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 2: Fetch Complaints</h2>
+        <button onclick="fetchComplaints()">Get All Complaints</button>
+        <div id="complaintsList"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 3: Test Status Update</h2>
+        <div>
+            <input type="text" id="testComplaintId" placeholder="Complaint ID">
+            <select id="testNewStatus">
+                <option value="under_review">Under Review</option>
+                <option value="in_progress">In Progress</option>
+                <option value="resolved">Resolved</option>
+                <option value="closed">Closed</option>
+            </select>
+            <textarea id="testRemarks" placeholder="Admin remarks...">Updated by admin for testing</textarea>
+            <button onclick="testAdminStatusUpdate()">Update Status</button>
+        </div>
+        <div id="statusUpdateResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 4: Test Emergency Update (Officer Login)</h2>
+        <div>
+            <input type="email" id="officerEmail" placeholder="Officer email" value="officer@example.com">
+            <input type="password" id="officerPassword" placeholder="Password" value="password123">
+            <button onclick="officerLogin()">Login as Officer</button>
+        </div>
+        <div id="officerLoginResult"></div>
+        
+        <h3>Test Emergency Status Update</h3>
+        <div>
+            <input type="text" id="emergencyComplaintId" placeholder="Emergency Complaint ID">
+            <select id="emergencyNewStatus">
+                <option value="in_progress">In Progress</option>
+                <option value="resolved">Resolved</option>
+            </select>
+            <textarea id="emergencyRemarks" placeholder="Officer remarks...">Emergency action taken</textarea>
+            <button onclick="testEmergencyUpdate()">Update Emergency</button>
+        </div>
+        <div id="emergencyUpdateResult"></div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        let adminUser = null;
+        let officerUser = null;
+
+        async function adminLogin() {
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+            const result = document.getElementById('adminLoginResult');
+            
+            try {
+                const response = await window.JanSamadhanAPI.adminLogin({ email, password });
+                adminUser = response;
+                result.innerHTML = `<div class="success">✅ Admin login successful - ${response.name} (${response.role})</div>`;
+                console.log('Admin login response:', response);
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Admin login failed: ${error.message}</div>`;
+                console.error('Admin login error:', error);
+            }
+        }
+
+        async function officerLogin() {
+            const email = document.getElementById('officerEmail').value;
+            const password = document.getElementById('officerPassword').value;
+            const result = document.getElementById('officerLoginResult');
+            
+            try {
+                const response = await window.JanSamadhanAPI.login({ email, password });
+                officerUser = response;
+                result.innerHTML = `<div class="success">✅ Officer login successful - ${response.name} (${response.role})</div>`;
+                console.log('Officer login response:', response);
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Officer login failed: ${error.message}</div>`;
+                console.error('Officer login error:', error);
+            }
+        }
+
+        async function fetchComplaints() {
+            const list = document.getElementById('complaintsList');
+            
+            if (!adminUser) {
+                list.innerHTML = '<div class="error">❌ Please login as admin first</div>';
+                return;
+            }
+            
+            try {
+                const complaints = await window.JanSamadhanAPI.getAllGrievances();
+                list.innerHTML = `
+                    <div class="success">✅ Found ${complaints.length} complaints:</div>
+                    ${complaints.map(g => `
+                        <div class="complaint-item">
+                            <strong>ID:</strong> ${g.id}<br>
+                            <strong>Priority:</strong> ${g.priority}<br>
+                            <strong>Status:</strong> ${g.status}<br>
+                            <strong>Category:</strong> ${g.category}<br>
+                            <strong>Assigned:</strong> ${g.assigned_officer || 'Unassigned'}<br>
+                            <strong>Description:</strong> ${g.description?.substring(0, 100)}...<br>
+                            <button onclick="selectComplaint('${g.id}')">Select This</button>
+                        </div>
+                    `).join('')}
+                `;
+            } catch (error) {
+                list.innerHTML = `<div class="error">❌ Failed to fetch complaints: ${error.message}</div>`;
+                console.error('Fetch error:', error);
+            }
+        }
+
+        function selectComplaint(id) {
+            document.getElementById('testComplaintId').value = id;
+            document.getElementById('emergencyComplaintId').value = id;
+        }
+
+        async function testAdminStatusUpdate() {
+            const complaintId = document.getElementById('testComplaintId').value;
+            const newStatus = document.getElementById('testNewStatus').value;
+            const remarks = document.getElementById('testRemarks').value;
+            const result = document.getElementById('statusUpdateResult');
+            
+            if (!adminUser) {
+                result.innerHTML = `<div class="error">❌ Please login as admin first</div>`;
+                return;
+            }
+            
+            if (!complaintId) {
+                result.innerHTML = `<div class="error">❌ Please enter a complaint ID</div>`;
+                return;
+            }
+            
+            try {
+                console.log(`Admin updating ${complaintId} to ${newStatus}`);
+                await window.JanSamadhanAPI.updateGrievanceStatus(complaintId, newStatus, remarks);
+                result.innerHTML = `<div class="success">✅ Admin successfully updated ${complaintId} to ${newStatus}</div>`;
+                // Refresh complaints list
+                fetchComplaints();
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Admin status update failed: ${error.message}</div>`;
+                console.error('Admin status update error:', error);
+            }
+        }
+
+        async function testEmergencyUpdate() {
+            const complaintId = document.getElementById('emergencyComplaintId').value;
+            const newStatus = document.getElementById('emergencyNewStatus').value;
+            const remarks = document.getElementById('emergencyRemarks').value;
+            const result = document.getElementById('emergencyUpdateResult');
+            
+            if (!officerUser) {
+                result.innerHTML = `<div class="error">❌ Please login as officer first</div>`;
+                return;
+            }
+            
+            if (!complaintId) {
+                result.innerHTML = `<div class="error">❌ Please enter a complaint ID</div>`;
+                return;
+            }
+            
+            try {
+                console.log(`Officer updating emergency ${complaintId} to ${newStatus}`);
+                await window.JanSamadhanAPI.updateGrievanceStatus(complaintId, newStatus, remarks);
+                result.innerHTML = `<div class="success">✅ Officer successfully updated emergency ${complaintId} to ${newStatus}</div>`;
+                // Refresh complaints list
+                fetchComplaints();
+            } catch (error) {
+                if (error.message.includes("You can only update your assigned complaints")) {
+                    result.innerHTML = `<div class="error">❌ OLD BUG: Emergency update blocked - ${error.message}</div>`;
+                } else {
+                    result.innerHTML = `<div class="error">❌ Emergency update failed: ${error.message}</div>`;
+                }
+                console.error('Emergency update error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

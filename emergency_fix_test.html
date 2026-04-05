@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Emergency Status Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        input, select { padding: 8px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🚨 Emergency Complaint Status Update Fix</h1>
+    
+    <div class="info result">
+        <strong>FIX APPLIED:</strong> Officers can now update emergency complaints even if not assigned to them.
+        Emergency complaints will be auto-assigned to the officer who updates them.
+    </div>
+
+    <h2>Test the Fix</h2>
+    
+    <div>
+        <label>Officer Email:</label>
+        <input type="email" id="officerEmail" value="officer@example.com" placeholder="officer@example.com">
+        <label>Password:</label>
+        <input type="password" id="officerPassword" value="password123" placeholder="password">
+        <button onclick="loginOfficer()">Login as Officer</button>
+    </div>
+    
+    <div id="loginResult"></div>
+    
+    <h3>Test Emergency Status Update</h3>
+    <div>
+        <label>Complaint ID:</label>
+        <input type="text" id="complaintId" value="JSM-2026-0001" placeholder="JSM-2026-XXXX">
+        <label>New Status:</label>
+        <select id="newStatus">
+            <option value="under_review">Under Review</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+        </select>
+        <button onclick="testEmergencyUpdate()">Update Emergency Status</button>
+    </div>
+    
+    <div id="updateResult"></div>
+
+    <script src="js/api.js"></script>
+    <script>
+        let currentUser = null;
+
+        async function loginOfficer() {
+            const email = document.getElementById('officerEmail').value;
+            const password = document.getElementById('officerPassword').value;
+            const resultDiv = document.getElementById('loginResult');
+            
+            try {
+                const response = await window.JanSamadhanAPI.login({ email, password });
+                currentUser = response;
+                resultDiv.innerHTML = `<div class="success result">✅ Logged in as ${response.role} - ${response.name}</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error result">❌ Login failed: ${error.message}</div>`;
+            }
+        }
+
+        async function testEmergencyUpdate() {
+            if (!currentUser) {
+                document.getElementById('updateResult').innerHTML = 
+                    `<div class="error result">❌ Please login first</div>`;
+                return;
+            }
+
+            const complaintId = document.getElementById('complaintId').value;
+            const newStatus = document.getElementById('newStatus').value;
+            const resultDiv = document.getElementById('updateResult');
+            
+            try {
+                const remarks = `Emergency status update to ${newStatus} by officer ${currentUser.name}`;
+                await window.JanSamadhanAPI.updateGrievanceStatus(complaintId, newStatus, remarks);
+                resultDiv.innerHTML = `<div class="success result">✅ Emergency complaint ${complaintId} status updated to ${newStatus}!</div>`;
+            } catch (error) {
+                if (error.message.includes("You can only update your assigned complaints")) {
+                    resultDiv.innerHTML = `<div class="error result">❌ OLD BUG STILL EXISTS: ${error.message}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error result">❌ Update failed: ${error.message}</div>`;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
