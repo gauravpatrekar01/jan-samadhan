@@ -666,22 +666,28 @@
         async function loadAdminAnnouncements() {
             const container = document.getElementById('adminAnnList');
             if (!container) return;
+            const user = getSessionUser();
             let announcements = [];
             try { 
                 announcements = await window.JanSamadhanAPI.getNotices(); 
             } catch(e) {
                 announcements = await window.JanSamadhan.getAnnouncements();
             }
-            container.innerHTML = announcements.map(a => `
+            container.innerHTML = announcements.map(a => {
+                // Admins can delete all, others only their own
+                const canDelete = user?.role === 'admin' || a.createdBy === user?.sub;
+                const createdByText = a.createdByRole === 'officer' ? '👮 Officer' : '🛡️ Admin';
+                return `
     <div class="announce-card ${a.pinned ? 'pinned' : ''}">
       <div class="announce-icon">${a.pinned ? '📌' : '📣'}</div>
       <div style="flex:1">
         <div class="announce-text">${a.text}</div>
-        <div class="announce-date">📅 ${a.date} ${a.pinned ? '<span class="badge badge-warning" style="margin-left:8px">Pinned</span>' : ''}</div>
+        <div class="announce-date">📅 ${a.date} ${a.pinned ? '<span class="badge badge-warning" style="margin-left:8px">Pinned</span>' : ''} <span style="margin-left:8px;font-size:0.8rem;color:var(--text-light)">${createdByText}</span></div>
       </div>
-      <button class="announce-del" onclick="removeAnnouncement('${a.id}')">🗑️ Remove</button>
+      ${canDelete ? `<button class="announce-del" onclick="removeAnnouncement('${a.id}')">🗑️ Remove</button>` : ''}
     </div>
-  `).join('') || '<div style="text-align:center;padding:32px;color:var(--text-muted)">No announcements yet</div>';
+  `;
+            }).join('') || '<div style="text-align:center;padding:32px;color:var(--text-muted)">No announcements yet</div>';
         }
 
         async function addAnnouncement() {
@@ -694,18 +700,24 @@
             };
             try {
                 await window.JanSamadhanAPI.addNotice(notice);
-            } catch(e) {}
-            window.JanSamadhan.addAnnouncement(text);
-            document.getElementById('newAnnText').value = '';
-            closeModal('addAnnModal');
-            showToast('📢 Announcement published successfully', 'success');
-            loadAdminAnnouncements();
+                showToast('📢 Announcement published successfully', 'success');
+                document.getElementById('newAnnText').value = '';
+                closeModal('addAnnModal');
+                loadAdminAnnouncements();
+            } catch(e) {
+                showToast('Failed to publish announcement: ' + e.message, 'error');
+            }
         }
 
-        function removeAnnouncement(id) {
-            window.JanSamadhan.removeAnnouncement(id);
-            showToast('Announcement removed', 'info');
-            loadAdminAnnouncements();
+        async function removeAnnouncement(id) {
+            if (!confirm('Delete this notice?')) return;
+            try {
+                await window.JanSamadhanAPI.deleteNotice(id);
+                showToast('✅ Notice deleted', 'success');
+                loadAdminAnnouncements();
+            } catch(e) {
+                showToast('Failed to delete notice: ' + e.message, 'error');
+            }
         }
 
         // ── Users ──

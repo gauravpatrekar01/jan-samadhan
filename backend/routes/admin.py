@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends
 from schemas.user import UserCreate
 from db import db
 from security import hash_password
-from dependencies import require_admin
+from dependencies import require_admin, require_officer_or_admin
 from datetime import datetime, timezone
 from government_registry import verify_citizen_record
 from audit import log_audit, get_audit_log
-from errors import ValidationError, NotFoundError, ConflictError
+from errors import ValidationError, NotFoundError, ConflictError, AuthorizationError
 import uuid
 
 router = APIRouter()
@@ -153,7 +153,8 @@ def get_analytics(admin: dict = Depends(require_admin)):
 
 
 @router.post("/notices", status_code=201)
-def add_notice(notice: dict, admin: dict = Depends(require_admin)):
+def add_notice(notice: dict, user: dict = Depends(require_officer_or_admin)):
+    """Officers and admins can add notices"""
     if not notice.get("text", "").strip():
         raise ValidationError("Notice text is required")
 
@@ -162,15 +163,16 @@ def add_notice(notice: dict, admin: dict = Depends(require_admin)):
         "id": str(uuid.uuid4()),
         "text": notice.get("text"),
         "date": datetime.now(timezone.utc).isoformat().split("T")[0],
-        "createdBy": admin["sub"],
+        "createdBy": user["sub"],
+        "createdByRole": user["role"],
         "pinned": notice.get("pinned", False),
     }
     collection.insert_one(notice_doc)
 
     log_audit(
         action="notice_created",
-        actor_email=admin["sub"],
-        actor_role=admin["role"],
+        actor_email=user["sub"],
+        actor_role=user["role"],
         resource_type="notice",
         resource_id=notice_doc["id"],
         details={"text": notice.get("text")[:100]},
@@ -189,16 +191,26 @@ def get_notices():
 
 
 @router.delete("/notices/{notice_id}")
-def delete_notice(notice_id: str, admin: dict = Depends(require_admin)):
+def delete_notice(notice_id: str, user: dict = Depends(require_officer_or_admin)):
+    """Admins can delete any notice, officers can only delete their own"""
     collection = db.get_collection("announcements")
+    notice = collection.find_one({"id": notice_id})
+    
+    if not notice:
+        raise NotFoundError("Notice")
+    
+    # Officers can only delete their own notices; admins can delete any
+    if user["role"] == "officer" and notice.get("createdBy") != user["sub"]:
+        raise AuthorizationError("You can only delete notices you created")
+
     result = collection.delete_one({"id": notice_id})
     if result.deleted_count == 0:
         raise NotFoundError("Notice")
 
     log_audit(
         action="notice_deleted",
-        actor_email=admin["sub"],
-        actor_role=admin["role"],
+        actor_email=user["sub"],
+        actor_role=user["role"],
         resource_type="notice",
         resource_id=notice_id,
     )

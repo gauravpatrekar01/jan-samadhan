@@ -55,6 +55,10 @@
                 <span class="nav-icon">🚨</span> Escalations
                 <span class="nav-badge" id="escBadge" style="background:var(--danger)">0</span>
             </div>
+            <div class="nav-section-label">Communications</div>
+            <div class="nav-item" onclick="showPage('notices',this)">
+                <span class="nav-icon">📢</span> Public Notices
+            </div>
         </nav>
         <div class="sidebar-footer">
             <button class="sidebar-footer-btn" onclick="logoutUser()">🚪 Logout</button>
@@ -228,10 +232,46 @@
                 <div class="escalation-list" id="escalationList"></div>
             </div>
 
+            <!-- ─── PUBLIC NOTICES ─── -->
+            <div class="dash-page" id="page-notices">
+                <div class="welcome-banner" style="background:linear-gradient(135deg,#10b981,#34d399)">
+                    <div>
+                        <div class="wb-title">📢 Public Notices</div>
+                        <div class="wb-sub">Post announcements and updates for public viewing</div>
+                    </div>
+                    <div style="font-size:2.5rem;opacity:.8">📣</div>
+                </div>
+                
+                <div style="margin-bottom: 24px;">
+                    <button class="btn btn-primary" onclick="openModal('addNoticeModal')">+ Publish Notice</button>
+                </div>
+
+                <div id="officerNoticeList" style="display:grid;gap:12px;margin-bottom:20px">
+                    <!-- Notices will be populated here -->
+                </div>
+            </div>
+
         </div>
     </div>
 
-    <!-- UPDATE STATUS MODAL -->
+    <!-- ADD NOTICE MODAL (Officer) -->
+    <div class="modal-overlay" id="addNoticeModal">
+        <div class="modal-box" style="max-width:500px">
+            <div class="modal-header">
+                <h3>📢 Publish Public Notice</h3>
+                <button class="modal-close" onclick="closeModal('addNoticeModal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label">Notice Text</label>
+                <textarea class="form-control" id="officerNoticeText" rows="4" 
+                    placeholder="Share important public information or updates..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="addOfficerNotice()">📢 Publish Notice</button>
+                <button class="btn btn-ghost" onclick="closeModal('addNoticeModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
     <div class="modal-overlay" id="updateModal">
         <div class="modal-box">
             <div class="modal-header">
@@ -308,6 +348,7 @@
             if (id === 'mapView') renderDummyMap('officerMap', window.JanSamadhan.getPriorityQueue({}));
             if (id === 'allComplaints') loadAllComplaints();
             if (id === 'escalations') loadEscalations();
+            if (id === 'notices') loadOfficerNotices();
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -602,6 +643,66 @@
             sessionStorage.removeItem('js_user');
             showToast('Logged out', 'success');
             setTimeout(() => window.location.href = 'index.html', 700);
+        }
+
+        // ── NOTICE MANAGEMENT FOR OFFICERS ──
+        async function loadOfficerNotices() {
+            const container = document.getElementById('officerNoticeList');
+            if (!container) return;
+            const user = getSessionUser();
+            let notices = [];
+            try { 
+                notices = await window.JanSamadhanAPI.getNotices(); 
+            } catch(e) {
+                console.error('Failed to load notices:', e);
+                notices = [];
+            }
+            
+            // Filter to show all notices, but only allow deletion of officer's own
+            container.innerHTML = notices.map(n => {
+                const isOwnNotice = n.createdBy === user?.sub;
+                const createdByText = n.createdByRole === 'officer' ? '👮 Officer' : '🛡️ Admin';
+                return `
+    <div class="announce-card ${n.pinned ? 'pinned' : ''}">
+      <div class="announce-icon">${n.pinned ? '📌' : '📣'}</div>
+      <div style="flex:1">
+        <div class="announce-text">${n.text}</div>
+        <div class="announce-date">📅 ${n.date} ${n.pinned ? '<span class="badge badge-warning" style="margin-left:8px">Pinned</span>' : ''} <span style="margin-left:8px;font-size:0.8rem;color:var(--text-light)">${createdByText}</span></div>
+      </div>
+      ${isOwnNotice ? `<button class="announce-del" onclick="deleteOfficerNotice('${n.id}')">🗑️ Delete</button>` : ''}
+    </div>
+  `;
+            }).join('') || '<div style="text-align:center;padding:32px;color:var(--text-muted)">No notices published yet</div>';
+        }
+
+        async function addOfficerNotice() {
+            const text = document.getElementById('officerNoticeText')?.value.trim();
+            if (!text) {
+                showToast('Please enter notice text', 'warning');
+                return;
+            }
+            
+            try {
+                await window.JanSamadhanAPI.addNotice({ text, pinned: false });
+                showToast('✅ Notice published successfully', 'success');
+                document.getElementById('officerNoticeText').value = '';
+                closeModal('addNoticeModal');
+                loadOfficerNotices();
+            } catch (err) {
+                showToast('Failed to publish notice: ' + err.message, 'error');
+            }
+        }
+
+        async function deleteOfficerNotice(noticeId) {
+            if (!confirm('Delete this notice?')) return;
+            
+            try {
+                await window.JanSamadhanAPI.deleteNotice(noticeId);
+                showToast('✅ Notice deleted', 'success');
+                loadOfficerNotices();
+            } catch (err) {
+                showToast('Failed to delete notice: ' + err.message, 'error');
+            }
         }
     </script>
 </body>
