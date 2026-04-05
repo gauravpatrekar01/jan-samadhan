@@ -495,10 +495,10 @@
             document.getElementById('ratingText').textContent = ratingLabels[val];
         }
 
-        function submitFeedback() {
+        async function submitFeedback() {
             if (!_feedbackRating) { showToast('Please select a rating', 'warning'); return; }
             const comment = document.getElementById('feedbackComment')?.value || '';
-            window.JanSamadhan.submitFeedback(_feedbackGID, _feedbackRating, comment);
+            await window.JanSamadhan.submitFeedback(_feedbackGID, _feedbackRating, comment);
             closeModal('feedbackModal');
             showToast('Thank you for your feedback! ⭐', 'success');
             loadOverview();
