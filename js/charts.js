@@ -154,44 +154,106 @@ function renderStatusPie(id, stats) {
 
 function renderTimelineChart(id, grievances) {
     const el = document.getElementById(id);
-    if (!el || !grievances || !grievances.length) return null;
+    if (!el) return null;
     
-    // Group grievances by date
+    // Destroy previous chart before rendering
+    const existingChart = Chart.getChart(id);
+    if (existingChart) existingChart.destroy();
+    
+    // Log grievances before processing
+    console.log('[renderTimelineChart] grievances:', grievances);
+    
+    grievances = grievances || [];
     const dateCounts = {};
+    
+    // Group data correctly
     grievances.forEach(g => {
-        const d = new Date(g.createdAt || g.created_at || g.timestamp || Date.now());
-        const dateStr = d.toISOString().split('T')[0];
-        dateCounts[dateStr] = (dateCounts[dateStr] || 0) + 1;
+        // Use ONLY g.createdAt
+        if (!g.createdAt) return;
+        
+        // Convert using new Date
+        const d = new Date(g.createdAt);
+        // If invalid -> skip entry
+        if (isNaN(d.getTime())) return;
+        
+        // Extract date in YYYY-MM-DD format
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const dateStr = `${yyyy}-${mm}-${dd}`;
+        
+        // Count complaints per day
+        if (dateCounts[dateStr] === undefined) {
+            dateCounts[dateStr] = 0;
+        }
+        dateCounts[dateStr]++;
     });
 
-    const sortedDates = Object.keys(dateCounts).sort((a,b) => new Date(a) - new Date(b));
-    const displayDates = sortedDates.slice(-14);
-    const dataPoints = displayDates.map(d => dateCounts[d]);
-    const formattedLabels = displayDates.map(d => new Date(d).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }));
+    // Ensure chart gets valid data
+    let labels = Object.keys(dateCounts);
+    let data = Object.values(dateCounts);
+    
+    // If no valid data -> show fallback
+    if (labels.length === 0) {
+        labels = ['No Data'];
+        data = [0];
+    } else {
+        // Sort dates chronologically natively and limit to last 14 if massive
+        const sortedDates = labels.sort((a, b) => new Date(a) - new Date(b));
+        labels = sortedDates.slice(-14);
+        data = labels.map(l => dateCounts[l]);
+    }
+    
+    // Log processed metrics
+    console.log('[renderTimelineChart] dateCounts:', dateCounts);
+    console.log('[renderTimelineChart] labels:', labels);
+    console.log('[renderTimelineChart] data:', data);
 
+    // Improve UI & Render
     return new Chart(el, {
         type: 'line',
         data: {
-            labels: formattedLabels.length ? formattedLabels : ['Today'],
+            labels: labels,
             datasets: [{
                 label: 'Complaints',
-                data: dataPoints.length ? dataPoints : [0],
+                data: data,
                 borderColor: '#2563eb',
-                backgroundColor: 'rgba(37,99,235,0.1)',
+                backgroundColor: 'rgba(37,99,235,0.15)',
                 tension: 0.4,
                 fill: true,
                 pointBackgroundColor: '#2563eb',
+                pointBorderColor: '#fff',
+                pointHoverRadius: 6,
                 pointRadius: 4
             }]
         },
         options: {
             maintainAspectRatio: false,
             responsive: true,
+            layout: { padding: { top: 10, right: 10, left: 0, bottom: 0 } },
             scales: {
-                y: { beginAtZero: true, ticks: { font: { size: 10 }, stepSize: 1 } },
-                x: { ticks: { font: { size: 10 } } }
+                y: { 
+                    beginAtZero: true, 
+                    ticks: { font: { size: 11 }, stepSize: 1, padding: 8 } 
+                },
+                x: { 
+                    ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 0 } 
+                }
             },
-            plugins: { legend: { display: false } }
+            plugins: { 
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    titleFont: { size: 12 },
+                    bodyFont: { size: 13 },
+                    padding: 10,
+                    callbacks: {
+                        label: function(context) {
+                            return ` ${context.raw} complaints`;
+                        }
+                    }
+                }
+            }
         }
     });
 }
