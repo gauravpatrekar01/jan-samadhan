@@ -26,6 +26,16 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
     except JWTError:
         raise TokenExpiredError()
 
+async def get_current_user_optional(authorization: Optional[str] = Header(None)) -> dict | None:
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    token = authorization.split(" ", 1)[1]
+    try:
+        payload = decode_token(token)
+        return payload
+    except JWTError:
+        return None
+
 
 async def require_citizen(user: dict = Depends(get_current_user)) -> dict:
     """Require citizen role"""

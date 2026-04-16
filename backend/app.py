@@ -134,8 +134,14 @@ def public_stats():
                 "pending": 0,
                 "emergency": 0,
                 "high": 0,
-                "status_distribution": {"submitted": 0},
-                "priority_distribution": {"emergency": 0, "high": 0},
+                "status_distribution": {
+                    "submitted": 0,
+                    "under_review": 0,
+                    "in_progress": 0,
+                    "resolved": 0,
+                    "closed": 0
+                },
+                "priority_distribution": {"emergency": 0, "high": 0, "medium": 0, "low": 0},
             },
         }
     
@@ -146,13 +152,38 @@ def public_stats():
     status_map = {s["_id"]: s["count"] for s in data["status_stats"]}
     resolved = status_map.get("resolved", 0) + status_map.get("closed", 0)
     pending = status_map.get("submitted", 0)
-    
+    status_distribution = {
+        "submitted": status_map.get("submitted", 0),
+        "under_review": status_map.get("under_review", 0) + status_map.get("under review", 0),
+        "in_progress": status_map.get("in_progress", 0) + status_map.get("in progress", 0),
+        "resolved": status_map.get("resolved", 0),
+        "closed": status_map.get("closed", 0),
+    }
+
     # Parse priority statistics
     priority_map = {p["_id"]: p["count"] for p in data["priority_stats"]}
     emergency = priority_map.get("emergency", 0)
     high = priority_map.get("high", 0)
+    medium = priority_map.get("medium", 0)
+    low = priority_map.get("low", 0)
     
     resolution_rate = round((resolved / total * 100), 1) if total > 0 else 0
+
+    # Quick secondary query for average satisfaction
+    # Since aggregation pipeline is already complex and satisfaction is simple
+    complaints = list(collection.find({}, {"_id": 0, "feedback": 1, "feedbackAverage": 1, "feedbackCount": 1}))
+    total_ratings = 0
+    total_rating_sum = 0
+    for c in complaints:
+        count = c.get("feedbackCount") if c.get("feedbackCount") is not None else len(c.get("feedback", []) or [])
+        if count > 0:
+            if c.get("feedbackAverage") is not None:
+                total_rating_sum += c.get("feedbackAverage", 0) * count
+            else:
+                total_rating_sum += sum(item.get("rating", 0) for item in (c.get("feedback") or []))
+            total_ratings += count
+
+    average_satisfaction = round((total_rating_sum / total_ratings), 2) if total_ratings > 0 else 0
 
     return {
         "success": True,
@@ -160,15 +191,16 @@ def public_stats():
             "total_complaints": total,
             "resolved_complaints": resolved,
             "resolution_rate": resolution_rate,
+            "average_satisfaction": average_satisfaction,
             "pending": pending,
             "emergency": emergency,
             "high": high,
-            "status_distribution": {
-                "submitted": pending,
-            },
+            "status_distribution": status_distribution,
             "priority_distribution": {
                 "emergency": emergency,
                 "high": high,
+                "medium": medium,
+                "low": low,
             },
         },
     }

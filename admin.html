@@ -624,7 +624,7 @@
                   <td>${priorityBadge(g.priority.charAt(0).toUpperCase() + g.priority.slice(1))}</td>
                   <td>${statusBadge(g.status.charAt(0).toUpperCase() + g.status.slice(1).replace('_', ' '))}</td>
                   <td>${g.region || 'N/A'}</td>
-                  <td style="font-size:.8rem">${new Date(g.created_at || g.timestamp || Date.now()).toLocaleDateString()}</td>
+                  <td style="font-size:.8rem">${new Date(g.createdAt || g.created_at || g.timestamp || Date.now()).toLocaleString('en-IN')}</td>
                   <td>${g.feedbackCount ? `<span class="badge badge-success">⭐ ${g.feedbackAverage || g.feedbackRating}/5 · ${g.feedbackCount}</span>` : '<span style="color:var(--text-muted);font-size:.8rem">—</span>'}</td>
                   <td>
                     <div style="display:flex;gap:6px">

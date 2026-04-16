@@ -8,6 +8,7 @@ from dependencies import (
     require_officer,
     require_officer_or_admin,
     get_current_user,
+    get_current_user_optional,
 )
 from errors import ValidationError, NotFoundError, AuthorizationError
 from audit import log_audit
@@ -173,14 +174,15 @@ def create_complaint(complaint: ComplaintCreate, user: dict = Depends(require_ci
 
 
 @router.get("/{id}")
-def get_complaint(id: str, user: dict = Depends(get_current_user)):
+def get_complaint(id: str, user: dict = Depends(get_current_user_optional)):
     collection = db.get_collection("complaints")
     complaint = collection.find_one({"id": id}, {"_id": 0})
     if not complaint:
         raise NotFoundError("Complaint")
 
-    if user.get("role") == "citizen":
-        if complaint.get("citizen_email") != user["sub"]:
+    if not user or user.get("role") == "citizen":
+        sub = user.get("sub") if user else None
+        if complaint.get("citizen_email") != sub:
             # Public feed complaints should remain viewable, but hide private identifiers.
             complaint = {k: v for k, v in complaint.items() if k not in {"citizen_email", "email"}}
 

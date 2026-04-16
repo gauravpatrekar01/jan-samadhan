@@ -498,7 +498,7 @@
         async function submitFeedback() {
             if (!_feedbackRating) { showToast('Please select a rating', 'warning'); return; }
             const comment = document.getElementById('feedbackComment')?.value || '';
-            await window.JanSamadhan.submitFeedback(_feedbackGID, _feedbackRating, comment);
+            await window.JanSamadhanAPI.submitFeedback(_feedbackGID, _feedbackRating, comment);
             closeModal('feedbackModal');
             showToast('Thank you for your feedback! ⭐', 'success');
             loadOverview();
@@ -529,13 +529,17 @@
         </div>
       </div>
       ${g.officerRemarks ? `<div style="font-size:.85rem;padding:10px;background:var(--bg);border-radius:6px;margin-bottom:10px">✅ ${g.officerRemarks}</div>` : ''}
-      ${g.feedbackRating
-                    ? `<div style="padding:12px;background:rgba(22,163,74,.06);border-radius:8px;display:flex;align-items:center;gap:12px">
-             <span style="font-size:1.5rem">${'⭐'.repeat(g.feedbackRating)}</span>
-             <div><div style="font-weight:700;font-size:.88rem">${ratingLabels[g.feedbackRating]}</div>${g.feedbackComment ? `<div style="font-size:.8rem;color:var(--text-muted)">"${g.feedbackComment}"</div>` : ''}</div>
-           </div>`
-                    : `<button class="btn btn-accent btn-sm" onclick="openFeedback('${g.id}')">⭐ Rate This Resolution</button>`
-                }
+      ${(() => {
+        const userFeedback = g.feedback?.find(f => f.user_email === window._citizenUser?.email);
+        if (userFeedback) {
+          return `<div style="padding:12px;background:rgba(22,163,74,.06);border-radius:8px;display:flex;align-items:center;gap:12px">
+             <span style="font-size:1.5rem">${'⭐'.repeat(userFeedback.rating)}</span>
+             <div><div style="font-weight:700;font-size:.88rem">${ratingLabels[userFeedback.rating]}</div>${userFeedback.comment ? `<div style="font-size:.8rem;color:var(--text-muted)">"${userFeedback.comment}"</div>` : ''}</div>
+           </div>`;
+        } else {
+          return `<button class="btn btn-accent btn-sm" onclick="openFeedback('${g.id}')">⭐ Rate This Resolution</button>`;
+        }
+      })()}
     </div>
   `).join('');
         }
@@ -544,7 +548,7 @@
         async function initMapPage() {
             const all = await window.JanSamadhanAPI.getAllGrievances();
             renderDummyMap('citizenMap', all);
-            const stats = await window.JanSamadhan.getStats();
+            const stats = await window.JanSamadhanAPI.getAnalytics();
             const container = document.getElementById('regionStats');
             if (container && stats.byRegion) {
                 container.innerHTML = Object.entries(stats.byRegion).map(([r, c]) => `
@@ -561,7 +565,7 @@
         async function loadAnnouncementsPage() {
             const container = document.getElementById('dashAnnouncements');
             if (!container) return;
-            const announcements = await window.JanSamadhan.getAnnouncements();
+            const announcements = await window.JanSamadhanAPI.getNotices();
             container.innerHTML = announcements.map(a => `
     <div class="announce-card ${a.pinned ? 'pinned' : ''}">
       <div class="announce-icon">${a.pinned ? '📌' : '📣'}</div>
@@ -576,7 +580,7 @@
             const result = document.getElementById('dashTrackResult');
             if (!id) { showToast('Enter a Grievance ID', 'warning'); return; }
             try {
-                const g = await window.JanSamadhan.getGrievanceByID(id);
+                const g = await window.JanSamadhanAPI.getGrievanceByID(id);
                 if (!g) { 
                     result.innerHTML = `<div style="background:rgba(220,38,38,.05);padding:16px;border-radius:8px;border-left:3px solid var(--danger);text-align:center"><div style="color:var(--danger);font-weight:700;margin-bottom:8px">❌ Grievance Not Found</div><div style="font-size:.85rem;color:var(--text-muted)">ID: <strong>${id}</strong> | Check the ID and try again</div></div>`; 
                     return; 

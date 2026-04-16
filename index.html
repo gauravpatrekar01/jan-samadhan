@@ -984,10 +984,10 @@
       // Populate Announcements list
       const list = document.getElementById('announcementsList');
       if (list) {
-          const fetchedNotices = await window.JanSamadhan.getAnnouncements();
+          const fetchedNotices = await window.JanSamadhanAPI.getNotices();
           list.innerHTML = fetchedNotices.map(n => `
               <div class="notice-card" style="padding: 16px; border-bottom: 1px solid var(--border); ${n.pinned ? 'background: rgba(249, 115, 22, 0.05);' : ''}">
-                  <div style="font-size: .8rem; color: var(--text-muted); margin-bottom: 4px;">📅 ${formatDate(n.date)} ${n.pinned ? '📌 Pinned' : ''}</div>
+                  <div style="font-size: .8rem; color: var(--text-muted); margin-bottom: 4px;">📅 ${new Date(n.date).toLocaleString('en-IN')} ${n.pinned ? '📌 Pinned' : ''}</div>
                   <div style="font-weight: 600; font-size: .95rem;">${n.text}</div>
               </div>
           `).join('');
@@ -1235,7 +1235,7 @@
       <div><span style="font-size:.75rem;color:var(--text-muted)">FILED BY</span><br><strong>${g.name || 'Citizen'}</strong></div>
       <div><span style="font-size:.75rem;color:var(--text-muted)">CATEGORY</span><br><strong>${categoryIcon(g.category)} ${g.category}</strong></div>
       <div><span style="font-size:.75rem;color:var(--text-muted)">LOCATION</span><br><strong>📍 ${g.region || 'N/A'}</strong></div>
-      <div><span style="font-size:.75rem;color:var(--text-muted)">FILED ON</span><br><strong>${new Date(g.createdAt).toLocaleDateString('en-IN')}</strong></div>
+      <div><span style="font-size:.75rem;color:var(--text-muted)">FILED ON</span><br><strong>${new Date(g.createdAt).toLocaleString('en-IN')}</strong></div>
     </div>
     <div style="margin-bottom:16px"><span style="font-size:.75rem;color:var(--text-muted)">DESCRIPTION</span><br>${g.description || 'No description'}</div>
     ${g.assigned_officer && g.assigned_officer !== 'null' ? `<div style="background:rgba(37,99,235,.06);border-left:3px solid var(--primary-light);padding:10px 14px;border-radius:6px;margin-bottom:16px"><span style="font-size:.75rem;font-weight:700;color:var(--primary-light)">ASSIGNED TO</span><br>${g.assigned_officer}</div>` : '<div style="background:rgba(217,119,6,.06);border-left:3px solid var(--warning);padding:10px 14px;border-radius:6px;margin-bottom:16px"><span style="font-size:.75rem;font-weight:700;color:var(--warning)">STATUS</span><br>Pending Assignment</div>'}
