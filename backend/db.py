@@ -25,7 +25,7 @@ class Database:
             cls.db["complaints"].create_index([("priority", ASCENDING)])
             cls.db["complaints"].create_index([("region", ASCENDING)])
             cls.db["complaints"].create_index([("assigned_officer", ASCENDING)])
-            cls.db["complaints"].create_index([("assigned_ngo", ASCENDING)])
+            cls.db["complaints"].create_index([("assigned_to_ngo", ASCENDING)])
             cls.db["complaints"].create_index([("sla_deadline", ASCENDING)])
             
             # Using location_geo for spatial to avoid conflicts with string 'location'

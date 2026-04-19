@@ -134,7 +134,7 @@ def get_ngo_assigned_complaints(
     user: dict = Depends(require_role(["ngo"])),
 ):
     """Get complaints assigned to current NGO"""
-    query = {"assigned_ngo": user["sub"]}
+    query = {"assigned_to_ngo": user["sub"]}
     if status:
         query["status"] = status.lower()
     if priority:
@@ -171,7 +171,7 @@ def create_complaint(request: Request, complaint: ComplaintCreate, user: dict = 
             "email": user["sub"],  # For backward compatibility
             "name": citizen_name,
             "assigned_officer": None,
-            "assigned_ngo": None,
+            "assigned_to_ngo": None,
             "createdAt": now,
             "updatedAt": now,
             "sla_deadline": deadline.isoformat(),
@@ -318,12 +318,12 @@ def assign_ngo(
         raise NotFoundError("Complaint")
 
     log_audit(
-        action="complaint_assigned_ngo",
+        action="complaint_assigned_to_ngo",
         actor_email=user["sub"],
         actor_role=user.get("role"),
         resource_type="complaint",
         resource_id=id,
-        details={"assigned_ngo": ngo_email},
+        details={"assigned_to_ngo": ngo_email},
     )
     
     notify_status_change(ngo_email, id, "NGO Assignment", f"You have been assigned to assist on grievance {id}.")

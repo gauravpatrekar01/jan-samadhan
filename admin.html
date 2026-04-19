@@ -222,6 +222,27 @@
                 <div class="escalation-list" id="adminEscList"></div>
             </div>
 
+            <!-- ─── NGO REQUESTS ─── -->
+            <div class="dash-page" id="page-ngoRequests">
+                <div class="page-header">
+                    <div class="page-title">🤝 NGO Access Requests</div>
+                    <div class="page-subtitle">Review applications from NGOs to handle specific grievances</div>
+                </div>
+                <div class="card" style="padding:0; overflow:hidden">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>NGO & Grievance</th>
+                                <th>Requested</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ngoRequestsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- ─── ANNOUNCEMENTS ─── -->
             <div class="dash-page" id="page-announcements">
                 <div class="page-header">
@@ -1169,6 +1190,48 @@ function toggleUserDistrictField() {
             }
         }
 
+        async function loadNGORequests() {
+            try {
+                const data = await window.JanSamadhanAPI.getAdminNGORequests('pending');
+                const container = document.getElementById('ngoRequestsTableBody');
+                if(!data.length) {
+                    container.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:40px">No pending NGO requests.</td></tr>`;
+                    return;
+                }
+                container.innerHTML = data.map(r => `
+                    <tr>
+                        <td>
+                            <div style="font-weight:600">${r.ngo_name}</div>
+                            <div style="font-size:.75rem;color:var(--text-muted)">Grievance: ${r.complaint_id}</div>
+                        </td>
+                        <td style="font-size:.85rem">${new Date(r.requested_at).toLocaleString()}</td>
+                        <td><span class="status-pill status-pending">PENDING</span></td>
+                        <td>
+                            <div style="display:flex;gap:6px">
+                                <button class="btn btn-primary btn-sm" onclick="processNGORequest('${r.id}', 'approve')">✔ Approve</button>
+                                <button class="btn btn-outline btn-sm" onclick="processNGORequest('${r.id}', 'reject')">✖ Reject</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        async function processNGORequest(requestId, action) {
+            try {
+                if(action === 'approve') {
+                    await window.JanSamadhanAPI.approveNGORequest(requestId);
+                    showToast("NGO Assigned and Grievance Activated!", "success");
+                } else {
+                    const reason = prompt("Enter rejection reason:");
+                    if(reason === null) return;
+                    await window.JanSamadhanAPI.rejectNGORequest(requestId, reason);
+                    showToast("NGO Request Rejected", "info");
+                }
+                loadNGORequests();
+            } catch(e) { showToast(e.message, "error"); }
+        }
+
     </script>
     <script>
         // Override showPage after all scripts load to add assignment and audit logic
@@ -1177,6 +1240,7 @@ function toggleUserDistrictField() {
             originalShowPage(id, navEl);
             if (id === 'assignments') loadAssignmentQueue();
             if (id === 'audit') loadAuditLog();
+            if (id === 'ngoRequests') loadNGORequests();
         };
     </script>
 </body>

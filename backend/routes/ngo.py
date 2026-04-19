@@ -82,7 +82,10 @@ def get_available_complaints(user=Depends(require_role(["ngo"]))):
     """View complaints that are open/unassigned for NGOs to request."""
     # Only show complaints that are NOT assigned to any NGO and are in relevant states
     query = {
-        "assigned_to_ngo": {"$exists": False},
+        "$or": [
+            {"assigned_to_ngo": {"$exists": False}},
+            {"assigned_to_ngo": None}
+        ],
         "status": {"$in": ["submitted", "under_review", "assigned"]}
     }
     complaints = list(db.get_collection("complaints").find(query, {"_id": 0}).sort("createdAt", -1).limit(50))
