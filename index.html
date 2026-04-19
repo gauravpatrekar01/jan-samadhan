@@ -1226,7 +1226,7 @@
     function setLoginRole(role) {
       console.log("👤 Setting role to:", role);
       if (role === 'ngo') {
-          closeLoginModal();
+          // Direct switch to specialized NGO portal without flickering
           openModal('ngoPartnerModal');
           return;
       }

@@ -1297,19 +1297,16 @@ select.form-control {
    ============================================================ */
 #chatbot-widget {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 9999;
-}
-
-.chatbot-toggle {
-
-  position: fixed;
   bottom: 30px;
   right: 30px;
   z-index: 9999;
   width: 64px;
   height: 64px;
+}
+
+.chatbot-toggle {
+  position: absolute;
+  inset: 0;
   background: linear-gradient(135deg, var(--primary-light), var(--accent));
   border-radius: 50%;
   display: flex;
@@ -1358,12 +1355,12 @@ select.form-control {
 }
 
 .chatbot-window {
-  position: fixed;
-  bottom: 108px;
-  right: 30px;
-  z-index: 1999;
-  width: 360px;
-  height: 500px;
+  position: absolute;
+  bottom: 84px;
+  right: 0;
+  z-index: 9999;
+  width: 380px;
+  height: 520px;
   background: var(--bg-card);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-xl);
@@ -1855,6 +1852,10 @@ select.form-control {
 /* ============================================================
    MODAL
    ============================================================ */
+body.modal-open {
+  overflow: hidden !important;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;

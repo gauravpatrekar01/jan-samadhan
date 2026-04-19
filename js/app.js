@@ -187,11 +187,14 @@ function openModal(id) {
     const modal = document.getElementById(id);
     if (!modal) return;
     
-    // Close any other open modals first to prevent overlay stack
-    document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
+    // Switch directly if another modal is open, without flickering scroll
+    document.querySelectorAll('.modal-overlay.show').forEach(m => {
+        if(m.id !== id) m.classList.remove('show');
+    });
     
     modal.classList.add('show');
-    document.body.style.overflow = 'hidden'; // Prevent page scroll
+    document.body.classList.add('modal-open');
+    document.body.style.overflow = 'hidden';
 }
 
 function closeModal(id) {
@@ -199,16 +202,17 @@ function closeModal(id) {
     if (modal) {
         modal.classList.remove('show');
     } else {
-        // Fallback: close all
         document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
     }
     
-    // Only restore scroll if no other modals are open
-    if (!document.querySelector('.modal-overlay.show')) {
-        document.body.style.overflow = '';
-        // Cleanup orphaned backdrops if any exist (safety check)
-        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-    }
+    // Delay check slightly to handle rapid transitions
+    setTimeout(() => {
+        if (!document.querySelector('.modal-overlay.show')) {
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        }
+    }, 50);
 }
 
 function handleLoginSuccess() {
