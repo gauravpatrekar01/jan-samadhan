@@ -20,7 +20,7 @@ const JanSamadhanAPI = {
         const token = userRaw ? JSON.parse(userRaw).token : null;
 
         const headers = {
-            'Content-Type': 'application/json',
+            ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
 
@@ -254,7 +254,51 @@ const JanSamadhanAPI = {
         if (action) params.append('action', action);
         params.append('limit', limit);
         return this._fetch(`/api/admin/audit-log?${params}`);
+    },
+
+    // ── NGO Specific Endpoints ──
+    async requestComplaint(id) {
+        return this._fetch('/api/ngo/requests', {
+            method: 'POST',
+            body: JSON.stringify({ complaint_id: id })
+        });
+    },
+
+    async getMyNGORequests() {
+        return this._fetch('/api/ngo/my-requests');
+    },
+
+    async getNGOAssignedComplaints() {
+        return this._fetch('/api/ngo/assigned-complaints');
+    },
+
+    async getNGOAvailableComplaints() {
+        return this._fetch('/api/ngo/available-complaints');
+    },
+
+    // ── Admin NGO Request Management ──
+    async getAdminNGORequests(status = 'pending') {
+        return this._fetch(`/api/admin/ngo-requests?status=${status}`);
+    },
+
+    async approveNGORequest(requestId) {
+        return this._fetch(`/api/admin/ngo-requests/${requestId}/approve`, { method: 'PATCH' });
+    },
+
+    async rejectNGORequest(requestId, remarks = '') {
+        return this._fetch(`/api/admin/ngo-requests/${requestId}/reject?remarks=${remarks}`, { method: 'PATCH' });
+    },
+
+    async uploadEvidence(complaintId, file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return this._fetch(`/api/complaints/${complaintId}/media`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'multipart/form-data' }, // Note: fetch handles boundary if Content-Type is empty, but our _fetch puts JSON by default.
+            body: formData
+        });
     }
+
 };
 
 window.JanSamadhanAPI = JanSamadhanAPI;

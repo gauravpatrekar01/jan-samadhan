@@ -1,0 +1,16 @@
+Attempting to create indexes manually to find the culprit...
+
+Checking collection: users
+Success: users.email (unique)
+Success: users.role
+
+Checking collection: complaints
+Success: [('id', 1)]
+Success: [('grievanceID', 1)]
+Success: [('citizen_email', 1)]
+Success: [('status', 1)]
+Success: [('priority', 1)]
+Success: [('region', 1)]
+FAIL: [('location', '2dsphere')] -> Index build failed: fadd7aa2-dbaf-4447-a55a-5f41ba51c255: Collection jansamadhan.complaints ( 873d2d02-60bc-476c-b44f-db23d03dd774 ) :: caused by :: collection scan stopped. totalRecords: 0; durationMillis: 0ms; phase: collection scan; collectionScanPosition: (None); readSource: kMajorityCommitted :: caused by :: Can't extract geo keys: { _id: ObjectId('69cfc63731f3d6c08c0bca90'), title: "T", description: "descdescdescdescdescdescdescdescdescdesc", category: "Other", subcategory: "", priority: "medium", location: "", region: "", latitude: null, longitude: null, grievanceID: "JSM-2026-FB60E6C9", id: "JSM-2026-FB60E6C9", status: "submitted", createdAt: "2026-04-03T13:52:55.649858", updatedAt: "2026-04-05T10:27:59.823867+00:00", history: [ { status: "submitted", remarks: "Grievance filed by citizen", timestamp: "2026-04-03T13:52:55.649872" }, { status: "assigned", remarks: "Assigned to officer gauravpatrekar01@gmail.com", timestamp: "2026-04-05T10:27:59.823867+00:00" } ], citizen_email: "migration@default.com", email: "migration@default.com", assigned_officer: "gauravpatrekar01@gmail.com" }  geo element must be an array or object: location: "", full error: {'ok': 0.0, 'errmsg': 'Index build failed: fadd7aa2-dbaf-4447-a55a-5f41ba51c255: Collection jansamadhan.complaints ( 873d2d02-60bc-476c-b44f-db23d03dd774 ) :: caused by :: collection scan stopped. totalRecords: 0; durationMillis: 0ms; phase: collection scan; collectionScanPosition: (None); readSource: kMajorityCommitted :: caused by :: Can\'t extract geo keys: { _id: ObjectId(\'69cfc63731f3d6c08c0bca90\'), title: "T", description: "descdescdescdescdescdescdescdescdescdesc", category: "Other", subcategory: "", priority: "medium", location: "", region: "", latitude: null, longitude: null, grievanceID: "JSM-2026-FB60E6C9", id: "JSM-2026-FB60E6C9", status: "submitted", createdAt: "2026-04-03T13:52:55.649858", updatedAt: "2026-04-05T10:27:59.823867+00:00", history: [ { status: "submitted", remarks: "Grievance filed by citizen", timestamp: "2026-04-03T13:52:55.649872" }, { status: "assigned", remarks: "Assigned to officer gauravpatrekar01@gmail.com", timestamp: "2026-04-05T10:27:59.823867+00:00" } ], citizen_email: "migration@default.com", email: "migration@default.com", assigned_officer: "gauravpatrekar01@gmail.com" }  geo element must be an array or object: location: ""', 'code': 16755, 'codeName': 'Location16755', '$clusterTime': {'clusterTime': Timestamp(1776583413, 5), 'signature': {'hash': b'\xbd\x02\x8b\xeb\x85:\xcf\x92\xc1P\xe2\xb6\x93\xb7\x85i\xcex\xb4`', 'keyId': 7584827204383539202}}, 'operationTime': Timestamp(1776583413, 5)}
+
+Checking collection: audit_logs

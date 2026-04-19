@@ -822,6 +822,7 @@
           <h4>Portals</h4>
           <a href="#" onclick="openLoginModal('citizen')">👤 Citizen Portal</a>
           <a href="#" onclick="openLoginModal('officer')">🧑‍💼 Officer Portal</a>
+          <a href="#" onclick="openLoginModal('ngo')">🤝 NGO Portal</a>
         </div>
         <div>
           <h4>Help &amp; Support</h4>
@@ -864,6 +865,7 @@
       <div class="role-tabs">
         <button class="role-tab active" data-role="citizen" onclick="setLoginRole('citizen')">👤 Citizen</button>
         <button class="role-tab" data-role="officer" onclick="setLoginRole('officer')">🧑‍💼 Officer</button>
+        <button class="role-tab" data-role="ngo" onclick="setLoginRole('ngo')">🤝 NGO</button>
       </div>
 
       <form id="authForm" onsubmit="handleAuth(event)">

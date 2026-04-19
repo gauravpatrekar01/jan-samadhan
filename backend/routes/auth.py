@@ -19,14 +19,19 @@ def register(request: Request, user: UserCreate):
     if collection.find_one({"email": user.email}):
         raise ConflictError("User already exists")
 
-    if user.role != "citizen":
-        raise ValidationError("Signup is only available for citizens")
+    if user.role not in {"citizen", "ngo"}:
+        raise ValidationError("Only citizens and NGOs can sign up directly")
 
     user_dict = user.model_dump()
-    user_dict["role"] = "citizen"
+    user_dict["role"] = user.role
     user_dict["password"] = hash_password(user.password)
     user_dict["createdAt"] = datetime.now(timezone.utc).isoformat()
-    user_dict["verified"] = verify_citizen_record(user.name, user.email, user.aadhar)
+    
+    if user.role == "citizen":
+        user_dict["verified"] = verify_citizen_record(user.name, user.email, user.aadhar)
+    else:
+        # NGOs are pending admin approval
+        user_dict["verified"] = False
 
     collection.insert_one(user_dict)
     user_dict.pop("_id", None)

@@ -21,8 +21,8 @@ async def init_db_indexes():
         collection.create_index("sla_deadline")
         collection.create_index("assigned_to_ngo")
         
-        # Geospatial index
-        collection.create_index([("location", "2dsphere")])
+        # Geospatial index (using separate field to avoid conflict with human-readable location string)
+        collection.create_index([("location_geo", "2dsphere")], sparse=True)
         
         # Audit logs indexes
         audit_collection = db.get_collection("audit_logs")

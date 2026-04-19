@@ -69,3 +69,9 @@ class ComplaintCreate(BaseModel):
         if len(v.strip()) < 10:
             raise ValueError("Description must be at least 10 characters")
         return v.strip()
+
+
+class NGORequestSchema(BaseModel):
+    complaint_id: str
+    admin_remarks: Optional[str] = ""
+

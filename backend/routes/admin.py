@@ -14,8 +14,8 @@ router = APIRouter()
 
 @router.post("/users", status_code=201)
 def create_user(user: UserCreate, admin: dict = Depends(require_admin)):
-    if user.role not in {"officer", "admin"}:
-        raise ValidationError("Admin may only create officer or admin accounts")
+    if user.role not in {"officer", "admin", "ngo"}:
+        raise ValidationError("Admin may only create officer, admin, or NGO accounts")
 
     if user.role == "officer" and not user.district:
         raise ValidationError("Officer district is required")
@@ -251,3 +251,90 @@ def fetch_audit_log(
     """Retrieve admin/officer audit log"""
     entries = get_audit_log(actor_email=actor_email, action=action, limit=limit)
     return {"success": True, "data": entries}
+
+
+# ── NGO Request Management ──
+@router.get("/ngo-requests")
+def get_all_ngo_requests(status: str = "pending", admin: dict = Depends(require_admin)):
+    """Admin views all pending NGO requests."""
+    collection = db.get_collection("ngo_requests")
+    requests = list(collection.find({"status": status}, {"_id": 0}).sort("requested_at", -1))
+    return {"success": True, "data": requests}
+
+@router.patch("/ngo-requests/{request_id}/approve")
+def approve_ngo_request(request_id: str, admin: dict = Depends(require_admin)):
+    """Approve an NGO request and assign the grievance."""
+    req_coll = db.get_collection("ngo_requests")
+    complaint_coll = db.get_collection("complaints")
+    
+    req = req_coll.find_one({"id": request_id})
+    if not req:
+        raise NotFoundError("NGO Request")
+    
+    if req["status"] != "pending":
+        raise ValidationError(f"Request is already {req['status']}")
+
+    complaint_id = req["complaint_id"]
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Verify complaint status and current assignment
+    complaint = complaint_coll.find_one({"id": complaint_id})
+    if not complaint:
+         raise NotFoundError("Complaint")
+    if complaint.get("assigned_to_ngo"):
+         raise ValidationError("Grievance is already assigned to another NGO")
+
+    # Update Complaint: Assign NGO, change status, add timeline
+    timeline_event = {
+        "status": "In Progress",
+        "remarks": f"Grievance assigned to NGO: {req['ngo_name']}. Handled by social partner.",
+        "timestamp": now,
+        "updated_by": "admin"
+    }
+
+    complaint_coll.update_one(
+        {"id": complaint_id},
+        {
+            "$set": {
+                "assigned_to_ngo": req["ngo_email"],
+                "status": "in_progress",
+                "updatedAt": now
+            },
+            "$push": {"history": timeline_event}
+        }
+    )
+
+    # Update request status
+    req_coll.update_one({"id": request_id}, {"$set": {"status": "approved", "processed_at": now}})
+
+    # Reject other pending requests for this same complaint
+    req_coll.update_many(
+        {"complaint_id": complaint_id, "status": "pending", "id": {"$ne": request_id}},
+        {"$set": {
+            "status": "rejected", 
+            "admin_remarks": "Another NGO was assigned to this case.", 
+            "processed_at": now
+        }}
+    )
+
+    log_audit("ngo_request_approved", admin["sub"], admin["role"], "ngo_request", request_id)
+    return {"success": True, "message": "NGO assigned successfully"}
+
+@router.patch("/ngo-requests/{request_id}/reject")
+def reject_ngo_request(request_id: str, remarks: str = "Request declined.", admin: dict = Depends(require_admin)):
+    """Reject an NGO's request to handle a grievance."""
+    req_coll = db.get_collection("ngo_requests")
+    req = req_coll.find_one({"id": request_id})
+    if not req:
+        raise NotFoundError("NGO Request")
+        
+    req_coll.update_one({"id": request_id}, {
+        "$set": {
+            "status": "rejected", 
+            "admin_remarks": remarks, 
+            "processed_at": datetime.now(timezone.utc).isoformat()
+        }
+    })
+    
+    return {"success": True, "message": "NGO request rejected"}
+

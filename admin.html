@@ -48,6 +48,7 @@
                 <span class="nav-badge" id="adminEscBadge" style="background:var(--danger)">0</span>
             </div>
             <div class="nav-item" onclick="showPage('assignments',this)"><span class="nav-icon">🎯</span> Assignments</div>
+            <div class="nav-item" onclick="showPage('ngoRequests',this)"><span class="nav-icon">🤝</span> NGO Requests</div>
             <div class="nav-item" onclick="showPage('announcements',this)"><span class="nav-icon">📢</span>
                 Announcements</div>
             <div class="nav-item" onclick="showPage('users',this)"><span class="nav-icon">👥</span> User Management
@@ -814,12 +815,13 @@
                 users = window.JanSamadhan.users || [];
             }
             
-            const roleCounts = { citizen: 0, officer: 0, admin: 0 };
+            const roleCounts = { citizen: 0, officer: 0, admin: 0, ngo: 0 };
             users.forEach(u => roleCounts[u.role] = (roleCounts[u.role] || 0) + 1);
 
             document.getElementById('roleSummary').innerHTML = [
                 { role: 'Citizen', count: roleCounts.citizen, icon: '👤', color: 'var(--primary-light)', bg: 'rgba(37,99,235,.1)' },
                 { role: 'Officer', count: roleCounts.officer, icon: '🧑‍💼', color: 'var(--success)', bg: 'rgba(22,163,74,.1)' },
+                { role: 'NGO', count: roleCounts.ngo, icon: '🤝', color: 'var(--accent)', bg: 'rgba(249,115,22,.1)' },
                 { role: 'Admin', count: roleCounts.admin, icon: '🛡️', color: 'var(--accent)', bg: 'rgba(249,115,22,.1)' },
                 { role: 'Total Users', count: users.length, icon: '👥', color: 'var(--primary-light)', bg: 'rgba(37,99,235,.08)' },
             ].map(s => `
@@ -830,14 +832,14 @@
     </div>
   `).join('');
 
-            const roleBadge = { citizen: 'badge-primary', officer: 'badge-success', admin: 'badge-warning' };
-            const roleLabel = { citizen: 'Citizen', officer: 'Field Officer', admin: 'Administrator' };
+            const roleBadge = { citizen: 'badge-primary', officer: 'badge-success', admin: 'badge-warning', ngo: 'badge-accent' };
+            const roleLabel = { citizen: 'Citizen', officer: 'Field Officer', admin: 'Administrator', ngo: 'Trusted NGO' };
 
             document.getElementById('usersList').innerHTML = users.map(u => `
     <div class="user-row">
       <div class="user-row-av">${u.avatar || u.name[0]}</div>
       <div class="user-row-info">
-        <div class="user-row-name">${u.name} ${u.verified || u.role !== 'citizen' ? '<span style="color:var(--success);font-size:.8rem" title="Verified User">✔</span>' : '<span style="color:var(--warning);font-size:.8rem" title="Pending Verification">⚠</span>'}</div>
+        <div class="user-row-name">${u.name} ${u.verified || u.role === 'admin' || u.role === 'officer' ? '<span style="color:var(--success);font-size:.8rem" title="Verified User">✔</span>' : '<span style="color:var(--warning);font-size:.8rem" title="Pending Verification">⚠</span>'}</div>
         <div class="user-row-eml">${u.email}</div>
       </div>
       <span class="badge ${roleBadge[u.role]}">${roleLabel[u.role]}</span>

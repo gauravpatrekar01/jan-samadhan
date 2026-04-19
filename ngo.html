@@ -10,29 +10,72 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        .request-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            background: #fff;
+            transition: all 0.3s;
+        }
+
+        .request-card:hover {
+            border-color: var(--primary-light);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .status-pill {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-pending { background: rgba(217, 119, 6, 0.1); color: #b45309; }
+        .status-approved { background: rgba(22, 163, 74, 0.1); color: #15803d; }
+        .status-rejected { background: rgba(220, 38, 38, 0.1); color: #b91c1c; }
+
+        .ev-upload-btn {
+            background: var(--bg-alt);
+            border: 2px dashed var(--border);
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .ev-upload-btn:hover { border-color: var(--primary); background: rgba(37,99,235,0.05); }
+    </style>
 </head>
 
 <body>
     <div class="toast-container"></div>
+    
+    <!-- SIDEBAR -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-brand">
             <div class="sidebar-logo">🏛️</div>
             <div>
                 <div class="sidebar-name">JanSamadhan</div>
-                <div class="sidebar-tag">NGO Partner Portal</div>
+                <div class="sidebar-tag">Social Partner Portal</div>
             </div>
         </div>
         <div class="sidebar-user">
             <div class="user-avatar">🤝</div>
             <div>
-                <div class="user-name" id="sbName">NGO User</div>
-                <div class="user-role">Assigned Support</div>
+                <div class="user-name" id="ngoNameDisplay">NGO User</div>
+                <div class="status-pill status-approved" style="display:inline-block;margin-top:4px">Verified Partner</div>
             </div>
         </div>
         <nav class="sidebar-nav">
-            <div class="nav-section-label">Main</div>
-            <div class="nav-item active" onclick="showPage('queue',this)"><span class="nav-icon">🎯</span> My Tasks</div>
-            <div class="nav-item" onclick="showPage('mapView',this)"><span class="nav-icon">🗺️</span> Heatmap</div>
+            <div class="nav-section-label">Operations</div>
+            <div class="nav-item active" onclick="showPage('work',this)"><span class="nav-icon">🎯</span> Active Work</div>
+            <div class="nav-item" onclick="showPage('available',this)"><span class="nav-icon">🔎</span> Available Grievances</div>
+            <div class="nav-item" onclick="showPage('requests',this)"><span class="nav-icon">📝</span> My Requests</div>
+            
+            <div class="nav-section-label">Resources</div>
+            <div class="nav-item" onclick="showPage('impact',this)"><span class="nav-icon">📈</span> Impact Tracker</div>
         </nav>
         <div class="sidebar-footer">
             <button class="sidebar-footer-btn" onclick="logoutUser()">🚪 Logout</button>
@@ -45,137 +88,243 @@
         <div class="topbar">
             <button class="topbar-hamburger" onclick="openSidebar()">☰</button>
             <div>
-                <div class="topbar-title" id="topbarTitle">Task Queue</div>
+                <div class="topbar-title" id="pageTitle">Active Work</div>
                 <div class="topbar-breadcrumb">JanSamadhan → NGO Dashboard</div>
             </div>
             <div class="topbar-actions">
                 <button class="topbar-dark-toggle" onclick="toggleDark()">🌙</button>
-                <div class="topbar-user" onclick="logoutUser()">NGO Partner 🚪</div>
+                <div class="topbar-user" onclick="logoutUser()">Portal 🚪</div>
             </div>
         </div>
 
         <div class="dash-content">
-            <div class="dash-page active" id="page-queue">
-                <div class="welcome-banner" style="background:linear-gradient(135deg, #1e3a8a, #3b82f6)">
+            
+            <!-- ─── ACTIVE WORK ─── -->
+            <div class="dash-page active" id="page-work">
+                <div class="welcome-banner" style="background:linear-gradient(135deg, #1e40af, #2563eb)">
                    <div>
-                       <div class="wb-title">Field Support Tasks 🤝</div>
-                       <div class="wb-sub">Public grievances assigned to your NGO for assistance.</div>
+                       <div class="wb-title">Assigned Grievances 📋</div>
+                       <div class="wb-sub">Direct resolution tasks assigned to your organization.</div>
                    </div>
                 </div>
-                <div class="filters-bar">
-                    <div class="search-bar" style="flex:1">
-                        <span class="search-icon">🔍</span>
-                        <input type="text" id="ngoSearch" placeholder="Search tasks..." oninput="loadNGOQueue()">
-                    </div>
-                </div>
-                <div class="grievance-list" id="ngoQueueList"></div>
+                <div id="activeWorkList" class="grievance-list"></div>
             </div>
 
-            <div class="dash-page" id="page-mapView">
-                <div class="page-header"><h3>Region Activity Heatmap</h3></div>
-                <div class="card"><div id="ngoMap" class="dummy-map" style="height:450px"></div></div>
+            <!-- ─── AVAILABLE GRIEVANCES ─── -->
+            <div class="dash-page" id="page-available">
+                <div class="page-header">
+                    <h3>Available for Assistance</h3>
+                    <p>Grievances currently seeking field support. You can request to handle these cases.</p>
+                </div>
+                <div id="availableList" class="grievance-list"></div>
+            </div>
+
+            <!-- ─── MY REQUESTS ─── -->
+            <div class="dash-page" id="page-requests">
+                <div class="page-header"><h3>Application Status</h3></div>
+                <div id="requestsList"></div>
+            </div>
+
+            <!-- ─── IMPACT TRACKER ─── -->
+            <div class="dash-page" id="page-impact">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-value" id="statResolved">0</div>
+                        <div class="stat-label">Total Resolved</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⭐</div>
+                        <div class="stat-value" id="statRating">0.0</div>
+                        <div class="stat-label">Avg Rating</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-value" id="statImpact">0</div>
+                        <div class="stat-label">Lives Impacted</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- UPDATE STATUS MODAL (Simpler for NGO) -->
-    <div class="modal-overlay" id="ngoUpdateModal">
+    <!-- UPDATE WORK MODAL -->
+    <div class="modal-overlay" id="workUpdateModal">
         <div class="modal-box">
             <div class="modal-header">
-                <h3>🔄 Update Grievance Status</h3>
-                <button class="modal-close" onclick="closeModal('ngoUpdateModal')">✕</button>
+                <h3>Update Resolution Status</h3>
+                <button class="modal-close" onclick="closeModal('workUpdateModal')">✕</button>
             </div>
             <div class="form-group">
-                <label class="form-label">New Status</label>
-                <select class="form-control" id="ngoNewStatus">
-                    <option value="in_progress">In Progress</option>
-                    <option value="resolved">Resolved</option>
+                <label class="form-label">Progress Status</label>
+                <select class="form-control" id="workStatus">
+                    <option value="in_progress">👷 In Progress</option>
+                    <option value="resolved">✅ Resolved</option>
                 </select>
             </div>
             <div class="form-group">
-                <label class="form-label">Field Remarks</label>
-                <textarea class="form-control" id="ngoRemarks" rows="3" placeholder="Notes from field visit..."></textarea>
+                <label class="form-label">Resolution Details / Evidence Notes</label>
+                <textarea class="form-control" id="workRemarks" rows="3" placeholder="Explain the actions taken..."></textarea>
             </div>
-            <button class="btn btn-primary" onclick="confirmNGOUpdate()">Confirm Update</button>
+            
+            <div class="form-group">
+                <label class="form-label">Upload Evidence (Photos/Docs)</label>
+                <div class="ev-upload-btn" onclick="document.getElementById('evFile').click()">
+                    📁 Click to select file
+                    <div id="fileName" style="font-size:.75rem;margin-top:4px;color:var(--primary)">No file selected</div>
+                </div>
+                <input type="file" id="evFile" hidden onchange="document.getElementById('fileName').textContent = this.files[0]?.name || 'No file selected'">
+            </div>
+            
+            <button class="btn btn-primary w-100" id="btnUpdateWork" onclick="submitWorkUpdate()">Update & Sync</button>
         </div>
     </div>
 
     <script src="js/api.js"></script>
     <script src="js/app.js"></script>
     <script>
+        let _currentWorkID = null;
+
         function openSidebar() { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('visible'); }
         function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('visible'); }
         
-        let _activeGID = null;
-
         function showPage(id, navEl) {
             document.querySelectorAll('.dash-page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById(`page-${id}`)?.classList.add('active');
-            if(id === 'queue') loadNGOQueue();
+            navEl?.classList.add('active');
+            
+            if(id === 'work') loadWork();
+            if(id === 'available') loadAvailable();
+            if(id === 'requests') loadRequests();
+            
+            document.getElementById('pageTitle').textContent = navEl?.textContent.trim() || 'Dashboard';
             closeSidebar();
         }
 
-        async function loadNGOQueue() {
+        async function loadWork() {
             try {
-                const res = await fetch(`${window.JanSamadhanAPI.BASE_URL}/complaints/ngo/assigned`, {
-                    headers: window.JanSamadhanAPI.getAuthHeaders()
-                });
-                const { data } = await res.json();
-                const container = document.getElementById('ngoQueueList');
-                
-                if(!data || !data.length) {
-                    container.innerHTML = `<div class="card" style="text-align:center;padding:50px"><h4>No tasks assigned to your NGO</h4></div>`;
+                const data = await window.JanSamadhanAPI.getNGOAssignedComplaints();
+                const container = document.getElementById('activeWorkList');
+                if(!data.length) {
+                    container.innerHTML = `<div class="card" style="text-align:center;padding:60px"><h4>No active assignments.</h4><p>Browse unassigned grievances to start helping.</p></div>`;
                     return;
                 }
-
                 container.innerHTML = data.map(g => `
                     <div class="grievance-card">
                         <div class="gc-header">
                             <div class="gc-icon">${categoryIcon(g.category)}</div>
                             <div style="flex:1">
                                 <div class="gc-id">${g.id}</div>
-                                <div class="gc-title">${g.category}</div>
-                                <div class="gc-meta">
-                                    ${priorityBadge(g.priority)} ${statusBadge(g.status)}
-                                    <span style="font-size:.8rem;color:var(--text-muted)">⏳ Deadline: ${formatDeadline(g.sla_deadline)}</span>
-                                </div>
+                                <div class="gc-title">${g.title}</div>
+                                <div class="gc-meta">${priorityBadge(g.priority)} ${statusBadge(g.status)}</div>
                             </div>
                         </div>
-                        <p style="font-size:.85rem;margin:10px 0">${g.description}</p>
-                        <button class="btn btn-primary btn-sm" onclick="openNGOUpdate('${g.id}')">Update Status</button>
+                        <p style="margin:12px 0; font-size:.9rem">${g.description}</p>
+                        <div style="display:flex;gap:10px">
+                            <button class="btn btn-primary btn-sm" onclick="openWorkModal('${g.id}')">Update & Upload Evidence</button>
+                        </div>
                     </div>
                 `).join('');
             } catch(e) { console.error(e); }
         }
 
-        function openNGOUpdate(id) { 
-            _activeGID = id; 
-            openModal('ngoUpdateModal'); 
+        async function loadAvailable() {
+            try {
+                const data = await window.JanSamadhanAPI.getNGOAvailableComplaints();
+                const container = document.getElementById('availableList');
+                container.innerHTML = data.map(g => `
+                    <div class="grievance-card">
+                        <div class="gc-header">
+                            <div class="gc-icon">${categoryIcon(g.category)}</div>
+                            <div style="flex:1">
+                                <div class="gc-id">${g.id}</div>
+                                <div class="gc-title">${g.title}</div>
+                                <div class="gc-meta">${priorityBadge(g.priority)}</div>
+                            </div>
+                        </div>
+                        <p style="margin:12px 0; font-size:.9rem">${g.description}</p>
+                        <button class="btn btn-outline btn-sm" onclick="requestGrievance('${g.id}')">🤝 Request to Handle</button>
+                    </div>
+                `).join('');
+            } catch(e) { console.error(e); }
         }
 
-        async function confirmNGOUpdate() {
-            const status = document.getElementById('ngoNewStatus').value;
-            const remarks = document.getElementById('ngoRemarks').value;
+        async function loadRequests() {
             try {
-                await window.JanSamadhanAPI.updateGrievanceStatus(_activeGID, status, "NGO Update: " + remarks);
-                showToast("Update successful", "success");
-                closeModal('ngoUpdateModal');
-                loadNGOQueue();
+                const data = await window.JanSamadhanAPI.getMyNGORequests();
+                const container = document.getElementById('requestsList');
+                container.innerHTML = data.map(r => `
+                    <div class="request-card">
+                        <div style="display:flex;justify-content:space-between;align-items:center">
+                            <div>
+                                <div style="font-weight:700">Request for ${r.complaint_id}</div>
+                                <div style="font-size:.8rem;color:var(--text-muted)">Requested on: ${new Date(r.requested_at).toLocaleDateString()}</div>
+                            </div>
+                            <span class="status-pill status-${r.status}">${r.status.toUpperCase()}</span>
+                        </div>
+                        ${r.admin_remarks ? `<div style="margin-top:10px;padding:8px;background:var(--bg-alt);border-radius:6px;font-size:.85rem"><strong>Admin Note:</strong> ${r.admin_remarks}</div>` : ''}
+                    </div>
+                `).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        async function requestGrievance(id) {
+            try {
+                await window.JanSamadhanAPI.requestComplaint(id);
+                showToast("Request sent to administration! You will be notified upon approval.", "success");
+                loadAvailable();
             } catch(e) { showToast(e.message, "error"); }
+        }
+
+        function openWorkModal(id) {
+            _currentWorkID = id;
+            document.getElementById('workRemarks').value = '';
+            document.getElementById('evFile').value = '';
+            document.getElementById('fileName').textContent = 'No file selected';
+            openModal('workUpdateModal');
+        }
+
+        async function submitWorkUpdate() {
+            const btn = document.getElementById('btnUpdateWork');
+            const status = document.getElementById('workStatus').value;
+            const remarks = document.getElementById('workRemarks').value;
+            const file = document.getElementById('evFile').files[0];
+            
+            if(!remarks) { showToast("Please provide resolution details.", "warning"); return; }
+            
+            btn.disabled = true;
+            btn.textContent = "Processing...";
+            
+            try {
+                // 1. Update Status
+                await window.JanSamadhanAPI.updateGrievanceStatus(_currentWorkID, status, remarks);
+                
+                // 2. Upload Evidence if present
+                if(file) {
+                    await window.JanSamadhanAPI.uploadEvidence(_currentWorkID, file);
+                }
+                
+                showToast("Update and evidence synced successfully!", "success");
+                closeModal('workUpdateModal');
+                loadWork();
+            } catch(e) {
+                showToast(e.message, "error");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Update & Sync";
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             const user = getSessionUser();
-            if(!user || user.role !== 'ngo') {
-                window.location.href = 'index.html';
-                return;
-            }
-            document.getElementById('sbName').textContent = user.name || user.sub;
-            loadNGOQueue();
+            if(!user || user.role !== 'ngo') { window.location.href = 'index.html'; return; }
+            document.getElementById('ngoNameDisplay').textContent = user.name || "NGO Partner";
+            loadWork();
         });
 
         function logoutUser() {
-            sessionStorage.removeItem('js_user');
+            window.JanSamadhanAPI.logout();
             window.location.href = 'index.html';
         }
     </script>

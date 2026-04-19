@@ -232,6 +232,12 @@ def get_complaint(id: str, user: dict = Depends(get_current_user_optional)):
             # Public feed complaints should remain viewable, but hide private identifiers.
             complaint = {k: v for k, v in complaint.items() if k not in {"citizen_email", "email"}}
 
+    # NGO Access Control
+    if user and user.get("role") == "ngo":
+        if complaint.get("assigned_to_ngo") != user["sub"]:
+            # NGO can see public data to decide whether to request, but not full citizen details
+            complaint = {k: v for k, v in complaint.items() if k not in {"citizen_email", "email", "history"}}
+
     return {"success": True, "data": complaint}
 
 
@@ -297,13 +303,13 @@ def assign_ngo(
     result = collection.update_one(
         {"id": id},
         {
-            "$set": {"assigned_ngo": ngo_email, "updatedAt": now},
+            "$set": {"assigned_to_ngo": ngo_email, "updatedAt": now},
             "$push": {
-                "timeline": {
-                    "stage": "Assigned to NGO",
+                "history": {
+                    "stage": "Under Review",
                     "remarks": f"Assigned to NGO {ngo_user.get('name', ngo_email)} for field assistance",
                     "timestamp": now,
-                    "updated_by_user_id": user["sub"]
+                    "updated_by": user["sub"]
                 }
             },
         },
@@ -354,9 +360,13 @@ def update_status(
     # NGO can only update their assigned complaints
     if (
         user.get("role") == "ngo"
-        and complaint.get("assigned_ngo") != user["sub"]
+        and complaint.get("assigned_to_ngo") != user["sub"]
     ):
-        raise AuthorizationError("You can only update your assigned complaints")
+        raise AuthorizationError("You can only update grievances assigned specifically to your NGO.")
+
+    # Formal Work Permissions: NGO can only Resolve or set to In Progress
+    if user.get("role") == "ngo" and status not in ["in_progress", "resolved"]:
+        raise ValidationError("NGOs can only update status to 'In Progress' or 'Resolved'")
 
     now = datetime.now(timezone.utc).isoformat()
     
@@ -525,9 +535,12 @@ def upload_complaint_media(
     if not complaint:
         raise NotFoundError("Complaint")
         
-    # Citizens can only upload to their own complaints. Officers/Admin can upload generally.
+    # Access Control: Citizens own their complaints, NGOs must be assigned.
     if user.get("role") == "citizen" and complaint.get("citizen_email") != user.get("sub"):
         raise AuthorizationError("Cannot upload media to someone else's complaint.")
+    
+    if user.get("role") == "ngo" and complaint.get("assigned_to_ngo") != user.get("sub"):
+        raise AuthorizationError("NGOs can only upload evidence for grievances assigned to them.")
         
     try:
         # Size limitation (5MB)
@@ -610,7 +623,7 @@ def update_location(
     collection = db.get_collection("complaints")
     result = collection.update_one(
         {"id": id},
-        {"$set": {"location": geo_point}}
+        {"$set": {"location_geo": geo_point}}
     )
 
     if result.matched_count == 0:

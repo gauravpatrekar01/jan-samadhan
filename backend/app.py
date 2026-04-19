@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
-from routes import auth, complaints, admin
+from routes import auth, complaints, admin, ngo
 from db import db
 from config import settings
 from limiter import limiter
@@ -47,7 +47,6 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;"
     return response
 
 
@@ -207,6 +206,7 @@ def stop_scheduler():
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(complaints.router, prefix="/api/complaints", tags=["complaints"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
+app.include_router(ngo.router, prefix="/api/ngo", tags=["ngo"])
 
 
 # ── Root Endpoints ──
@@ -286,7 +286,7 @@ def public_stats():
     pending = status_map.get("submitted", 0)
     status_distribution = {
         "submitted": status_map.get("submitted", 0),
-        "under_review": status_map.get("under_review", 0) + status_map.get("under review", 0),
+        "under_review": status_map.get("under_review", 0) + status_map.get("under review", 0) + status_map.get("assigned", 0),
         "in_progress": status_map.get("in_progress", 0) + status_map.get("in progress", 0),
         "resolved": status_map.get("resolved", 0),
         "closed": status_map.get("closed", 0),
