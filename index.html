@@ -1030,33 +1030,36 @@
 
 
   <!-- ════════════════════════════════════════════
-     CHATBOT
-════════════════════════════════════════════ -->
-  <button class="chatbot-toggle" id="chatbotToggle" title="Chat with JanBot">
-    🤖
-    <div class="chatbot-badge">1</div>
-  </button>
-  <div class="chatbot-window" id="chatbotWindow">
-    <div class="chat-header">
-      <div class="chat-avatar">🤖</div>
-      <div>
-        <div class="chat-name">JanBot</div>
-        <div class="chat-status">● Online – JanSamadhan Assistant</div>
+     CHATBOT WIDGET (Global Layer)
+  ════════════════════════════════════════════ -->
+  <div id="chatbot-widget">
+    <button class="chatbot-toggle" id="chatbotToggle" title="Chat with JanBot">
+      🤖
+      <div class="chatbot-badge">1</div>
+    </button>
+    <div class="chatbot-window" id="chatbotWindow">
+      <div class="chat-header">
+        <div class="chat-avatar">🤖</div>
+        <div>
+          <div class="chat-name">JanBot</div>
+          <div class="chat-status">● Online – JanSamadhan Assistant</div>
+        </div>
+        <button class="chat-close" id="chatClose">✕</button>
       </div>
-      <button class="chat-close" id="chatClose">✕</button>
-    </div>
-    <div class="chat-messages" id="chatMessages"></div>
-    <div class="chat-suggestions">
-      <button class="chat-suggestion">How to file grievance?</button>
-      <button class="chat-suggestion">How to track?</button>
-      <button class="chat-suggestion">Emergency process?</button>
-      <button class="chat-suggestion">Officer contact?</button>
-    </div>
-    <div class="chat-input-area">
-      <input type="text" class="chat-input" id="chatInput" placeholder="Ask JanBot anything...">
-      <button class="chat-send" id="chatSend">➤</button>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-suggestions">
+        <button class="chat-suggestion">How to file grievance?</button>
+        <button class="chat-suggestion">How to track?</button>
+        <button class="chat-suggestion">Emergency process?</button>
+        <button class="chat-suggestion">Officer contact?</button>
+      </div>
+      <div class="chat-input-area">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Ask JanBot anything...">
+        <button class="chat-send" id="chatSend">➤</button>
+      </div>
     </div>
   </div>
+
 
   <!-- BACK TO TOP -->
   <div class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0, behavior:'smooth'})">
@@ -1313,8 +1316,10 @@
         }
 
         console.log("👤 User role:", response.role);
+        handleLoginSuccess();
         
         setTimeout(() => {
+
           const userRole = response.role.toLowerCase();
           console.log("🚀 Redirecting to:", userRole === 'citizen' ? 'citizen.html' : userRole === 'officer' ? 'officer.html' : 'admin.html');
           

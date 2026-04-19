@@ -573,27 +573,30 @@
         </div>
     </div>
 
-    <!-- CHATBOT (same as index) -->
-    <button class="chatbot-toggle" id="chatbotToggle" title="Chat with JanBot">🤖</button>
-    <div class="chatbot-window" id="chatbotWindow">
-        <div class="chat-header">
-            <div class="chat-avatar">🤖</div>
-            <div>
-                <div class="chat-name">JanBot</div>
-                <div class="chat-status">● Online</div>
+    <!-- Chatbot Widget -->
+    <div id="chatbot-widget">
+        <button class="chatbot-toggle" id="chatbotToggle" title="Chat with JanBot">🤖</button>
+        <div class="chatbot-window" id="chatbotWindow">
+            <div class="chat-header">
+                <div class="chat-avatar">🤖</div>
+                <div>
+                    <div class="chat-name">JanBot</div>
+                    <div class="chat-status">● Online</div>
+                </div>
+                <button class="chat-close" id="chatClose">✕</button>
             </div>
-            <button class="chat-close" id="chatClose">✕</button>
-        </div>
-        <div class="chat-messages" id="chatMessages"></div>
-        <div class="chat-suggestions">
-            <button class="chat-suggestion">How to file?</button>
-            <button class="chat-suggestion">Emergency process?</button>
-        </div>
-        <div class="chat-input-area">
-            <input type="text" class="chat-input" id="chatInput" placeholder="Ask JanBot...">
-            <button class="chat-send" id="chatSend">➤</button>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-suggestions">
+                <button class="chat-suggestion">How to file?</button>
+                <button class="chat-suggestion">Emergency process?</button>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Ask JanBot...">
+                <button class="chat-send" id="chatSend">➤</button>
+            </div>
         </div>
     </div>
+
 
 
     <script src="js/api.js"></script>

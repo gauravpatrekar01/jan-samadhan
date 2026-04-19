@@ -86,13 +86,33 @@ window.addEventListener('offline', () => {
 });
 
 function showToast(message, type = 'info') {
-    const container = document.querySelector('.toast-container');
-    if (!container) return;
+    // Ensure container exists on body
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+    
     const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.textContent = message;
+    toast.className = `toast ${type}`;
+    
+    const icons = { success: '✅', info: 'ℹ️', warning: '⚠️', error: '❌' };
+    
+    toast.innerHTML = `
+        <span class="toast-icon">${icons[type] || '🔔'}</span>
+        <span class="toast-msg">${message}</span>
+        <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+    `;
+    
     container.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(20px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
 // Global UI Helpers (referenced in HTML)
@@ -162,9 +182,41 @@ function getDeadlineBadge(deadline) {
     return `<span class="badge badge-success">🕒 On Time</span>`;
 }
 
-// Modal Toggle
-function openModal(id) { document.getElementById(id)?.classList.add('show'); }
-function closeModal(id) { document.getElementById(id)?.classList.remove('show'); }
+// Global Modal Management
+function openModal(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    
+    // Close any other open modals first to prevent overlay stack
+    document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
+    
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden'; // Prevent page scroll
+}
+
+function closeModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.classList.remove('show');
+    } else {
+        // Fallback: close all
+        document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
+    }
+    
+    // Only restore scroll if no other modals are open
+    if (!document.querySelector('.modal-overlay.show')) {
+        document.body.style.overflow = '';
+        // Cleanup orphaned backdrops if any exist (safety check)
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    }
+}
+
+function handleLoginSuccess() {
+    console.log("🔓 Login successful, cleaning up UI...");
+    document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show'));
+    document.body.style.overflow = '';
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+}
 
 // Basic Dark Mode
 function toggleDark() {

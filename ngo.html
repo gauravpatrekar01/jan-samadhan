@@ -210,9 +210,37 @@
         </div>
     </div>
 
+    <!-- Scripts moved to end of body -->
+
+    <!-- Chatbot Widget -->
+    <div id="chatbot-widget">
+        <button class="chatbot-toggle" id="chatbotToggle" title="Chat with JanBot">🤖</button>
+        <div class="chatbot-window" id="chatbotWindow">
+            <div class="chat-header">
+                <div class="chat-avatar">🤖</div>
+                <div>
+                    <div class="chat-name">JanBot</div>
+                    <div class="chat-status">● NGO Assistant</div>
+                </div>
+                <button class="chat-close" id="chatClose">✕</button>
+            </div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-suggestions">
+                <button class="chat-suggestion">How to request?</button>
+                <button class="chat-suggestion">Status help?</button>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Ask JanBot...">
+                <button class="chat-send" id="chatSend">➤</button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/api.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/chatbot.js"></script>
     <script>
+
         let _currentWorkID = null;
 
         function openSidebar() { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('visible'); }

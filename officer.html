@@ -327,27 +327,30 @@
         </div>
     </div>
 
-    <!-- Chatbot -->
-    <button class="chatbot-toggle" id="chatbotToggle">🤖</button>
-    <div class="chatbot-window" id="chatbotWindow">
-        <div class="chat-header">
-            <div class="chat-avatar">🤖</div>
-            <div>
-                <div class="chat-name">JanBot</div>
-                <div class="chat-status">● Officer Assistant</div>
+    <!-- Chatbot Widget -->
+    <div id="chatbot-widget">
+        <button class="chatbot-toggle" id="chatbotToggle">🤖</button>
+        <div class="chatbot-window" id="chatbotWindow">
+            <div class="chat-header">
+                <div class="chat-avatar">🤖</div>
+                <div>
+                    <div class="chat-name">JanBot</div>
+                    <div class="chat-status">● Officer Assistant</div>
+                </div>
+                <button class="chat-close" id="chatClose">✕</button>
             </div>
-            <button class="chat-close" id="chatClose">✕</button>
-        </div>
-        <div class="chat-messages" id="chatMessages"></div>
-        <div class="chat-suggestions">
-            <button class="chat-suggestion">Emergency process?</button>
-            <button class="chat-suggestion">How to update status?</button>
-        </div>
-        <div class="chat-input-area">
-            <input type="text" class="chat-input" id="chatInput" placeholder="Ask JanBot...">
-            <button class="chat-send" id="chatSend">➤</button>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-suggestions">
+                <button class="chat-suggestion">Emergency process?</button>
+                <button class="chat-suggestion">How to update status?</button>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Ask JanBot...">
+                <button class="chat-send" id="chatSend">➤</button>
+            </div>
         </div>
     </div>
+
 
 
     <script src="js/api.js"></script>

@@ -1293,13 +1293,21 @@ select.form-control {
 }
 
 /* ============================================================
-   CHATBOT
+   CHATBOT WIDGET
    ============================================================ */
+#chatbot-widget {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+
 .chatbot-toggle {
+
   position: fixed;
   bottom: 30px;
   right: 30px;
-  z-index: 2000;
+  z-index: 9999;
   width: 64px;
   height: 64px;
   background: linear-gradient(135deg, var(--primary-light), var(--accent));
@@ -1656,7 +1664,7 @@ select.form-control {
   position: fixed;
   top: 80px;
   right: 20px;
-  z-index: 3000;
+  z-index: 10000;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1850,7 +1858,7 @@ select.form-control {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 5000;
+  z-index: 9000;
   background: rgba(0, 0, 0, .6);
   backdrop-filter: blur(4px);
   display: flex;
@@ -1873,6 +1881,7 @@ select.form-control {
   max-width: 520px;
   width: 90%;
   box-shadow: var(--shadow-xl);
+  z-index: 9500;
   transform: scale(.9) translateY(20px);
   transition: all .3s cubic-bezier(.4, 0, .2, 1);
   max-height: 90vh;
