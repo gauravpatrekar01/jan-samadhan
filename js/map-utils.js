@@ -171,6 +171,12 @@ class MapManager {
         if (latInput) latInput.value = lat.toFixed(6);
         if (lngInput) lngInput.value = lng.toFixed(6);
 
+        // Update display divs
+        const latDisplay = document.getElementById('latitudeDisplay');
+        const lngDisplay = document.getElementById('longitudeDisplay');
+        if (latDisplay) latDisplay.textContent = lat.toFixed(6);
+        if (lngDisplay) lngDisplay.textContent = lng.toFixed(6);
+
         // Trigger change event for form validation
         if (latInput) latInput.dispatchEvent(new Event('change', { bubbles: true }));
         if (lngInput) lngInput.dispatchEvent(new Event('change', { bubbles: true }));

@@ -4,7 +4,6 @@
  */
 
 let mapManager = null;
-const API_BASE_URL = window.location.protocol === 'file:' ? 'http://localhost:8000' : `${window.location.protocol}//${window.location.host}`;
 
 // Initialize form on page load
 document.addEventListener('DOMContentLoaded', async () => {

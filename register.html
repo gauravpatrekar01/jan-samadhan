@@ -464,12 +464,12 @@
                             <div class="location-display">
                                 <div class="location-field">
                                     <div class="location-label">Latitude</div>
-                                    <div class="location-value" id="latitude">--</div>
+                                    <div class="location-value" id="latitudeDisplay">--</div>
                                     <input type="hidden" id="latitude" name="latitude" value="">
                                 </div>
                                 <div class="location-field">
                                     <div class="location-label">Longitude</div>
-                                    <div class="location-value" id="longitude">--</div>
+                                    <div class="location-value" id="longitudeDisplay">--</div>
                                     <input type="hidden" id="longitude" name="longitude" value="">
                                 </div>
                             </div>
@@ -668,7 +668,7 @@
                 if (btn) { btn.disabled = true; btn.innerText = '🔒 Login Required'; }
             }
 
-            renderDummyMap('registrationMap', [], true);
+            // Map initialization will be handled by registration-map.js
 
             // Description char counter
             const desc = document.getElementById('fDescription');
@@ -807,11 +807,16 @@
 
             try {
                 const priority = (document.querySelector('input[name="priority"]:checked')?.value || 'Medium').toLowerCase();
-                const locationRaw = document.getElementById('locationHidden').value;
-                let locationObj = { lat: 28.6139, lng: 77.2090, address: document.getElementById('fAddress').value || 'Location marked on map' };
-                try {
-                    if (locationRaw) locationObj = JSON.parse(locationRaw);
-                } catch (err) { }
+                
+                // Get location from form fields
+                const lat = parseFloat(document.getElementById('latitude').value);
+                const lng = parseFloat(document.getElementById('longitude').value);
+                const address = document.getElementById('fAddress').value || 'Location marked on map';
+                
+                let locationObj = { lat: 28.6139, lng: 77.2090, address: address };
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    locationObj = { lat, lng, address };
+                }
 
                 const grievanceData = {
                     title: document.getElementById('fSubcategory').value || `${selectedCategory} Issue`,
@@ -845,6 +850,10 @@
             }
         }
     </script>
+    
+    <!-- Map Integration Scripts -->
+    <script src="js/map-utils.js"></script>
+    <script src="js/registration-map.js"></script>
 </body>
 
 </html>
