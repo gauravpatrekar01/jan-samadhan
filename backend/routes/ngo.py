@@ -13,20 +13,35 @@ router = APIRouter()
 @limiter.limit("5/hour")
 def request_handling(request: Request, request_data: NGORequestSchema, user=Depends(require_role(["ngo"]))):
     """NGO requests to handle a specific grievance."""
-    # Check if NGO is verified
     user_doc = db.get_collection("users").find_one({"email": user["sub"]})
+    
+    # Check if NGO is verified and active
     if not user_doc or not user_doc.get("verified"):
         raise HTTPException(status_code=403, detail="Your NGO account is pending verification by administration.")
+    if not user_doc.get("is_active", True):
+        raise HTTPException(status_code=403, detail="NGO account is currently inactive. Contact administration.")
+
+    complaint_coll = db.get_collection("complaints")
+    
+    # Capacity Limit Check (Max 5 active cases)
+    active_cases = complaint_coll.count_documents({
+        "assigned_to_ngo": user["sub"],
+        "status": {"$in": ["assigned", "under_review", "in_progress"]}
+    })
+    if active_cases >= 5:
+        raise HTTPException(status_code=400, detail="NGO capacity reached. Complete existing assignments before requesting more.")
 
     # Check if complaint exists and is available
-    complaint_coll = db.get_collection("complaints")
     complaint = complaint_coll.find_one({"id": request_data.complaint_id})
-    
     if not complaint:
         raise HTTPException(status_code=404, detail="Complaint not found")
+
+    # Category-Based Matching Check
+    if complaint.get("category") not in user_doc.get("categories", []):
+         raise HTTPException(status_code=400, detail=f"Your NGO is not authorized to handle {complaint.get('category')} cases.")
     
     if complaint.get("assigned_to_ngo"):
-         raise HTTPException(status_code=400, detail="Grievance already assigned to an NGO.")
+         raise HTTPException(status_code=400, detail="Grievance already assigned to another NGO.")
 
     # Prevent duplicate requests
     request_coll = db.get_collection("ngo_requests")
@@ -65,6 +80,7 @@ def request_handling(request: Request, request_data: NGORequestSchema, user=Depe
     new_req.pop("_id", None)
     return {"success": True, "data": new_req}
 
+
 @router.get("/my-requests")
 def get_my_requests(user=Depends(require_role(["ngo"]))):
     """View status of all requests made by the NGO."""
@@ -79,15 +95,29 @@ def get_assigned_complaints(user=Depends(require_role(["ngo"]))):
 
 @router.get("/available-complaints")
 def get_available_complaints(user=Depends(require_role(["ngo"]))):
-    """View complaints that are open/unassigned for NGOs to request."""
-    # Only show complaints that are NOT assigned to any NGO and are in relevant states
+    """View complaints that are open/unassigned for NGOs to request, filtered by NGO expertise."""
+    user_doc = db.get_collection("users").find_one({"email": user["sub"]})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="NGO details not found")
+        
+    ngo_categories = user_doc.get("categories", [])
+    ngo_area = user_doc.get("service_area", "")
+
+    # Base Query: Unassigned and in a state where assistance is needed
     query = {
         "$or": [
             {"assigned_to_ngo": {"$exists": False}},
             {"assigned_to_ngo": None}
         ],
-        "status": {"$in": ["submitted", "under_review", "assigned"]}
+        "status": {"$in": ["submitted", "under_review", "assigned"]},
+        "category": {"$in": ngo_categories} # Match NGOexpertise
     }
+    
+    # Location Matching (Optional but prioritized)
+    # Checks if complaint region mentions the NGO's service area
+    if ngo_area:
+        query["region"] = {"$regex": ngo_area, "$options": "i"}
+
     complaints = list(db.get_collection("complaints").find(query, {"_id": 0}).sort("createdAt", -1).limit(50))
     return {"success": True, "data": complaints}
 

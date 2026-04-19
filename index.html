@@ -898,6 +898,84 @@
         No account? <a href="#" onclick="setAuthMode('signup')"
           style="color:var(--primary-light);font-weight:600">Register as Citizen →</a>
       </p>
+  <!-- DETAILED NGO REGISTRATION MODAL -->
+  <div class="modal-overlay" id="ngoRegisterModal">
+    <div class="modal-box" style="width:100%; max-width:600px">
+      <div class="modal-header">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:1.8rem">🤝</div>
+          <h3 id="ngoRegTitle">NGO Partnership Registration</h3>
+        </div>
+        <button class="modal-close" onclick="closeModal('ngoRegisterModal')">✕</button>
+      </div>
+      <form id="ngoRegForm" onsubmit="handleNGORegister(event)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group">
+            <label class="form-label">Organization Name <span class="req">*</span></label>
+            <input type="text" class="form-control" id="ngoRegName" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Reg. Number <span class="req">*</span></label>
+            <input type="text" class="form-control" id="ngoRegNum" required placeholder="Unique ID">
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group">
+            <label class="form-label">Org. Type <span class="req">*</span></label>
+            <select class="form-control" id="ngoRegType" required>
+              <option value="Trust">Trust</option>
+              <option value="Society">Society</option>
+              <option value="Section 8">Section 8</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Service City/Region <span class="req">*</span></label>
+            <input type="text" class="form-control" id="ngoRegArea" required placeholder="e.g. Mumbai">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Expertise Categories (Multi) <span class="req">*</span></label>
+          <div id="ngoCategoryGrid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;background:var(--bg-alt);padding:10px;border-radius:8px">
+            <label style="font-size:.8rem;display:flex;align-items:center;gap:4px"><input type="checkbox" name="ngoCat" value="Infrastructure"> Infrastructure</label>
+            <label style="font-size:.8rem;display:flex;align-items:center;gap:4px"><input type="checkbox" name="ngoCat" value="Water Supply"> Water Supply</label>
+            <label style="font-size:.8rem;display:flex;align-items:center;gap:4px"><input type="checkbox" name="ngoCat" value="Electricity"> Electricity</label>
+            <label style="font-size:.8rem;display:flex;align-items:center;gap:4px"><input type="checkbox" name="ngoCat" value="Sanitation"> Sanitation</label>
+            <label style="font-size:.8rem;display:flex;align-items:center;gap:4px"><input type="checkbox" name="ngoCat" value="Healthcare"> Healthcare</label>
+            <label style="font-size:.8rem;display:flex;align-items:center;gap:4px"><input type="checkbox" name="ngoCat" value="Other"> Other</label>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group">
+            <label class="form-label">Contact Person <span class="req">*</span></label>
+            <input type="text" class="form-control" id="ngoRegContact" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone Number <span class="req">*</span></label>
+            <input type="tel" class="form-control" id="ngoRegPhone" required>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-group">
+            <label class="form-label">Email <span class="req">*</span></label>
+            <input type="email" class="form-control" id="ngoRegEmail" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password <span class="req">*</span></label>
+            <input type="password" class="form-control" id="ngoRegPass" required placeholder="Min 8 chars">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Verification Doc (PDF/JPG/PNG) <span class="req">*</span></label>
+          <input type="file" class="form-control" id="ngoRegDoc" required accept=".pdf,.jpg,.jpeg,.png">
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full" id="ngoSubmitBtn">📝 Submit Application for Review</button>
+      </form>
     </div>
   </div>
 
@@ -1096,9 +1174,17 @@
         
         let response;
         if (mode === 'signup') {
+          if (role === 'ngo') {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            closeLoginModal();
+            openModal('ngoRegisterModal');
+            return;
+          }
           if (role !== 'citizen') {
             throw new Error('Officers must be created by the admin. Please login instead.');
           }
+
           console.log("📝 Registering new user:", email);
           await window.JanSamadhanAPI.register({ name, email, password, role: role, aadhar });
           // Auto-login after successful registration to get the token
@@ -1153,6 +1239,48 @@
       } catch (err) {
         console.error("❌ Auth Error:", err.message, err);
         showToast((err.message || 'Login failed') + ' · Check browser console for details', 'error');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    async function handleNGORegister(e) {
+      e.preventDefault();
+      const btn = document.getElementById('ngoSubmitBtn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '⌛ Validating...';
+      btn.disabled = true;
+
+      try {
+        const file = document.getElementById('ngoRegDoc').files[0];
+        if (!file) throw new Error("Registration certificate is mandatory.");
+        if (file.size > 5 * 1024 * 1024) throw new Error("Document exceeds 5MB limit.");
+
+        const doc_url = `https://jansamadhan-docs.s3.amazonaws.com/ngo-certs/${Date.now()}_${file.name}`;
+        const categories = Array.from(document.querySelectorAll('input[name="ngoCat"]:checked')).map(cb => cb.value);
+        if (categories.length === 0) throw new Error("At least one category required.");
+
+        const ngoData = {
+          name: document.getElementById('ngoRegName').value,
+          email: document.getElementById('ngoRegEmail').value,
+          password: document.getElementById('ngoRegPass').value,
+          registration_number: document.getElementById('ngoRegNum').value,
+          organization_type: document.getElementById('ngoRegType').value,
+          categories: categories,
+          service_area: document.getElementById('ngoRegArea').value,
+          contact_person: document.getElementById('ngoRegContact').value,
+          phone: document.getElementById('ngoRegPhone').value,
+          address: '-',
+          document_url: doc_url
+        };
+
+        const res = await window.JanSamadhanAPI.registerNGO(ngoData);
+        showToast("Application submitted for review!", "success");
+        closeModal('ngoRegisterModal');
+        openLoginModal('ngo');
+      } catch (err) {
+        showToast(err.message, "error");
+      } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
       }

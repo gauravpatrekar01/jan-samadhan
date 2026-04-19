@@ -338,3 +338,42 @@ def reject_ngo_request(request_id: str, remarks: str = "Request declined.", admi
     
     return {"success": True, "message": "NGO request rejected"}
 
+
+# ── NGO Detailed Verification ──
+@router.get("/ngo/pending")
+def get_pending_ngos(admin: dict = Depends(require_admin)):
+    """List NGOs awaiting verification."""
+    users = db.get_collection("users")
+    pending = list(users.find({"role": "ngo", "verified": False}, {"_id": 0, "password": 0}).sort("createdAt", -1))
+    return {"success": True, "data": pending}
+
+@router.patch("/ngo/{email}/approve")
+def approve_ngo(email: str, admin: dict = Depends(require_admin)):
+    """Approve NGO registration certificate and documents."""
+    users = db.get_collection("users")
+    target = users.find_one({"email": email, "role": "ngo"})
+    if not target:
+        raise NotFoundError("NGO Account")
+    
+    users.update_one(
+        {"email": email},
+        {"$set": {"verified": True, "verification_level": 1, "is_active": True}}
+    )
+    log_audit("ngo_account_verified", admin["sub"], admin["role"], "user", email)
+    return {"success": True, "message": f"NGO {email} is now verified and active."}
+
+@router.patch("/ngo/{email}/reject")
+def reject_ngo(email: str, reason: str = "Incomplete documentation", admin: dict = Depends(require_admin)):
+    """Reject NGO registration."""
+    users = db.get_collection("users")
+    target = users.find_one({"email": email, "role": "ngo"})
+    if not target:
+        raise NotFoundError("NGO Account")
+
+    users.update_one(
+        {"email": email},
+        {"$set": {"verified": False, "is_active": False, "rejection_reason": reason}}
+    )
+    return {"success": True, "message": "NGO registration has been rejected."}
+
+

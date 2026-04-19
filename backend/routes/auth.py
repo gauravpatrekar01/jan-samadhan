@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from schemas.user import UserCreate, UserLogin
+from schemas.user import UserCreate, UserLogin, NGORegistrationSchema
 from db import db
 from security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token, verify_token_type
 from limiter import limiter
@@ -38,6 +38,39 @@ def register(request: Request, user: UserCreate):
     user_dict.pop("password", None)
 
     return {"success": True, "data": user_dict}
+
+
+@router.post("/register-ngo", status_code=201)
+@limiter.limit("3/minute")
+def register_ngo(request: Request, ngo: NGORegistrationSchema):
+    collection = db.get_collection("users")
+    
+    # Validation
+    if collection.find_one({"email": ngo.email}):
+        raise ConflictError("An account with this email already exists.")
+        
+    if collection.find_one({"registration_number": ngo.registration_number}):
+        raise ConflictError("An organization with this registration number is already registered.")
+
+    ngo_dict = ngo.model_dump()
+    ngo_dict.update({
+        "role": "ngo",
+        "verified": False,
+        "verification_level": 0,
+        "is_active": True,
+        "password": hash_password(ngo.password),
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+        # Metrics & Capacity Initialization
+        "resolved_cases": 0,
+        "avg_rating": 0,
+        "active_cases_count": 0
+    })
+    
+    collection.insert_one(ngo_dict)
+    ngo_dict.pop("_id", None)
+    ngo_dict.pop("password", None)
+    
+    return {"success": True, "data": ngo_dict}
 
 
 @router.post("/login")

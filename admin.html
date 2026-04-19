@@ -49,8 +49,10 @@
             </div>
             <div class="nav-item" onclick="showPage('assignments',this)"><span class="nav-icon">🎯</span> Assignments</div>
             <div class="nav-item" onclick="showPage('ngoRequests',this)"><span class="nav-icon">🤝</span> NGO Requests</div>
+            <div class="nav-item" onclick="showPage('ngoVerification',this)"><span class="nav-icon">🛡️</span> NGO Verification</div>
             <div class="nav-item" onclick="showPage('announcements',this)"><span class="nav-icon">📢</span>
                 Announcements</div>
+
             <div class="nav-item" onclick="showPage('users',this)"><span class="nav-icon">👥</span> User Management
             </div>
             <div class="nav-item" onclick="showPage('audit',this)"><span class="nav-icon">📋</span> Audit Log
@@ -225,7 +227,7 @@
             <!-- ─── NGO REQUESTS ─── -->
             <div class="dash-page" id="page-ngoRequests">
                 <div class="page-header">
-                    <div class="page-title">🤝 NGO Access Requests</div>
+                    <div class="page-title">🤝 NGO Task Requests</div>
                     <div class="page-subtitle">Review applications from NGOs to handle specific grievances</div>
                 </div>
                 <div class="card" style="padding:0; overflow:hidden">
@@ -242,6 +244,31 @@
                     </table>
                 </div>
             </div>
+
+            <!-- ─── NGO VERIFICATION ─── -->
+            <div class="dash-page" id="page-ngoVerification">
+                <div class="page-header">
+                    <div class="page-title">🛡️ NGO Partner Verification</div>
+                    <div class="page-subtitle">Review organization registration papers and onboarding details</div>
+                </div>
+                <div class="card" style="padding:0; overflow:hidden">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Organization</th>
+                                <th>Details</th>
+                                <th>Expertise</th>
+                                <th>Document</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ngoVerifyTableBody">
+                            <tr><td colspan="5" style="text-align:center;padding:40px">⌛ Loading NGO applications...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
 
             <!-- ─── ANNOUNCEMENTS ─── -->
             <div class="dash-page" id="page-announcements">
@@ -1232,6 +1259,57 @@ function toggleUserDistrictField() {
             } catch(e) { showToast(e.message, "error"); }
         }
 
+        async function loadNGOVerification() {
+            try {
+                const data = await window.JanSamadhanAPI.getPendingNGOs();
+                const container = document.getElementById('ngoVerifyTableBody');
+                if(!data.length) {
+                    container.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px">No pending NGO registrations.</td></tr>`;
+                    return;
+                }
+                container.innerHTML = data.map(n => `
+                    <tr>
+                        <td>
+                            <div style="font-weight:600">${n.name}</div>
+                            <div style="font-size:.7rem;color:var(--text-muted)">ID: ${n.registration_number}</div>
+                        </td>
+                        <td style="font-size:.85rem">
+                            <div>Type: ${n.organization_type}</div>
+                            <div>Area: ${n.service_area}</div>
+                            <div style="color:var(--text-muted)">${n.email}</div>
+                        </td>
+                        <td>
+                            ${(n.categories || []).map(c => `<span class="badge" style="background:var(--bg-alt);color:var(--text);margin:2px">${c}</span>`).join('')}
+                        </td>
+                        <td>
+                            <a href="${n.document_url || '#'}" target="_blank" class="btn btn-outline btn-sm">📄 View Doc</a>
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:6px">
+                                <button class="btn btn-primary btn-sm" onclick="processNGOAccount('${n.email}', 'approve')">✔ Verify</button>
+                                <button class="btn btn-outline btn-sm" onclick="processNGOAccount('${n.email}', 'reject')">✖ Reject</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        async function processNGOAccount(email, action) {
+            try {
+                if(action === 'approve') {
+                    await window.JanSamadhanAPI.approveNGO(email);
+                    showToast(`NGO ${email} verified successfully!`, "success");
+                } else {
+                    const reason = prompt("Rejection reason:");
+                    if(reason === null) return;
+                    await window.JanSamadhanAPI.rejectNGO(email, reason);
+                    showToast("NGO account rejected.", "info");
+                }
+                loadNGOVerification();
+            } catch(e) { showToast(e.message, "error"); }
+        }
+
     </script>
     <script>
         // Override showPage after all scripts load to add assignment and audit logic
@@ -1241,6 +1319,7 @@ function toggleUserDistrictField() {
             if (id === 'assignments') loadAssignmentQueue();
             if (id === 'audit') loadAuditLog();
             if (id === 'ngoRequests') loadNGORequests();
+            if (id === 'ngoVerification') loadNGOVerification();
         };
     </script>
 </body>

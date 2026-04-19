@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, field_validator, model_validator
-from typing import Optional, Literal
+from typing import Optional, Literal, List
 import re
 
 
@@ -45,3 +45,32 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+
+class NGORegistrationSchema(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    registration_number: str
+    organization_type: Literal["Trust", "Society", "Section 8"]
+    categories: List[str]
+    service_area: str
+    contact_person: str
+    phone: str
+    address: str
+    document_url: str  # URL of uploaded certificate
+
+    @field_validator("registration_number")
+    @classmethod
+    def reg_num_min_len(cls, v: str) -> str:
+        if len(v.strip()) < 5:
+            raise ValueError("Registration number must be at least 5 characters")
+        return v.strip()
+
+    @field_validator("categories")
+    @classmethod
+    def categories_not_empty(cls, v: List[str]) -> List[str]:
+        if not v:
+            raise ValueError("At least one category must be selected")
+        return v
+

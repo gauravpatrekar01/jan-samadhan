@@ -38,6 +38,8 @@ class Database:
             cls.db["ngo_requests"].create_index([("ngo_email", ASCENDING)])
             cls.db["ngo_requests"].create_index([("complaint_id", ASCENDING)])
             cls.db["ngo_requests"].create_index([("status", ASCENDING)])
+
+            cls.db["users"].create_index([("registration_number", ASCENDING)], unique=True, sparse=True)
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"Database index creation encountered an issue: {e}")

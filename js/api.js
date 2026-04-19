@@ -108,6 +108,11 @@ const JanSamadhanAPI = {
         return this._fetch('/api/auth/register', { method: 'POST', body: JSON.stringify(userData) });
     },
 
+    async registerNGO(ngoData) {
+        return this._fetch('/api/auth/register-ngo', { method: 'POST', body: JSON.stringify(ngoData) });
+    },
+
+
     async login(credentials) {
         const response = await this._fetch('/api/auth/login', {
             method: 'POST',
@@ -292,6 +297,20 @@ const JanSamadhanAPI = {
     async rejectNGORequest(requestId, remarks = '') {
         return this._fetch(`/api/admin/ngo-requests/${requestId}/reject?remarks=${remarks}`, { method: 'PATCH' });
     },
+
+    // ── Admin NGO Verification Management ──
+    async getPendingNGOs() {
+        return this._fetch('/api/admin/ngo/pending');
+    },
+
+    async approveNGO(email) {
+        return this._fetch(`/api/admin/ngo/${email}/approve`, { method: 'PATCH' });
+    },
+
+    async rejectNGO(email, reason) {
+        return this._fetch(`/api/admin/ngo/${email}/reject?reason=${encodeURIComponent(reason)}`, { method: 'PATCH' });
+    },
+
 
     async uploadEvidence(complaintId, file) {
         const formData = new FormData();

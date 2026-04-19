@@ -65,8 +65,9 @@
             <div class="user-avatar">🤝</div>
             <div>
                 <div class="user-name" id="ngoNameDisplay">NGO User</div>
-                <div class="status-pill status-approved" style="display:inline-block;margin-top:4px">Verified Partner</div>
+                <div id="ngoStatusBadge" style="display:inline-block;margin-top:4px"></div>
             </div>
+
         </div>
         <nav class="sidebar-nav">
             <div class="nav-section-label">Operations</div>
@@ -326,12 +327,25 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             const user = getSessionUser();
             if(!user || user.role !== 'ngo') { window.location.href = 'index.html'; return; }
+            
             document.getElementById('ngoNameDisplay').textContent = user.name || "NGO Partner";
+            
+            const badge = document.getElementById('ngoStatusBadge');
+            if(user.verified) {
+                badge.innerHTML = `<span class="status-pill status-approved">🛡️ Verified Partner</span>`;
+            } else if(user.rejection_reason) {
+                badge.innerHTML = `<span class="status-pill status-rejected" title="${user.rejection_reason}">✖ Rejected</span>`;
+            } else {
+                badge.innerHTML = `<span class="status-pill status-pending">⌛ Verification Pending</span>`;
+            }
+
             loadWork();
+            loadNGOStats();
         });
+
 
         function logoutUser() {
             window.JanSamadhanAPI.logout();
