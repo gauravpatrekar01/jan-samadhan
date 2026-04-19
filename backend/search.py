@@ -14,9 +14,26 @@ def build_complaint_query(
     search: Optional[str] = None,
     assigned_to: Optional[str] = None,
     citizen_email: Optional[str] = None,
+    near: Optional[str] = None,
+    radius: int = 5000,
 ) -> Dict[str, Any]:
     """Build a MongoDB query for complaint filtering"""
     query = {}
+
+    if near:
+        try:
+            lat, lng = map(float, near.split(","))
+            query["location"] = {
+                "$near": {
+                    "$geometry": {
+                        "type": "Point",
+                        "coordinates": [lng, lat]
+                    },
+                    "$maxDistance": radius
+                }
+            }
+        except ValueError:
+            pass
 
     if status:
         query["status"] = status.lower()
@@ -55,6 +72,8 @@ def search_complaints(
     search: Optional[str] = None,
     assigned_to: Optional[str] = None,
     citizen_email: Optional[str] = None,
+    near: Optional[str] = None,
+    radius: int = 5000,
     skip: int = 0,
     limit: int = 50,
 ) -> List[Dict[str, Any]]:
@@ -67,6 +86,8 @@ def search_complaints(
         search=search,
         assigned_to=assigned_to,
         citizen_email=citizen_email,
+        near=near,
+        radius=radius,
     )
 
     collection = db.get_collection("complaints")
@@ -86,6 +107,8 @@ def get_complaint_count(
     region: Optional[str] = None,
     assigned_to: Optional[str] = None,
     citizen_email: Optional[str] = None,
+    near: Optional[str] = None,
+    radius: int = 5000,
 ) -> int:
     """Get count of complaints matching criteria"""
     query = build_complaint_query(
@@ -95,6 +118,8 @@ def get_complaint_count(
         region=region,
         assigned_to=assigned_to,
         citizen_email=citizen_email,
+        near=near,
+        radius=radius,
     )
 
     collection = db.get_collection("complaints")

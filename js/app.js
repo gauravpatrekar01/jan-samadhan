@@ -128,7 +128,12 @@ function timeAgo(date) {
 
 function formatDate(date) {
     if (!date) return 'N/A';
-    return new Date(date).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const d = new Date(date);
+    return new Intl.DateTimeFormat(navigator.language, {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+        timeZoneName: 'short'
+    }).format(d);
 }
 
 function renderProgressBar(percent) {
@@ -149,17 +154,24 @@ function toggleDark() {
 // Counter animation
 function initCounters() {
     document.querySelectorAll('[data-counter]').forEach(el => {
-        const target = parseInt(el.dataset.counter);
+        const target = parseFloat(el.dataset.counter) || 0;
         const suffix = el.dataset.suffix || '';
+        const isFloat = el.id === 'heroSatisfaction' || el.id === 'heroResolved';
+        
+        if (target === 0) {
+            el.innerText = (isFloat ? "0.0" : "0") + suffix;
+            return;
+        }
+
         let count = 0;
         const inc = target / 50;
         const timer = setInterval(() => {
             count += inc;
             if (count >= target) {
-                el.innerText = target + suffix;
+                el.innerText = (isFloat ? target.toFixed(1) : Math.floor(target)) + suffix;
                 clearInterval(timer);
             } else {
-                el.innerText = Math.floor(count) + suffix;
+                el.innerText = (isFloat ? count.toFixed(1) : Math.floor(count)) + suffix;
             }
         }, 30);
     });

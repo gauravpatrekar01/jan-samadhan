@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, UploadFile, File, Form, HTTPException
 from schemas.complaint import ComplaintCreate
 from db import db
 from datetime import datetime, timezone
@@ -7,12 +7,16 @@ from dependencies import (
     require_citizen,
     require_officer,
     require_officer_or_admin,
+    require_role,
     get_current_user,
     get_current_user_optional,
 )
 from errors import ValidationError, NotFoundError, AuthorizationError
 from audit import log_audit
+from bson import ObjectId
+from bson.errors import InvalidId
 from search import search_complaints, get_complaint_count
+from notifications import notify_status_change
 
 router = APIRouter()
 
@@ -39,6 +43,8 @@ def get_complaints(
     category: str = Query(None),
     region: str = Query(None),
     search: str = Query(None),
+    near: str = Query(None),
+    radius: int = Query(5000),
     skip: int = Query(0),
     limit: int = Query(50),
     user: dict = Depends(get_current_user),
@@ -56,6 +62,8 @@ def get_complaints(
         category=category,
         region=region,
         search=search,
+        near=near,
+        radius=radius,
         skip=skip,
         limit=limit,
     )
@@ -66,6 +74,8 @@ def get_complaints(
         priority=priority,
         category=category,
         region=region,
+        near=near,
+        radius=radius,
     )
 
     return {"success": True, "data": complaints, "total": total}
@@ -133,28 +143,30 @@ def create_complaint(complaint: ComplaintCreate, user: dict = Depends(require_ci
             "assigned_officer": None,
             "createdAt": now,
             "updatedAt": now,
-            "history": [
+            "timeline": [
                 {
-                    "status": "submitted",
+                    "stage": "Submitted",
                     "remarks": "Grievance filed by citizen",
                     "timestamp": now,
+                    "updated_by_user_id": user["sub"],
                 }
             ],
+            "media": [],
             "feedback": [],
             "feedbackAverage": 0,
             "feedbackCount": 0,
         }
     )
 
-    # Auto-assign complaints to the officer responsible for the district
     assigned_officer = find_officer_for_region(c_dict.get("region"))
     if assigned_officer:
         c_dict["assigned_officer"] = assigned_officer
-        c_dict["history"].append(
+        c_dict["timeline"].append(
             {
-                "status": "submitted",
+                "stage": "Under Review",
                 "remarks": f"Auto-assigned to officer {assigned_officer} for district {c_dict.get('region')}",
                 "timestamp": now,
+                "updated_by_user_id": "system"
             }
         )
 
@@ -169,6 +181,8 @@ def create_complaint(complaint: ComplaintCreate, user: dict = Depends(require_ci
         resource_id=complaint_id,
         details={"category": complaint.category, "priority": complaint.priority},
     )
+
+    notify_status_change(user["sub"], complaint_id, "Submitted", "Your complaint has been successfully registered.")
 
     return {"success": True, "data": c_dict}
 
@@ -211,10 +225,11 @@ def assign_complaint(
         {
             "$set": {"assigned_officer": officer_email, "updatedAt": now},
             "$push": {
-                "history": {
-                    "status": "assigned",
+                "timeline": {
+                    "stage": "Under Review",
                     "remarks": f"Assigned to officer {officer_email}",
                     "timestamp": now,
+                    "updated_by_user_id": user["sub"]
                 }
             },
         },
@@ -234,12 +249,56 @@ def assign_complaint(
     return {"success": True, "message": f"Complaint {id} assigned to {officer_email}"}
 
 
+@router.patch("/{id}/assign-ngo")
+def assign_ngo(
+    id: str,
+    ngo_email: str,
+    user: dict = Depends(require_role(["admin", "officer"]))
+):
+    """Assign an NGO to assist with a complaint"""
+    ngo_user = db.get_collection("users").find_one({"email": ngo_email})
+    if not ngo_user or ngo_user.get("role") != "ngo":
+        raise ValidationError("Valid NGO user not found")
+
+    collection = db.get_collection("complaints")
+    now = datetime.now(timezone.utc).isoformat()
+    result = collection.update_one(
+        {"id": id},
+        {
+            "$set": {"assigned_ngo": ngo_email, "updatedAt": now},
+            "$push": {
+                "timeline": {
+                    "stage": "Assigned to NGO",
+                    "remarks": f"Assigned to NGO {ngo_user.get('name', ngo_email)} for field assistance",
+                    "timestamp": now,
+                    "updated_by_user_id": user["sub"]
+                }
+            },
+        },
+    )
+    if result.matched_count == 0:
+        raise NotFoundError("Complaint")
+
+    log_audit(
+        action="complaint_assigned_ngo",
+        actor_email=user["sub"],
+        actor_role=user.get("role"),
+        resource_type="complaint",
+        resource_id=id,
+        details={"assigned_ngo": ngo_email},
+    )
+    
+    notify_status_change(ngo_email, id, "NGO Assignment", f"You have been assigned to assist on grievance {id}.")
+
+    return {"success": True, "message": f"Complaint {id} assigned to NGO {ngo_email}"}
+
+
 @router.patch("/{id}/status")
 def update_status(
     id: str,
     status: str,
     remarks: str = "",
-    user: dict = Depends(require_officer_or_admin),
+    user: dict = Depends(require_role(["admin", "officer", "ngo"])),
 ):
     allowed_statuses = {"submitted", "under_review", "in_progress", "resolved", "closed"}
     if status not in allowed_statuses:
@@ -260,6 +319,13 @@ def update_status(
     ):
         raise AuthorizationError("You can only update your assigned complaints (except emergency cases)")
 
+    # NGO can only update their assigned complaints
+    if (
+        user.get("role") == "ngo"
+        and complaint.get("assigned_ngo") != user["sub"]
+    ):
+        raise AuthorizationError("You can only update your assigned complaints")
+
     now = datetime.now(timezone.utc).isoformat()
     
     # Auto-assign emergency complaints to the officer updating them
@@ -269,16 +335,24 @@ def update_status(
             update_fields["assigned_officer"] = user["sub"]
             remarks = f"[AUTO-ASSIGNED] {remarks}" if remarks else "Emergency complaint auto-assigned to responding officer"
     
+    stage_map = {
+        "submitted": "Submitted",
+        "under_review": "Under Review",
+        "in_progress": "In Progress",
+        "resolved": "Resolved",
+        "closed": "Closed"
+    }
+    
     collection.update_one(
         {"id": id},
         {
             "$set": update_fields,
             "$push": {
-                "history": {
-                    "status": status,
+                "timeline": {
+                    "stage": stage_map.get(status, "In Progress"),
                     "remarks": remarks,
                     "timestamp": now,
-                    "updated_by": user["sub"],
+                    "updated_by_user_id": user["sub"],
                 }
             },
         },
@@ -292,6 +366,10 @@ def update_status(
         resource_id=id,
         details={"new_status": status},
     )
+    
+    citizen_email = complaint.get("citizen_email")
+    if citizen_email:
+        notify_status_change(citizen_email, id, stage_map.get(status, "In Progress"), remarks)
 
     return {"success": True, "message": f"Updated {id} status to {status}"}
 
@@ -301,49 +379,43 @@ def submit_feedback(
     id: str,
     rating: int,
     comment: str = "",
+    satisfaction: str = "Neutral",
     user: dict = Depends(require_citizen),
 ):
     if not 1 <= rating <= 5:
         raise ValidationError("Rating must be between 1 and 5")
 
     collection = db.get_collection("complaints")
-    complaint = collection.find_one({"id": id}, {"_id": 0, "status": 1, "feedback": 1, "feedbackAverage": 1, "feedbackCount": 1})
+    complaint = collection.find_one({"id": id})
     if not complaint:
         raise NotFoundError("Complaint")
 
     if complaint.get("status") not in {"resolved", "closed"}:
-        raise ValidationError("Only resolved or closed complaints can be rated")
-
-    feedback_entries = complaint.get("feedback") or []
-    if any(entry.get("user_email") == user["sub"] for entry in feedback_entries):
-        raise ValidationError("You have already rated this complaint")
+        raise ValidationError("Feedback allowed only after resolution")
 
     now = datetime.now(timezone.utc).isoformat()
-    total_count = len(feedback_entries) + 1
-    total_sum = sum(entry.get("rating", 0) for entry in feedback_entries) + rating
-    average = round(total_sum / total_count, 2)
+    feedback_doc = {
+        "rating": rating,
+        "comment": comment,
+        "satisfaction": satisfaction,
+        "submitted_at": now
+    }
 
     collection.update_one(
         {"id": id},
         {
-            "$push": {
-                "feedback": {
-                    "user_email": user["sub"],
-                    "rating": rating,
-                    "comment": comment,
-                    "timestamp": now,
-                },
-                "history": {
-                    "status": "closed",
-                    "remarks": f"Citizen Feedback ({rating}/5): {comment}",
-                    "timestamp": now,
-                }
-            },
             "$set": {
                 "status": "closed",
+                "feedback": feedback_doc,
                 "updatedAt": now,
-                "feedbackAverage": average,
-                "feedbackCount": total_count,
+            },
+            "$push": {
+                "timeline": {
+                    "stage": "Closed",
+                    "remarks": f"Citizen Feedback ({rating}/5): {comment}",
+                    "timestamp": now,
+                    "updated_by_user_id": user["sub"]
+                }
             },
         },
     )
@@ -358,3 +430,126 @@ def submit_feedback(
     )
 
     return {"success": True, "message": f"Feedback submitted for {id}"}
+
+
+@router.get("/{id}/timeline")
+def get_complaint_timeline(id: str, user: dict = Depends(get_current_user)):
+    """Fetch the isolated timeline of a complaint."""
+    try:
+        # Just safely checking if an ObjectId arrived by mistake, although we use 'id'
+        if len(id) == 24:
+             _ = ObjectId(id)
+    except InvalidId:
+        pass
+        
+    collection = db.get_collection("complaints")
+    complaint = collection.find_one({"id": id}, {"timeline": 1, "citizen_email": 1, "_id": 0})
+    
+    if not complaint:
+        raise NotFoundError("Complaint")
+        
+    if user.get("role") == "citizen" and complaint.get("citizen_email") != user.get("sub"):
+        raise AuthorizationError("Not authorized to view other citizens' detailed timeline.")
+        
+    return {"success": True, "data": complaint.get("timeline", [])}
+
+
+@router.post("/{id}/upload-media")
+def upload_complaint_media(
+    id: str,
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user)
+):
+    """Secure Media Upload endpoint for complaints."""
+    collection = db.get_collection("complaints")
+    complaint = collection.find_one({"id": id})
+    if not complaint:
+        raise NotFoundError("Complaint")
+        
+    # Citizens can only upload to their own complaints. Officers/Admin can upload generally.
+    if user.get("role") == "citizen" and complaint.get("citizen_email") != user.get("sub"):
+        raise AuthorizationError("Cannot upload media to someone else's complaint.")
+        
+    try:
+        # Size limitation (5MB)
+        file.file.seek(0, 2)
+        file_size = file.file.tell()
+        file.file.seek(0)
+        
+        if file_size > 5 * 1024 * 1024:
+            raise ValidationError("File size exceeds 5MB limit.")
+            
+        allowed_types = ["image/jpeg", "image/png", "application/pdf", "video/mp4"]
+        if file.content_type not in allowed_types:
+            raise ValidationError(f"Invalid file type: {file.content_type}")
+            
+        # Mock S3 Cloud URL generation for Phase 2
+        file_extension = file.filename.split(".")[-1]
+        unique_filename = f"{uuid.uuid4()}.{file_extension}"
+        mock_s3_url = f"https://jansamadhan-media.s3.amazonaws.com/{id}/{unique_filename}"
+        
+        media_doc = {
+            "url": mock_s3_url,
+            "media_type": "image" if "image" in file.content_type else ("video" if "video" in file.content_type else "document"),
+            "file_name": file.filename,
+            "size_bytes": file_size,
+            "uploaded_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Proper use of $push to prevent array overwrites
+        collection.update_one(
+            {"id": id},
+            {"$push": {"media": media_doc}}
+        )
+        
+        # Push timeline event to record media upload
+        collection.update_one(
+            {"id": id},
+            {"$push": {
+                "timeline": {
+                    "stage": complaint.get("status", "in_progress").title().replace("_", " "),
+                    "remarks": f"Uploaded media attachment: {file.filename}",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "updated_by_user_id": user["sub"]
+                }
+            }}
+        )
+        
+        return {"success": True, "data": media_doc}
+    except ValidationError:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Media upload failed: {str(e)}")
+
+
+from pydantic import BaseModel
+
+class LocationInputSchema(BaseModel):
+    latitude: float
+    longitude: float
+
+@router.patch("/{id}/location")
+def update_location(
+    id: str,
+    data: LocationInputSchema,
+    user: dict = Depends(require_role(["citizen", "admin", "officer"]))
+):
+    """Enable Geo Spatial indexing by patching geolocation state."""
+    if not (-90 <= data.latitude <= 90 and -180 <= data.longitude <= 180):
+        raise ValidationError("Invalid coordinates")
+
+    geo_point = {
+        "type": "Point",
+        "coordinates": [data.longitude, data.latitude]
+    }
+
+    collection = db.get_collection("complaints")
+    result = collection.update_one(
+        {"id": id},
+        {"$set": {"location": geo_point}}
+    )
+
+    if result.matched_count == 0:
+        raise NotFoundError("Complaint")
+
+    return {"success": True, "message": "Location updated seamlessly."}

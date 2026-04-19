@@ -80,3 +80,12 @@ async def require_verified_citizen(
             "Your account is not yet verified. Please wait for admin approval."
         )
     return user
+
+
+def require_role(allowed_roles: list[str]):
+    """Dynamic role requirement dependency."""
+    async def role_checker(user: dict = Depends(get_current_user)) -> dict:
+        if user.get("role") not in allowed_roles:
+            raise AuthorizationError(f"Access requires one of: {', '.join(allowed_roles)}")
+        return user
+    return role_checker

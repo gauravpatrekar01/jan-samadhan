@@ -1,11 +1,47 @@
-from pydantic import BaseModel, field_validator
-from typing import Optional, Literal
+from pydantic import BaseModel, Field, field_validator
+from typing import Optional, Literal, List
+from datetime import datetime, timezone
+from uuid import uuid4
 
 
 VALID_CATEGORIES = {
     "Infrastructure", "Water Supply", "Electricity",
     "Sanitation", "Transport", "Law & Order", "Healthcare", "Other"
 }
+
+
+class GeoPoint(BaseModel):
+    type: str = "Point"
+    coordinates: List[float]  # [longitude, latitude]
+
+
+class MediaAttachment(BaseModel):
+    url: str
+    media_type: Literal["image", "video", "document"]
+    file_name: str
+    size_bytes: int
+    uploaded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class EscalationLog(BaseModel):
+    previous_level: str
+    new_level: str
+    escalated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    reason: str
+
+
+class TimelineEvent(BaseModel):
+    stage: Literal["Submitted", "Under Review", "In Progress", "Resolved", "Closed", "Rejected"]
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_by_user_id: Optional[str] = None
+    remarks: str = ""
+
+
+class ResolutionFeedback(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    satisfaction: Literal["Satisfied", "Neutral", "Unsatisfied"]
+    comments: Optional[str] = None
+    submitted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class ComplaintCreate(BaseModel):
@@ -18,6 +54,7 @@ class ComplaintCreate(BaseModel):
     region: Optional[str] = ""
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    media: Optional[List[MediaAttachment]] = []
 
     @field_validator("title")
     @classmethod

@@ -71,6 +71,78 @@ async def health_check_middleware(request: Request, call_next):
     return response
 
 
+# ── Background Scheduler (Escalation Hooks) ──
+from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime, timezone, timedelta
+
+scheduler = BackgroundScheduler()
+
+def check_escalations():
+    try:
+        now = datetime.now(timezone.utc)
+        collection = db.get_collection("complaints")
+        
+        # Limit to valid unclosed complaints with an SLA deadline that has passed
+        complaints = collection.find({
+            "status": {"$nin": ["resolved", "closed", "Rejected"]},
+            "sla_deadline": {"$lt": now.isoformat(), "$exists": True},
+            "$or": [
+                {"last_escalated_at": {"$exists": False}},
+                {"last_escalated_at": {"$lt": (now - timedelta(hours=1)).isoformat()}}
+            ]
+        })
+
+        for complaint in complaints:
+            new_level = complaint.get("escalation_level", 0) + 1
+            if new_level > 3:
+                continue
+
+            escalation_entry = {
+                "previous_level": str(new_level - 1),
+                "new_level": str(new_level),
+                "escalated_at": now.isoformat(),
+                "reason": "SLA deadline breached."
+            }
+
+            timeline_event = {
+                "stage": "Escalated",
+                "timestamp": now.isoformat(),
+                "updated_by_user_id": "system",
+                "remarks": f"System auto-escalated SLA breach to Level {new_level}"
+            }
+
+            collection.update_one(
+                {"id": complaint["id"]},
+                {
+                    "$set": {
+                        "escalation_level": new_level,
+                        "last_escalated_at": now.isoformat()
+                    },
+                    "$push": {
+                        "escalation_history": escalation_entry,
+                        "timeline": timeline_event
+                    }
+                }
+            )
+
+            # Send Notification
+            assigned_officer = complaint.get("assigned_officer")
+            if assigned_officer:
+                from notifications import notify_escalation
+                notify_escalation(assigned_officer, complaint["id"], new_level)
+    except Exception as e:
+        print("Scheduler error:", str(e))
+
+@app.on_event("startup")
+def start_scheduler():
+    scheduler.add_job(check_escalations, "interval", minutes=15)
+    scheduler.start()
+    
+@app.on_event("shutdown")
+def stop_scheduler():
+    scheduler.shutdown()
+
+
 # ── Routes ──
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(complaints.router, prefix="/api/complaints", tags=["complaints"])

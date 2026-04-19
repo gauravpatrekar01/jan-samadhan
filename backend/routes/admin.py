@@ -167,7 +167,7 @@ def get_analytics(admin: dict = Depends(require_admin)):
             "resolved_complaints": resolved,
             "resolution_rate": resolution_rate,
             "average_satisfaction": average_satisfaction,
-            "rated_complaints": len(rated_complaints),
+            "rated_complaints": rated_complaints,
             "status_distribution": status_dist,
             "priority_distribution": priority_dist,
             "byRegion": regions,

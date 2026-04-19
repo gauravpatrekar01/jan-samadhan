@@ -18,6 +18,8 @@ class Database:
         cls.db["complaints"].create_index([("id", ASCENDING)], unique=True)
         cls.db["complaints"].create_index([("email", ASCENDING)])
         cls.db["complaints"].create_index([("status", ASCENDING)])
+        cls.db["complaints"].create_index([("location", "2dsphere")])
+        cls.db["complaints"].create_index([("sla_deadline", ASCENDING)])
 
     @classmethod
     def disconnect(cls):
