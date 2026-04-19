@@ -1132,7 +1132,8 @@
       let email, password, name, aadhar;
       
       // Determine source of credentials
-      if (document.getElementById('ngoPartnerModal').classList.contains('show')) {
+      const ngoModal = document.getElementById('ngoPartnerModal');
+      if (ngoModal && ngoModal.classList.contains('show')) {
         email = document.getElementById('ngoLoginEmail').value;
         password = document.getElementById('ngoLoginPass').value;
       } else {
