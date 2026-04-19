@@ -10,6 +10,19 @@
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📝</text></svg>">
     <link rel="stylesheet" href="css/main.css">
+    
+    <!-- Leaflet Map Library -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Leaflet Marker Cluster (Optional for dashboard) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
+    
+    <!-- Map Styles -->
+    <link rel="stylesheet" href="css/map.css">
+    
     <style>
         body {
             background: var(--bg);
@@ -430,19 +443,40 @@
 
                     <div class="form-group">
                         <label class="form-label">Mark Location on Map</label>
-                        <div class="dummy-map" id="registrationMap">
-                            <div class="map-grid"></div>
-                            <div class="map-label">
-                                <div style="font-size:2rem">🗺️</div>
-                                <div style="font-weight:600;color:var(--text-muted)">Click to mark your complaint
-                                    location</div>
-                                <div style="font-size:.78rem;color:var(--text-light);margin-top:4px">Interactive Demo
-                                    Map</div>
+                        
+                        <!-- Location Search -->
+                        <div class="map-search-container">
+                            <input type="text" class="location-search-input" placeholder="Search location (e.g., 'Nashik', 'Main Street, Pune')..." id="locationSearchInput">
+                            <button type="button" class="location-search-btn" onclick="searchLocation()">🔍 Search</button>
+                        </div>
+
+                        <!-- Map Container -->
+                        <div id="registrationMap"></div>
+
+                        <!-- Map Info Box -->
+                        <div class="map-info-box" id="mapInfoBox">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <div>
+                                    <strong>📍 Selected Location</strong>
+                                </div>
+                                <button type="button" onclick="if(mapManager) { mapManager.getUserLocation(); }" style="font-size: 0.8rem; padding: 4px 8px; background: var(--primary-light); color: white; border: none; border-radius: 4px; cursor: pointer;">📌 Use Current Location</button>
+                            </div>
+                            <div class="location-display">
+                                <div class="location-field">
+                                    <div class="location-label">Latitude</div>
+                                    <div class="location-value" id="latitude">--</div>
+                                    <input type="hidden" id="latitude" name="latitude" value="">
+                                </div>
+                                <div class="location-field">
+                                    <div class="location-label">Longitude</div>
+                                    <div class="location-value" id="longitude">--</div>
+                                    <input type="hidden" id="longitude" name="longitude" value="">
+                                </div>
+                            </div>
+                            <div style="margin-top: 8px; font-size: 0.8rem; color: var(--text-muted);">
+                                💡 Tip: Click on the map to place a marker. Drag the marker to adjust location. Or use the search bar above.
                             </div>
                         </div>
-                        <div id="locationText"
-                            style="font-size:.82rem;color:var(--primary-light);margin-top:6px;font-weight:600"></div>
-                        <input type="hidden" id="locationHidden" value="">
                     </div>
 
                     <div class="form-group">

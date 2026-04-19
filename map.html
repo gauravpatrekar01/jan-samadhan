@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complaints Map – JanSamadhan</title>
+    <meta name="description" content="Interactive map view of all grievances registered in the JanSamadhan system.">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>">
+
+    <!-- Main Styles -->
+    <link rel="stylesheet" href="css/main.css">
+
+    <!-- Leaflet Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Leaflet Marker Cluster -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
+
+    <!-- Map Styles -->
+    <link rel="stylesheet" href="css/map.css">
+
+    <style>
+        body {
+            background: var(--bg);
+            padding: 0;
+            margin: 0;
+        }
+
+        .map-container {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            height: 100vh;
+            gap: 0;
+        }
+
+        @media (max-width: 1024px) {
+            .map-container {
+                grid-template-columns: 1fr 280px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .map-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        #dashboardMap {
+            width: 100%;
+            height: 100%;
+            border-radius: 0;
+            margin: 0;
+            border: none;
+        }
+
+        .map-sidebar {
+            background: var(--bg-card);
+            border-left: 1px solid var(--border);
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .map-sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+            margin-bottom: 4px;
+        }
+
+        .map-sidebar-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .filter-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .filter-options {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 6px;
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .filter-option:hover {
+            background: rgba(79, 70, 229, 0.04);
+            border-color: var(--primary-light);
+        }
+
+        .filter-option input {
+            cursor: pointer;
+        }
+
+        .filter-option.active {
+            background: rgba(79, 70, 229, 0.1);
+            border-color: var(--primary-light);
+        }
+
+        .stats-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stats-number {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary-light);
+        }
+
+        .stats-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+
+        .legend {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 12px;
+        }
+
+        .legend-title {
+            font-weight: 600;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .legend-items {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+        }
+
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        .action-button {
+            width: 100%;
+            padding: 10px;
+            background: var(--primary-light);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .action-button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .action-button:disabled {
+            background: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .secondary-button {
+            width: 100%;
+            padding: 8px;
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .secondary-button:hover {
+            background: var(--primary-light);
+            color: white;
+            border-color: var(--primary-light);
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 0.85rem;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .loading-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            height: 60px;
+            box-sizing: border-box;
+        }
+
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .navbar-title {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text);
+        }
+
+        .map-container {
+            margin-top: 60px;
+        }
+
+        @media (max-width: 768px) {
+            .map-sidebar {
+                display: none;
+            }
+
+            .navbar {
+                flex-wrap: wrap;
+                height: auto;
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-left">
+            <a href="officer.html" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+                <span style="font-size: 1.4rem;">🏛️</span>
+                <div>
+                    <div class="navbar-title">JanSamadhan</div>
+                </div>
+            </a>
+            <span style="color: var(--text-muted);">|</span>
+            <span style="color: var(--text-muted); font-size: 0.9rem;">Complaints Map View</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button class="secondary-button" onclick="toggleDarkMode()" style="width: auto; padding: 8px 12px;">🌙</button>
+            <button class="secondary-button" onclick="history.back()" style="width: auto; padding: 8px 12px;">← Back</button>
+        </div>
+    </nav>
+
+    <!-- Map Container -->
+    <div class="map-container">
+        <div id="dashboardMap"></div>
+
+        <!-- Sidebar -->
+        <div class="map-sidebar">
+            <div class="map-sidebar-header">
+                <div class="map-sidebar-title">🗺️ Filters</div>
+                <button onclick="resetFilters()" style="background: none; border: none; cursor: pointer; font-size: 1.2rem;" title="Reset filters">↻</button>
+            </div>
+
+            <!-- Search -->
+            <div class="filter-section">
+                <input type="text" id="complaintSearch" class="search-box" placeholder="Search complaints...">
+            </div>
+
+            <!-- Status Filter -->
+            <div class="filter-section">
+                <div class="filter-label">📊 Status</div>
+                <div class="filter-options">
+                    <label class="filter-option active">
+                        <input type="checkbox" name="status" value="submitted" checked> Submitted
+                    </label>
+                    <label class="filter-option active">
+                        <input type="checkbox" name="status" value="under review" checked> Under Review
+                    </label>
+                    <label class="filter-option active">
+                        <input type="checkbox" name="status" value="in progress" checked> In Progress
+                    </label>
+                    <label class="filter-option active">
+                        <input type="checkbox" name="status" value="resolved" checked> Resolved
+                    </label>
+                    <label class="filter-option active">
+                        <input type="checkbox" name="status" value="closed" checked> Closed
+                    </label>
+                </div>
+            </div>
+
+            <!-- Priority Filter -->
+            <div class="filter-section">
+                <div class="filter-label">⚡ Priority</div>
+                <div class="filter-options">
+                    <label class="filter-option active">
+                        <input type="checkbox" name="priority" value="emergency" checked> 🚨 Emergency
+                    </label>
+                    <label class="filter-option active">
+                        <input type="checkbox" name="priority" value="high" checked> 🔴 High
+                    </label>
+                    <label class="filter-option active">
+                        <input type="checkbox" name="priority" value="medium" checked> 🟠 Medium
+                    </label>
+                    <label class="filter-option active">
+                        <input type="checkbox" name="priority" value="low" checked> 🟢 Low
+                    </label>
+                </div>
+            </div>
+
+            <!-- Category Filter -->
+            <div class="filter-section">
+                <div class="filter-label">📁 Category</div>
+                <div class="filter-options">
+                    <label class="filter-option active">
+                        <input type="checkbox" name="category" value="Infrastructure" checked> Infrastructure
+                    </label>
+                    <label class="filter-option active">
+                        <input type="checkbox" name="category" value="Water Supply" checked> Water Supply
+                    </label>
+                    <label class="filter-option active">
+                        <input type="checkbox" name="category" value="Electricity" checked> Electricity
+                    </label>
+                    <label class="filter-option active">
+                        <input type="checkbox" name="category" value="Sanitation" checked> Sanitation
+                    </label>
+                    <label class="filter-option active">
+                        <input type="checkbox" name="category" value="Transport" checked> Transport
+                    </label>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <div class="stats-box">
+                    <div class="stats-number" id="totalStats">0</div>
+                    <div class="stats-label">Total</div>
+                </div>
+                <div class="stats-box">
+                    <div class="stats-number" id="visibleStats">0</div>
+                    <div class="stats-label">Visible</div>
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="legend">
+                <div class="legend-title">Status Colors</div>
+                <div class="legend-items">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #fbbf24;"></div>
+                        <span>Submitted</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #3b82f6;"></div>
+                        <span>Under Review</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f97316;"></div>
+                        <span>In Progress</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #10b981;"></div>
+                        <span>Resolved</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #6b7280;"></div>
+                        <span>Closed</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <button class="action-button" onclick="loadComplaints()">🔄 Refresh</button>
+            <button class="secondary-button" onclick="downloadReport()">📥 Download Report</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/map-utils.js"></script>
+    <script src="js/ledger.js"></script>
+
+    <script>
+        let mapManager = null;
+        let allComplaints = [];
+        const API_BASE_URL = window.location.protocol === 'file:' ? 'http://localhost:8000' : `${window.location.protocol}//${window.location.host}`;
+
+        /**
+         * Initialize map and load complaints
+         */
+        async function initializeMap() {
+            mapManager = new MapManager('dashboardMap', {
+                defaultZoom: 11,
+                defaultCity: 'Nashik',
+                defaultLat: 19.9975,
+                defaultLng: 73.7898,
+                markerColor: '#4f46e5'
+            });
+
+            console.log('✓ Map initialized');
+            await loadComplaints();
+        }
+
+        /**
+         * Load all complaints from API
+         */
+        async function loadComplaints() {
+            try {
+                const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+                if (!token) {
+                    console.warn('Not authenticated. Showing demo data.');
+                    showDemoData();
+                    return;
+                }
+
+                const response = await fetch(`${API_BASE_URL}/api/complaints/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load complaints');
+
+                const data = await response.json();
+                allComplaints = data.data || data.complaints || [];
+
+                // Load on map
+                mapManager.clearComplaintMarkers();
+                mapManager.loadComplaints(allComplaints);
+
+                // Update stats
+                document.getElementById('totalStats').textContent = allComplaints.length;
+                updateStats();
+
+                console.log(`✓ Loaded ${allComplaints.length} complaints`);
+            } catch (error) {
+                console.error('Error loading complaints:', error);
+                showDemoData();
+            }
+        }
+
+        /**
+         * Show demo data for testing
+         */
+        function showDemoData() {
+            const demoData = [
+                {
+                    _id: 'JSM-001',
+                    title: 'Pothole on Main Road',
+                    description: 'Large pothole creating traffic hazard',
+                    latitude: 19.9975,
+                    longitude: 73.7898,
+                    status: 'in progress',
+                    priority: 'high',
+                    category: 'Infrastructure',
+                    region: 'Nashik'
+                },
+                {
+                    _id: 'JSM-002',
+                    title: 'Water Supply Issue',
+                    description: 'No water supply for past 5 days',
+                    latitude: 19.9925,
+                    longitude: 73.7950,
+                    status: 'submitted',
+                    priority: 'emergency',
+                    category: 'Water Supply',
+                    region: 'Nashik'
+                },
+                {
+                    _id: 'JSM-003',
+                    title: 'Electricity Failure',
+                    description: 'Power cut affecting entire colony',
+                    latitude: 20.0025,
+                    longitude: 73.7850,
+                    status: 'under review',
+                    priority: 'high',
+                    category: 'Electricity',
+                    region: 'Nashik'
+                },
+                {
+                    _id: 'JSM-004',
+                    title: 'Sanitation Issues',
+                    description: 'Garbage not being collected regularly',
+                    latitude: 19.9875,
+                    longitude: 73.7750,
+                    status: 'resolved',
+                    priority: 'medium',
+                    category: 'Sanitation',
+                    region: 'Nashik'
+                }
+            ];
+
+            allComplaints = demoData;
+            mapManager.clearComplaintMarkers();
+            mapManager.loadComplaints(demoData);
+            document.getElementById('totalStats').textContent = demoData.length;
+            updateStats();
+        }
+
+        /**
+         * Update displayed statistics
+         */
+        function updateStats() {
+            const visibleMarkers = Object.keys(mapManager.complaintMarkers).length;
+            document.getElementById('visibleStats').textContent = visibleMarkers;
+        }
+
+        /**
+         * Apply filters
+         */
+        function applyFilters() {
+            const statusFilters = Array.from(document.querySelectorAll('input[name="status"]:checked')).map(el => el.value);
+            const priorityFilters = Array.from(document.querySelectorAll('input[name="priority"]:checked')).map(el => el.value);
+            const categoryFilters = Array.from(document.querySelectorAll('input[name="category"]:checked')).map(el => el.value);
+            const searchTerm = document.getElementById('complaintSearch')?.value?.toLowerCase() || '';
+
+            mapManager.clearComplaintMarkers();
+
+            allComplaints.forEach(complaint => {
+                const matchStatus = statusFilters.length === 0 || statusFilters.includes(complaint.status);
+                const matchPriority = priorityFilters.length === 0 || priorityFilters.includes(complaint.priority?.toLowerCase());
+                const matchCategory = categoryFilters.length === 0 || categoryFilters.includes(complaint.category);
+                const matchSearch = searchTerm === '' || 
+                    complaint.title?.toLowerCase().includes(searchTerm) ||
+                    complaint.description?.toLowerCase().includes(searchTerm);
+
+                if (matchStatus && matchPriority && matchCategory && matchSearch) {
+                    mapManager.addComplaintMarker(complaint);
+                }
+            });
+
+            updateStats();
+        }
+
+        /**
+         * Reset all filters
+         */
+        function resetFilters() {
+            document.querySelectorAll('input[type="checkbox"]').forEach(el => el.checked = true);
+            document.getElementById('complaintSearch').value = '';
+            applyFilters();
+        }
+
+        /**
+         * Toggle dark mode
+         */
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        /**
+         * Download complaint report
+         */
+        function downloadReport() {
+            const complaints = Array.from(Object.values(mapManager.complaintMarkers)).map(marker => {
+                return {
+                    id: marker.options.complaintId,
+                    title: marker.options.title,
+                    status: marker.options.status,
+                    priority: marker.options.priority,
+                    latitude: marker.getLatLng().lat,
+                    longitude: marker.getLatLng().lng
+                };
+            });
+
+            const csv = [
+                ['ID', 'Title', 'Status', 'Priority', 'Latitude', 'Longitude'],
+                ...complaints.map(c => [c.id, c.title, c.status, c.priority, c.latitude.toFixed(6), c.longitude.toFixed(6)])
+            ].map(row => row.join(',')).join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `complaints-map-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        }
+
+        /**
+         * Setup event listeners
+         */
+        function setupEventListeners() {
+            // Filter checkboxes
+            document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', applyFilters);
+            });
+
+            // Search input
+            document.getElementById('complaintSearch')?.addEventListener('input', applyFilters);
+
+            // Apply theme
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+
+        /**
+         * Initialize on page load
+         */
+        document.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners();
+            initializeMap();
+        });
+
+        // Listen for visibility changes to refresh map when returning to tab
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && mapManager) {
+                setTimeout(() => mapManager.map.invalidateSize(), 100);
+            }
+        });
+    </script>
+</body>
+
+</html>
