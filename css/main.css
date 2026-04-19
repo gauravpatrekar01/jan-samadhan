@@ -52,6 +52,7 @@
   inset: 0;
   background: rgba(15, 23, 42, 0.4);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 9500;
   display: flex;
   align-items: center;
@@ -67,8 +68,9 @@
 }
 
 .modal-box {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: var(--radius-lg);
   width: 90%;
