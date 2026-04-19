@@ -359,9 +359,8 @@ const JanSamadhanAPI = {
     async uploadEvidence(complaintId, file) {
         const formData = new FormData();
         formData.append('file', file);
-        return this._fetch(`/api/complaints/${complaintId}/media`, {
+        return this._fetch(`/api/complaints/${complaintId}/upload-media`, {
             method: 'POST',
-            headers: { 'Content-Type': 'multipart/form-data' }, // Note: fetch handles boundary if Content-Type is empty, but our _fetch puts JSON by default.
             body: formData
         });
     }

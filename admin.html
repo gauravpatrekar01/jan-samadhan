@@ -87,30 +87,36 @@
             <!-- ─── OVERVIEW ─── -->
             <div class="dash-page active" id="page-overview">
                 <div class="welcome-banner"
-                    style="background:linear-gradient(135deg,#0f2444,var(--primary),var(--accent))">
-                    <div>
-                        <div class="wb-title">🛡️ Admin Control Center</div>
-                        <div class="wb-sub">Full system overview – JanSamadhan Grievance Management</div>
-                        <div class="wb-time" id="adminTime"></div>
+                    style="background: linear-gradient(135deg, #0f172a, #1e3a8a, #2563eb); border-radius: var(--radius-lg); padding: 48px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 32px">
+                    <div style="flex: 1">
+                        <div class="wb-title" style="font-size: 2.5rem; font-weight: 800; letter-spacing: -0.04em">🛡️ Command Center</div>
+                        <div class="wb-sub" style="font-size: 1.1rem; opacity: 0.85; margin: 8px 0 16px">Centralized monitoring and unified system intelligence for JanSamadhan.</div>
+                        <div class="wb-time badge" id="adminTime" style="background: rgba(255,255,255,0.1); color: #fff; font-weight: 600; font-size: 0.85rem; padding: 6px 16px"></div>
                     </div>
-                    <div style="font-size:3rem;opacity:.8">🏛️</div>
+                    <div style="font-size: 4rem; opacity: 0.2; transform: rotate(-15deg)">🏛️</div>
                 </div>
 
                 <!-- KPI Stats -->
-                <div class="stats-grid" id="adminStats"></div>
+                <div class="stats-grid" id="adminStats" style="gap: 24px"></div>
+
+                <div class="section-divider">Real-time Performance</div>
 
                 <!-- KPI Bars -->
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:24px"
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-bottom:32px"
                     id="kpiBars"></div>
 
                 <!-- Recent activity -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" id="overviewGrid">
-                    <div class="card">
-                        <h4 style="margin-bottom:16px">🔴 Urgent Cases</h4>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px; margin-top: 32px" id="overviewGrid">
+                    <div class="card" style="background: rgba(254, 242, 242, 0.3); border-color: #fee2e2">
+                        <h4 style="margin-bottom:20px; color: #991b1b; display: flex; align-items:center; gap: 10px">
+                            <span style="font-size: 1.2rem">🚨</span> Urgent Priority Queue
+                        </h4>
                         <div id="urgentList"></div>
                     </div>
-                    <div class="card">
-                        <h4 style="margin-bottom:16px">✅ Recent Resolutions</h4>
+                    <div class="card" style="background: rgba(240, 253, 244, 0.3); border-color: #dcfce7">
+                        <h4 style="margin-bottom:20px; color: #166534; display: flex; align-items:center; gap: 10px">
+                            <span style="font-size: 1.2rem">✅</span> Success Resolutions
+                        </h4>
                         <div id="recentResolved"></div>
                     </div>
                 </div>
@@ -670,17 +676,36 @@
                 </div>
               `).join('');
 
-            // Urgent cases - Fallback to ledger for demo UI if API doesn't provide specific list
-            const urgentResults = window.JanSamadhan.getPriorityQueue({ priority: 'Emergency' }).slice(0, 4);
+            // Urgent cases
+            let allGrievances = [];
+            try {
+                allGrievances = await window.JanSamadhanAPI.getAllGrievances(null, null, null, null, null, 0, 100);
+            } catch (e) { console.error("Failed to fetch grievances for overview", e); }
+
+            const urgentResults = allGrievances.filter(g => g.priority?.toLowerCase() === 'emergency' && g.status !== 'resolved' && g.status !== 'closed').slice(0, 5);
             document.getElementById('urgentList').innerHTML = urgentResults.length
                 ? urgentResults.map(g => `
                     <div style="padding:10px;border-radius:8px;border:1px solid #fecaca;background:#fef2f2;margin-bottom:8px;display:flex;gap:10px;align-items:center">
                       <span>${categoryIcon(g.category)}</span>
-                      <div style="flex:1"><div style="font-size:.85rem;font-weight:700;color:#991b1b">${g.grievanceID}</div><div style="font-size:.78rem;color:#b91c1c">${g.category} | ${g.region}</div></div>
+                      <div style="flex:1"><div style="font-size:.85rem;font-weight:700;color:#991b1b">${g.id}</div><div style="font-size:.78rem;color:#b91c1c">${g.category} | ${g.region || 'N/A'}</div></div>
                       ${statusBadge(g.status)}
                     </div>
                   `).join('')
                 : '<div style="text-align:center;padding:16px;color:var(--success)">✅ No emergency cases</div>';
+
+            const resolvedResults = allGrievances.filter(g => g.status === 'resolved' || g.status === 'closed').sort((a,b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)).slice(0, 5);
+            document.getElementById('recentResolved').innerHTML = resolvedResults.length
+                ? resolvedResults.map(g => `
+                    <div style="padding:10px;border-radius:8px;border:1px solid var(--border);background:rgba(22,163,74,.05);margin-bottom:8px;display:flex;gap:10px;align-items:center">
+                      <span style="font-size:1.2rem">✅</span>
+                      <div style="flex:1">
+                        <div style="font-size:.85rem;font-weight:700;color:var(--success)">${g.id}</div>
+                        <div style="font-size:.78rem;color:var(--text-muted)">${g.category} · Resolved ${timeAgo(g.updatedAt || g.createdAt)}</div>
+                      </div>
+                      <button class="btn btn-ghost btn-sm" onclick="showComplaintDetails('${g.id}')">👁️</button>
+                    </div>
+                  `).join('')
+                : '<div style="text-align:center;padding:16px;color:var(--text-muted)">No resolutions yet.</div>';
         }
 
         async function loadAdminGrievances() {
