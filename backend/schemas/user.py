@@ -72,5 +72,8 @@ class NGORegistrationSchema(BaseModel):
     def categories_not_empty(cls, v: List[str]) -> List[str]:
         if not v:
             raise ValueError("At least one category must be selected")
+        if len(v) > 3:
+            raise ValueError("Max 3 categories allowed for quality focus")
         return v
+
 

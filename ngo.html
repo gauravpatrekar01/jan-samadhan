@@ -77,7 +77,9 @@
             
             <div class="nav-section-label">Resources</div>
             <div class="nav-item" onclick="showPage('impact',this)"><span class="nav-icon">📈</span> Impact Tracker</div>
+            <div class="nav-item" onclick="showPage('profile',this)"><span class="nav-icon">👤</span> Profile & Verification</div>
         </nav>
+
         <div class="sidebar-footer">
             <button class="sidebar-footer-btn" onclick="logoutUser()">🚪 Logout</button>
             <button class="sidebar-footer-btn" onclick="window.location.href='index.html'">🏠 Home</button>
@@ -146,6 +148,33 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ─── PROFILE & VERIFICATION ─── -->
+            <div class="dash-page" id="page-profile">
+                <div class="page-header">
+                    <h3>🛡️ Organization Identity</h3>
+                    <p>Track your verified status and maintain organization records</p>
+                </div>
+                
+                <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:20px">
+                    <div class="card">
+                        <div id="ngoProfileContent">
+                            <div style="text-align:center;padding:40px">⌛ Loading profile...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="card" style="background:var(--bg-alt)">
+                        <h4>Onboarding Tips 💡</h4>
+                        <ul style="font-size:.85rem; line-height:1.6; padding-left:20px; margin-top:10px; color:var(--text-muted)">
+                            <li><strong style="color:var(--text)">Authenticity:</strong> Documentation must be valid and government-issued.</li>
+                            <li><strong style="color:var(--text)">Quality over Quantity:</strong> Focus on max 3 categories for better impact data.</li>
+                            <li><strong style="color:var(--text)">Resolution Proof:</strong> Always upload location-tagged photos during resolution.</li>
+                            <li><strong style="color:var(--text)">Response Time:</strong> Swift responses to assignments improve your verification level.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -199,12 +228,40 @@
             if(id === 'available') loadAvailable();
             if(id === 'requests') loadRequests();
             if(id === 'impact') loadNGOStats();
+            if(id === 'profile') loadNGOProfile();
             
             document.getElementById('pageTitle').textContent = navEl?.textContent.trim() || 'Dashboard';
             closeSidebar();
         }
 
+        async function loadNGOProfile() {
+            try {
+                const res = await window.JanSamadhanAPI.getNGOProfile();
+                const p = res.data;
+                const container = document.getElementById('ngoProfileContent');
+                
+                let statusHtml = p.verified ? 
+                    `<div class="alert alert-success">✅ Verifed and Active until ${new Date(p.verification_expiry).toLocaleDateString()}</div>` :
+                    (p.rejection_reason ? 
+                        `<div class="alert alert-danger">❌ Registration Rejected: ${p.rejection_reason}<br><small>Update your details below to re-submit.</small></div>` :
+                        `<div class="alert alert-warning">⏳ Verification in progress...</div>`);
+
+                container.innerHTML = `
+                    ${statusHtml}
+                    <div style="margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:16px; font-size:.9rem">
+                        <div><label style="color:var(--text-muted)">Organization</label><div>${p.name}</div></div>
+                        <div><label style="color:var(--text-muted)">Registration ID</label><div>${p.registration_number}</div></div>
+                        <div><label style="color:var(--text-muted)">Sector Type</label><div>${p.organization_type}</div></div>
+                        <div><label style="color:var(--text-muted)">Service Area</label><div>${p.service_area}</div></div>
+                        <div><label style="color:var(--text-muted)">Contact</label><div>${p.contact_person} (${p.phone})</div></div>
+                        <div><label style="color:var(--text-muted)">Categories</label><div>${(p.categories || []).join(', ')}</div></div>
+                    </div>
+                `;
+            } catch(e) { console.error(e); }
+        }
+
         async function loadNGOStats() {
+
             try {
                 const stats = await window.JanSamadhanAPI.getNGOStats();
                 document.getElementById('statResolved').textContent = stats.resolved;

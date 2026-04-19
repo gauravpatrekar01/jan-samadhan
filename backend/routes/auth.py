@@ -63,8 +63,15 @@ def register_ngo(request: Request, ngo: NGORegistrationSchema):
         # Metrics & Capacity Initialization
         "resolved_cases": 0,
         "avg_rating": 0,
-        "active_cases_count": 0
+        "active_cases_count": 0,
+        "rejection_reason": None,
+        "verification_expiry": None,
+        # Fraud Detection Signals
+        "suspicious_activity": False,
+        "request_count_today": 0,
+        "last_request_reset": datetime.now(timezone.utc).isoformat()
     })
+
     
     collection.insert_one(ngo_dict)
     ngo_dict.pop("_id", None)

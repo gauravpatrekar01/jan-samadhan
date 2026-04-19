@@ -7,6 +7,10 @@ from schemas.complaint import NGORequestSchema, TimelineEvent
 from audit import log_audit
 from limiter import limiter
 
+def mask_name(name: str) -> str:
+    if not name or len(name) < 2: return "***"
+    return f"{name[0]}*** {name[-1]}"
+
 router = APIRouter()
 
 @router.post("/requests")
@@ -43,7 +47,23 @@ def request_handling(request: Request, request_data: NGORequestSchema, user=Depe
     if complaint.get("assigned_to_ngo"):
          raise HTTPException(status_code=400, detail="Grievance already assigned to another NGO.")
 
+    # 8. Fraud Detection & Activity Tracking
+    today = datetime.now(timezone.utc).date().isoformat()
+    if user_doc.get("last_request_reset", "").split('T')[0] != today:
+        db.get_collection("users").update_one(
+            {"email": user["sub"]}, 
+            {"$set": {"request_count_today": 0, "last_request_reset": datetime.now(timezone.utc).isoformat()}}
+        )
+        user_doc["request_count_today"] = 0
+
+    if user_doc.get("request_count_today", 0) >= 10:
+        db.get_collection("users").update_one({"email": user["sub"]}, {"$set": {"suspicious_activity": True}})
+        raise HTTPException(status_code=429, detail="Daily request limit reached. Account flagged for automated activity check.")
+
+    db.get_collection("users").update_one({"email": user["sub"]}, {"$inc": {"request_count_today": 1}})
+
     # Prevent duplicate requests
+
     request_coll = db.get_collection("ngo_requests")
     existing = request_coll.find_one({
         "complaint_id": request_data.complaint_id,
@@ -89,8 +109,10 @@ def get_my_requests(user=Depends(require_role(["ngo"]))):
 
 @router.get("/assigned-complaints")
 def get_assigned_complaints(user=Depends(require_role(["ngo"]))):
-    """View complaints currently assigned to this NGO."""
+    """View complaints currently assigned to this NGO with masked names."""
     complaints = list(db.get_collection("complaints").find({"assigned_to_ngo": user["sub"]}, {"_id": 0}).sort("updatedAt", -1))
+    for c in complaints:
+        c["name"] = mask_name(c.get("name", "Citizen"))
     return {"success": True, "data": complaints}
 
 @router.get("/available-complaints")
@@ -114,12 +136,14 @@ def get_available_complaints(user=Depends(require_role(["ngo"]))):
     }
     
     # Location Matching (Optional but prioritized)
-    # Checks if complaint region mentions the NGO's service area
     if ngo_area:
         query["region"] = {"$regex": ngo_area, "$options": "i"}
 
-    complaints = list(db.get_collection("complaints").find(query, {"_id": 0}).sort("createdAt", -1).limit(50))
+    complaints = list(db.get_collection("complaints").find(query, {"_id": 0, "aadhar": 0}).sort("createdAt", -1).limit(50))
+    for c in complaints:
+        c["name"] = mask_name(c.get("name", "Citizen"))
     return {"success": True, "data": complaints}
+
 
 @router.get("/stats")
 def get_ngo_stats(user=Depends(require_role(["ngo"]))):
@@ -155,4 +179,31 @@ def get_ngo_stats(user=Depends(require_role(["ngo"]))):
             "impact_lives": resolved_count * 4 # Estimated families helped
         }
     }
+
+@router.get("/profile")
+def get_ngo_profile(user=Depends(require_role(["ngo"]))):
+    """Retrieve full profile including verification status and rejection reasons."""
+    user_doc = db.get_collection("users").find_one({"email": user["sub"]}, {"_id": 0, "password": 0})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return {"success": True, "data": user_doc}
+
+@router.patch("/profile")
+def update_ngo_profile(profile_update: dict, user=Depends(require_role(["ngo"]))):
+    """Allow NGO to update details/docs for re-verification if not currently verified."""
+    users = db.get_collection("users")
+    current = users.find_one({"email": user["sub"]})
+    
+    if current.get("verified") and current.get("verification_level", 0) > 0:
+        raise HTTPException(status_code=403, detail="Verified profiles cannot be edited directly. Contact admin.")
+
+    # Prevent privileged field spoofing
+    for field in ["role", "email", "verified", "verification_level", "password", "resolved_cases", "avg_rating"]:
+        profile_update.pop(field, None)
+    
+    # Reset rejection reason on update to mark as "ready for re-review"
+    profile_update["rejection_reason"] = None
+    
+    users.update_one({"email": user["sub"]}, {"$set": profile_update})
+    return {"success": True, "message": "Profile updated for re-verification."}
 

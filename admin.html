@@ -1272,12 +1272,14 @@ function toggleUserDistrictField() {
                         <td>
                             <div style="font-weight:600">${n.name}</div>
                             <div style="font-size:.7rem;color:var(--text-muted)">ID: ${n.registration_number}</div>
+                            ${n.suspicious_activity ? '<span class="badge badge-danger">🚩 Suspicious Activity</span>' : ''}
                         </td>
                         <td style="font-size:.85rem">
                             <div>Type: ${n.organization_type}</div>
                             <div>Area: ${n.service_area}</div>
-                            <div style="color:var(--text-muted)">${n.email}</div>
+                            <div style="font-weight:bold; color:var(--primary)">Rating: ${n.avg_rating || 'N/A'} ⭐</div>
                         </td>
+
                         <td>
                             ${(n.categories || []).map(c => `<span class="badge" style="background:var(--bg-alt);color:var(--text);margin:2px">${c}</span>`).join('')}
                         </td>
@@ -1298,10 +1300,12 @@ function toggleUserDistrictField() {
         async function processNGOAccount(email, action) {
             try {
                 if(action === 'approve') {
+                    const notes = prompt("Verification Notes (e.g. Doc checked, NGO Darpan verified):", "Identity and certificates verified.");
+                    if(notes === null) return;
                     await window.JanSamadhanAPI.approveNGO(email);
-                    showToast(`NGO ${email} verified successfully!`, "success");
+                    showToast(`NGO verified and activated!`, "success");
                 } else {
-                    const reason = prompt("Rejection reason:");
+                    const reason = prompt("Rejection reason for organization:", "Incomplete or invalid documentation.");
                     if(reason === null) return;
                     await window.JanSamadhanAPI.rejectNGO(email, reason);
                     showToast("NGO account rejected.", "info");

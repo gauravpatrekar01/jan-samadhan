@@ -3,7 +3,7 @@ from schemas.user import UserCreate
 from db import db
 from security import hash_password
 from dependencies import require_admin, require_officer_or_admin
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from government_registry import verify_citizen_record
 from audit import log_audit, get_audit_log
 from errors import ValidationError, NotFoundError, ConflictError, AuthorizationError
@@ -348,23 +348,35 @@ def get_pending_ngos(admin: dict = Depends(require_admin)):
     return {"success": True, "data": pending}
 
 @router.patch("/ngo/{email}/approve")
-def approve_ngo(email: str, admin: dict = Depends(require_admin)):
-    """Approve NGO registration certificate and documents."""
+def approve_ngo(email: str, notes: str = "Credibility verified by documents.", admin: dict = Depends(require_admin)):
+    """Approve NGO registration certificate and documents with 1-year expiry."""
     users = db.get_collection("users")
     target = users.find_one({"email": email, "role": "ngo"})
     if not target:
         raise NotFoundError("NGO Account")
     
+    expiry = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat()
+    
     users.update_one(
         {"email": email},
-        {"$set": {"verified": True, "verification_level": 1, "is_active": True}}
+        {
+            "$set": {
+                "verified": True, 
+                "verification_level": 1, 
+                "is_active": True,
+                "verification_notes": notes,
+                "verification_expiry": expiry,
+                "rejection_reason": None
+            }
+        }
     )
-    log_audit("ngo_account_verified", admin["sub"], admin["role"], "user", email)
-    return {"success": True, "message": f"NGO {email} is now verified and active."}
+    log_audit("NGO_APPROVED", admin["sub"], admin["role"], "user", email, {"notes": notes, "expiry": expiry})
+    return {"success": True, "message": f"NGO verified until {expiry}"}
+
 
 @router.patch("/ngo/{email}/reject")
 def reject_ngo(email: str, reason: str = "Incomplete documentation", admin: dict = Depends(require_admin)):
-    """Reject NGO registration."""
+    """Reject NGO registration with reason for transparency."""
     users = db.get_collection("users")
     target = users.find_one({"email": email, "role": "ngo"})
     if not target:
@@ -372,8 +384,17 @@ def reject_ngo(email: str, reason: str = "Incomplete documentation", admin: dict
 
     users.update_one(
         {"email": email},
-        {"$set": {"verified": False, "is_active": False, "rejection_reason": reason}}
+        {
+            "$set": {
+                "verified": False, 
+                "verification_level": 0,
+                "is_active": False, 
+                "rejection_reason": reason
+            }
+        }
     )
+    log_audit("NGO_REJECTED", admin["sub"], admin["role"], "user", email, {"reason": reason})
     return {"success": True, "message": "NGO registration has been rejected."}
+
 
 
