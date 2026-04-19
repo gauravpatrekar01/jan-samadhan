@@ -140,6 +140,28 @@ function renderProgressBar(percent) {
     return `<div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${percent}%"></div></div>`;
 }
 
+function formatDeadline(deadline) {
+    if (!deadline) return "No deadline set";
+    const d = new Date(deadline);
+    return d.toLocaleString(navigator.language, {
+        month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
+}
+
+function getDeadlineBadge(deadline) {
+    if (!deadline) return "";
+    const now = new Date();
+    const d = new Date(deadline);
+
+    if (d < now) return `<span class="badge badge-error">🚨 Overdue</span>`;
+    
+    const diff = (d - now) / (1000 * 60 * 60);
+    if (diff < 6) return `<span class="badge badge-warning">⏰ Urgent</span>`;
+    
+    return `<span class="badge badge-success">🕒 On Time</span>`;
+}
+
 // Modal Toggle
 function openModal(id) { document.getElementById(id)?.classList.add('show'); }
 function closeModal(id) { document.getElementById(id)?.classList.remove('show'); }

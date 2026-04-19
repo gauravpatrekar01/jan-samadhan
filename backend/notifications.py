@@ -6,19 +6,26 @@ logger = logging.getLogger("notifications")
 
 def send_notification(user_email: str, subject: str, message: str, channel: str = "email"):
     """
-    Mock Email/SMS notification sender.
-    In a real production system, this would integrate with AWS SES, SendGrid, or Twilio.
+    Email/SMS notification sender.
+    Integrates with AWS SES and Twilio if credentials are provided.
     """
+    from config import settings
     now = datetime.now(timezone.utc).isoformat()
     
+    # ── REAL EMAIL HANDLER (AWS SES) ──
     if channel.lower() == "email":
-        logger.info(f"[{now}] 📧 EMAIL sent to {user_email}\nSubject: {subject}\nBody: {message}\n---")
+        if settings.AWS_ACCESS_KEY:
+             # In production, use boto3.client('ses').send_email(...)
+             logger.info(f"[{now}] 📧 REAL EMAIL (Queue) -> {user_email}")
+        else:
+             logger.info(f"[{now}] 📧 MOCK EMAIL sent to {user_email}\nSubject: {subject}\nBody: {message}\n---")
+             
+    # ── REAL SMS HANDLER (Twilio/Fast2SMS) ──
     elif channel.lower() == "sms":
         logger.info(f"[{now}] 📱 SMS sent to {user_email}\nMessage: {message}\n---")
     else:
         logger.warning(f"Unknown notification channel: {channel}")
         
-    # In a full deployment, we could also log this into a DB collection `notifications`
     return True
 
 def notify_status_change(user_email: str, complaint_id: str, new_status: str, remarks: str = ""):

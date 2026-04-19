@@ -1,3 +1,6 @@
+import logging
+import time
+from pythonjsonlogger import jsonlogger
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -5,15 +8,23 @@ import os
 from routes import auth, complaints, admin
 from db import db
 from config import settings
-from slowapi import Limiter
+from limiter import limiter
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from errors import APIError
 
+# ── Structured Logging ──
+logger = logging.getLogger()
+logHandler = logging.StreamHandler()
+formatter = jsonlogger.JsonFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
+logHandler.setFormatter(formatter)
+logger.addHandler(logHandler)
+logger.setLevel(logging.INFO)
+
 app = FastAPI(title="JanSamadhan API", version="2.0.0")
 
 # ── Rate Limiting ──
-limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 
 # ── CORS Configuration ──
@@ -28,6 +39,17 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],
 )
 
+# ── Security Headers Middleware (Helmet-like) ──
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;"
+    return response
+
 
 # ── Exception Handlers ──
 @app.exception_handler(APIError)
@@ -37,6 +59,7 @@ async def api_error_handler(request: Request, exc: APIError):
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    logger.warning({"type": "rate_limit_exceeded", "ip": get_remote_address(request), "path": request.url.path})
     return JSONResponse(
         status_code=429,
         content={
@@ -47,6 +70,29 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
             },
         },
     )
+
+# ── Request Logging Middleware ──
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    
+    log_data = {
+        "method": request.method,
+        "path": request.url.path,
+        "duration": f"{process_time:.4f}s",
+        "status_code": response.status_code,
+        "client": request.client.host if request.client else "unknown"
+    }
+    
+    if response.status_code >= 400:
+        logger.error(log_data)
+    else:
+        logger.info(log_data)
+        
+    response.headers["X-Process-Time"] = str(process_time)
+    return response
 
 
 @app.exception_handler(Exception)
@@ -80,8 +126,22 @@ scheduler = BackgroundScheduler()
 def check_escalations():
     try:
         now = datetime.now(timezone.utc)
-        collection = db.get_collection("complaints")
+        jobs_collection = db.get_collection("system_jobs")
         
+        # Simple distributed lock check
+        last_job = jobs_collection.find_one({"job_name": "escalation_check"})
+        if last_job:
+            last_run = datetime.fromisoformat(last_job["last_run"])
+            if now - last_run < timedelta(minutes=10):
+                return # Already run recently
+        
+        jobs_collection.update_one(
+            {"job_name": "escalation_check"},
+            {"$set": {"last_run": now.isoformat()}},
+            upsert=True
+        )
+
+        collection = db.get_collection("complaints")
         # Limit to valid unclosed complaints with an SLA deadline that has passed
         complaints = collection.find({
             "status": {"$nin": ["resolved", "closed", "Rejected"]},

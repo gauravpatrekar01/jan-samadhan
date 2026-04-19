@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NGO Dashboard – JanSamadhan</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤝</text></svg>">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+    <div class="toast-container"></div>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-logo">🏛️</div>
+            <div>
+                <div class="sidebar-name">JanSamadhan</div>
+                <div class="sidebar-tag">NGO Partner Portal</div>
+            </div>
+        </div>
+        <div class="sidebar-user">
+            <div class="user-avatar">🤝</div>
+            <div>
+                <div class="user-name" id="sbName">NGO User</div>
+                <div class="user-role">Assigned Support</div>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Main</div>
+            <div class="nav-item active" onclick="showPage('queue',this)"><span class="nav-icon">🎯</span> My Tasks</div>
+            <div class="nav-item" onclick="showPage('mapView',this)"><span class="nav-icon">🗺️</span> Heatmap</div>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="sidebar-footer-btn" onclick="logoutUser()">🚪 Logout</button>
+            <button class="sidebar-footer-btn" onclick="window.location.href='index.html'">🏠 Home</button>
+        </div>
+    </div>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <div class="dash-main">
+        <div class="topbar">
+            <button class="topbar-hamburger" onclick="openSidebar()">☰</button>
+            <div>
+                <div class="topbar-title" id="topbarTitle">Task Queue</div>
+                <div class="topbar-breadcrumb">JanSamadhan → NGO Dashboard</div>
+            </div>
+            <div class="topbar-actions">
+                <button class="topbar-dark-toggle" onclick="toggleDark()">🌙</button>
+                <div class="topbar-user" onclick="logoutUser()">NGO Partner 🚪</div>
+            </div>
+        </div>
+
+        <div class="dash-content">
+            <div class="dash-page active" id="page-queue">
+                <div class="welcome-banner" style="background:linear-gradient(135deg, #1e3a8a, #3b82f6)">
+                   <div>
+                       <div class="wb-title">Field Support Tasks 🤝</div>
+                       <div class="wb-sub">Public grievances assigned to your NGO for assistance.</div>
+                   </div>
+                </div>
+                <div class="filters-bar">
+                    <div class="search-bar" style="flex:1">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="ngoSearch" placeholder="Search tasks..." oninput="loadNGOQueue()">
+                    </div>
+                </div>
+                <div class="grievance-list" id="ngoQueueList"></div>
+            </div>
+
+            <div class="dash-page" id="page-mapView">
+                <div class="page-header"><h3>Region Activity Heatmap</h3></div>
+                <div class="card"><div id="ngoMap" class="dummy-map" style="height:450px"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UPDATE STATUS MODAL (Simpler for NGO) -->
+    <div class="modal-overlay" id="ngoUpdateModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>🔄 Update Grievance Status</h3>
+                <button class="modal-close" onclick="closeModal('ngoUpdateModal')">✕</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">New Status</label>
+                <select class="form-control" id="ngoNewStatus">
+                    <option value="in_progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Field Remarks</label>
+                <textarea class="form-control" id="ngoRemarks" rows="3" placeholder="Notes from field visit..."></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="confirmNGOUpdate()">Confirm Update</button>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        function openSidebar() { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('visible'); }
+        function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('visible'); }
+        
+        let _activeGID = null;
+
+        function showPage(id, navEl) {
+            document.querySelectorAll('.dash-page').forEach(p => p.classList.remove('active'));
+            document.getElementById(`page-${id}`)?.classList.add('active');
+            if(id === 'queue') loadNGOQueue();
+            closeSidebar();
+        }
+
+        async function loadNGOQueue() {
+            try {
+                const res = await fetch(`${window.JanSamadhanAPI.BASE_URL}/complaints/ngo/assigned`, {
+                    headers: window.JanSamadhanAPI.getAuthHeaders()
+                });
+                const { data } = await res.json();
+                const container = document.getElementById('ngoQueueList');
+                
+                if(!data || !data.length) {
+                    container.innerHTML = `<div class="card" style="text-align:center;padding:50px"><h4>No tasks assigned to your NGO</h4></div>`;
+                    return;
+                }
+
+                container.innerHTML = data.map(g => `
+                    <div class="grievance-card">
+                        <div class="gc-header">
+                            <div class="gc-icon">${categoryIcon(g.category)}</div>
+                            <div style="flex:1">
+                                <div class="gc-id">${g.id}</div>
+                                <div class="gc-title">${g.category}</div>
+                                <div class="gc-meta">
+                                    ${priorityBadge(g.priority)} ${statusBadge(g.status)}
+                                    <span style="font-size:.8rem;color:var(--text-muted)">⏳ Deadline: ${formatDeadline(g.sla_deadline)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <p style="font-size:.85rem;margin:10px 0">${g.description}</p>
+                        <button class="btn btn-primary btn-sm" onclick="openNGOUpdate('${g.id}')">Update Status</button>
+                    </div>
+                `).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        function openNGOUpdate(id) { 
+            _activeGID = id; 
+            openModal('ngoUpdateModal'); 
+        }
+
+        async function confirmNGOUpdate() {
+            const status = document.getElementById('ngoNewStatus').value;
+            const remarks = document.getElementById('ngoRemarks').value;
+            try {
+                await window.JanSamadhanAPI.updateGrievanceStatus(_activeGID, status, "NGO Update: " + remarks);
+                showToast("Update successful", "success");
+                closeModal('ngoUpdateModal');
+                loadNGOQueue();
+            } catch(e) { showToast(e.message, "error"); }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = getSessionUser();
+            if(!user || user.role !== 'ngo') {
+                window.location.href = 'index.html';
+                return;
+            }
+            document.getElementById('sbName').textContent = user.name || user.sub;
+            loadNGOQueue();
+        });
+
+        function logoutUser() {
+            sessionStorage.removeItem('js_user');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

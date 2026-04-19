@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Depends, Query, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, Depends, Query, UploadFile, File, Form, HTTPException, Request
+from limiter import limiter
+from services.s3_service import s3_service
 from schemas.complaint import ComplaintCreate
 from db import db
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import uuid
+import os
 from dependencies import (
     require_citizen,
     require_officer,
@@ -122,8 +125,30 @@ def get_assigned_complaints(
     return {"success": True, "data": complaints, "total": total}
 
 
+@router.get("/ngo/assigned")
+def get_ngo_assigned_complaints(
+    status: str = Query(None),
+    priority: str = Query(None),
+    skip: int = Query(0),
+    limit: int = Query(50),
+    user: dict = Depends(require_role(["ngo"])),
+):
+    """Get complaints assigned to current NGO"""
+    query = {"assigned_ngo": user["sub"]}
+    if status:
+        query["status"] = status.lower()
+    if priority:
+        query["priority"] = priority.lower()
+
+    collection = db.get_collection("complaints")
+    complaints = list(collection.find(query, {"_id": 0}).sort("createdAt", -1).skip(skip).limit(limit))
+    total = collection.count_documents(query)
+    return {"success": True, "data": complaints, "total": total}
+
+
 @router.post("/", status_code=201)
-def create_complaint(complaint: ComplaintCreate, user: dict = Depends(require_citizen)):
+@limiter.limit("5/hour")
+def create_complaint(request: Request, complaint: ComplaintCreate, user: dict = Depends(require_citizen)):
     collection = db.get_collection("complaints")
     now = datetime.now(timezone.utc).isoformat()
     complaint_id = f"JSM-{datetime.now(timezone.utc).year}-{str(uuid.uuid4())[:8].upper()}"
@@ -132,6 +157,11 @@ def create_complaint(complaint: ComplaintCreate, user: dict = Depends(require_ci
     citizen_name = user_doc.get("name", "Citizen") if user_doc else "Citizen"
 
     c_dict = complaint.model_dump()
+    # Set SLA deadline based on priority
+    sla_hours = {"emergency": 24, "high": 48, "medium": 72, "low": 120}
+    priority_key = (complaint.priority or "medium").lower()
+    deadline = datetime.now(timezone.utc) + timedelta(hours=sla_hours.get(priority_key, 72))
+
     c_dict.update(
         {
             "grievanceID": complaint_id,
@@ -141,8 +171,10 @@ def create_complaint(complaint: ComplaintCreate, user: dict = Depends(require_ci
             "email": user["sub"],  # For backward compatibility
             "name": citizen_name,
             "assigned_officer": None,
+            "assigned_ngo": None,
             "createdAt": now,
             "updatedAt": now,
+            "sla_deadline": deadline.isoformat(),
             "timeline": [
                 {
                     "stage": "Submitted",
@@ -335,6 +367,25 @@ def update_status(
             update_fields["assigned_officer"] = user["sub"]
             remarks = f"[AUTO-ASSIGNED] {remarks}" if remarks else "Emergency complaint auto-assigned to responding officer"
     
+    # Enforce Status Flow
+    STATUS_SEQUENCE = ["submitted", "under_review", "in_progress", "resolved", "closed"]
+    current_status = complaint.get("status", "submitted")
+    
+    try:
+        current_idx = STATUS_SEQUENCE.index(current_status)
+        new_idx = STATUS_SEQUENCE.index(status)
+        
+        if new_idx < current_idx and not (current_status == "in_progress" and status == "under_review"):
+            # Allow one-step rollback for review, otherwise block
+            raise ValidationError(f"Invalid status transition from {current_status} to {status}")
+            
+        if new_idx > current_idx + 1 and status != "resolved":
+            # Prevent skipping unless marking as resolved (which can happen from in_progress)
+            if not (current_status == "in_progress" and status == "resolved"):
+                raise ValidationError(f"Cannot skip stages in status flow")
+    except ValueError:
+        raise ValidationError(f"Invalid status value: {status}")
+
     stage_map = {
         "submitted": "Submitted",
         "under_review": "Under Review",
@@ -390,6 +441,9 @@ def submit_feedback(
     if not complaint:
         raise NotFoundError("Complaint")
 
+    if complaint.get("feedback"):
+        raise ValidationError("Feedback has already been submitted for this complaint")
+
     if complaint.get("status") not in {"resolved", "closed"}:
         raise ValidationError("Feedback allowed only after resolution")
 
@@ -407,6 +461,9 @@ def submit_feedback(
             "$set": {
                 "status": "closed",
                 "feedback": feedback_doc,
+                "feedbackRating": rating, # For aggregation
+                "feedbackAverage": rating, # Initial
+                "feedbackCount": 1,        # First feedback
                 "updatedAt": now,
             },
             "$push": {
@@ -455,7 +512,9 @@ def get_complaint_timeline(id: str, user: dict = Depends(get_current_user)):
 
 
 @router.post("/{id}/upload-media")
+@limiter.limit("10/hour")
 def upload_complaint_media(
+    request: Request,
     id: str,
     file: UploadFile = File(...),
     user: dict = Depends(get_current_user)
@@ -483,13 +542,18 @@ def upload_complaint_media(
         if file.content_type not in allowed_types:
             raise ValidationError(f"Invalid file type: {file.content_type}")
             
-        # Mock S3 Cloud URL generation for Phase 2
+        # Actual S3 Upload
         file_extension = file.filename.split(".")[-1]
         unique_filename = f"{uuid.uuid4()}.{file_extension}"
-        mock_s3_url = f"https://jansamadhan-media.s3.amazonaws.com/{id}/{unique_filename}"
+        
+        file_content = file.file.read()
+        s3_url = s3_service.upload_file(file_content, file.filename, folder=f"complaints/{id}")
+        
+        if not s3_url:
+            raise HTTPException(status_code=500, detail="Cloud storage upload failed")
         
         media_doc = {
-            "url": mock_s3_url,
+            "url": s3_url,
             "media_type": "image" if "image" in file.content_type else ("video" if "video" in file.content_type else "document"),
             "file_name": file.filename,
             "size_bytes": file_size,

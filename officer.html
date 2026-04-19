@@ -481,7 +481,10 @@
                         ${priorityBadge(g.priority.charAt(0).toUpperCase() + g.priority.slice(1))} 
                         ${statusBadge(g.status.charAt(0).toUpperCase() + g.status.slice(1).replace('_', ' '))}
                         <span style="font-size:.78rem;color:var(--text-muted)">🏙️ ${g.region}</span>
-                        <span style="font-size:.78rem;color:var(--text-muted)">📅 ${timeAgo(g.created_at)}</span>
+                        <div style="font-size:.78rem;color:var(--text-muted);margin-top:4px">
+                            📅 Filed: ${timeAgo(g.created_at)} | 🕒 Deadline: ${formatDeadline(g.sla_deadline)} 
+                            ${getDeadlineBadge(g.sla_deadline)}
+                        </div>
                       </div>
                     </div>
                   </div>

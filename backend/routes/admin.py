@@ -115,7 +115,7 @@ def verify_user_government(email: str, admin: dict = Depends(require_admin)):
 @router.get("/analytics")
 def get_analytics(admin: dict = Depends(require_admin)):
     collection = db.get_collection("complaints")
-    complaints = list(collection.find({}, {"_id": 0, "status": 1, "priority": 1, "region": 1, "feedback": 1, "feedbackAverage": 1, "feedbackCount": 1}))
+    complaints = list(collection.find({}, {"_id": 0, "status": 1, "priority": 1, "region": 1, "sla_deadline": 1, "feedback": 1, "feedbackAverage": 1, "feedbackCount": 1}))
 
     total = len(complaints)
     resolved = sum(1 for c in complaints if c.get("status") in {"resolved", "closed"})

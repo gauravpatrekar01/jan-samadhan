@@ -1140,6 +1140,7 @@
           if (userRole === 'citizen') window.location.href = 'citizen.html';
           else if (userRole === 'officer') window.location.href = 'officer.html';
           else if (userRole === 'admin') window.location.href = 'admin.html';
+          else if (userRole === 'ngo') window.location.href = 'ngo.html';
           else {
             console.error("❌ Unknown role:", userRole);
             showToast('Unknown user role: ' + userRole, 'error');

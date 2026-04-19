@@ -2,6 +2,8 @@ from fastapi import APIRouter
 from schemas.user import UserCreate, UserLogin
 from db import db
 from security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token, verify_token_type
+from limiter import limiter
+from fastapi import Request
 from government_registry import verify_citizen_record
 from errors import AuthenticationError, ValidationError, ConflictError, TokenExpiredError
 from datetime import datetime, timezone
@@ -10,7 +12,8 @@ router = APIRouter()
 
 
 @router.post("/register", status_code=201)
-def register(user: UserCreate):
+@limiter.limit("5/minute")
+def register(request: Request, user: UserCreate):
     collection = db.get_collection("users")
 
     if collection.find_one({"email": user.email}):
@@ -33,7 +36,8 @@ def register(user: UserCreate):
 
 
 @router.post("/login")
-def login(user: UserLogin):
+@limiter.limit("5/minute")
+def login(request: Request, user: UserLogin):
     collection = db.get_collection("users")
     db_user = collection.find_one({"email": user.email})
 
@@ -55,7 +59,8 @@ def login(user: UserLogin):
 
 
 @router.post("/admin-login")
-def admin_login(user: UserLogin):
+@limiter.limit("5/minute")
+def admin_login(request: Request, user: UserLogin):
     collection = db.get_collection("users")
     db_user = collection.find_one({"email": user.email})
 

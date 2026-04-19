@@ -2188,3 +2188,43 @@ tbody tr {
 .section-dark .section-eyebrow {
   color: var(--accent-light);
 }
+
+/* ── Mobile Responsiveness ── */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .step-card {
+    flex-direction: column !important;
+    text-align: center;
+    padding: 20px !important;
+  }
+  
+  .welcome-banner {
+    padding: 24px !important;
+  }
+  
+  .topbar {
+    left: 0 !important;
+    width: 100% !important;
+  }
+  
+  .dash-main {
+    margin-left: 0 !important;
+    padding: 10px !important;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .sidebar {
+    width: 280px;
+    left: -280px;
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+}

@@ -45,13 +45,13 @@ class ResolutionFeedback(BaseModel):
 
 
 class ComplaintCreate(BaseModel):
-    title: str
-    description: str
-    category: str
+    title: str = Field(..., min_length=5, max_length=100)
+    description: str = Field(..., min_length=10, max_length=2000)
+    category: str = Field(..., min_length=1)
     subcategory: Optional[str] = ""
     priority: Literal["low", "medium", "high", "emergency"] = "medium"
-    location: Optional[str] = ""
-    region: Optional[str] = ""
+    location: str = Field(..., min_length=1)
+    region: str = Field(..., min_length=1)
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     media: Optional[List[MediaAttachment]] = []
