@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAQ - JanSamadhan</title>
+</head>
+
+<body style="margin:0; font-family:'Segoe UI', Arial, sans-serif; background:linear-gradient(135deg,#eef2f7,#d9e4f5); color:#333;">
+
+<div style="max-width:900px; margin:40px auto; background:#fff; padding:30px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.15);">
+
+    <!-- Header -->
+    <div style="text-align:center; margin-bottom:25px;">
+        <h1 style="margin:0; color:#2c3e50;">JanSamadhan FAQ</h1>
+        <p style="color:#666; font-size:14px;">Quick answers to common questions</p>
+    </div>
+
+    <!-- Search -->
+    <input type="text" id="searchFAQ" placeholder="Search your question..."
+    style="width:100%; padding:12px; border-radius:8px; border:1px solid #ccc; margin-bottom:20px; font-size:14px; outline:none;">
+
+    <!-- FAQ Container -->
+    <div id="faqContainer">
+
+        <!-- FAQ Item -->
+        <div style="border-bottom:1px solid #eee; padding:10px 0;">
+            <div onclick="toggleFAQ(this)" style="cursor:pointer; font-weight:600; display:flex; justify-content:space-between;">
+                What is JanSamadhan?
+                <span>+</span>
+            </div>
+            <p style="display:none; margin-top:8px; color:#555;">
+                A smart grievance platform to report, track, and resolve public issues efficiently.
+            </p>
+        </div>
+
+        <div style="border-bottom:1px solid #eee; padding:10px 0;">
+            <div onclick="toggleFAQ(this)" style="cursor:pointer; font-weight:600; display:flex; justify-content:space-between;">
+                How do I submit a complaint?
+                <span>+</span>
+            </div>
+            <p style="display:none; margin-top:8px; color:#555;">
+                Login → Register Complaint → Fill details → Upload media → Submit.
+            </p>
+        </div>
+
+        <div style="border-bottom:1px solid #eee; padding:10px 0;">
+            <div onclick="toggleFAQ(this)" style="cursor:pointer; font-weight:600; display:flex; justify-content:space-between;">
+                Who resolves complaints?
+                <span>+</span>
+            </div>
+            <p style="display:none; margin-top:8px; color:#555;">
+                Government officers and verified NGOs handle grievances.
+            </p>
+        </div>
+
+        <div style="border-bottom:1px solid #eee; padding:10px 0;">
+            <div onclick="toggleFAQ(this)" style="cursor:pointer; font-weight:600; display:flex; justify-content:space-between;">
+                Is my data secure?
+                <span>+</span>
+            </div>
+            <p style="display:none; margin-top:8px; color:#555;">
+                Yes. Sensitive data is protected with encryption and strict role-based access.
+            </p>
+        </div>
+
+        <div style="border-bottom:1px solid #eee; padding:10px 0;">
+            <div onclick="toggleFAQ(this)" style="cursor:pointer; font-weight:600; display:flex; justify-content:space-between;">
+                Can NGOs handle complaints?
+                <span>+</span>
+            </div>
+            <p style="display:none; margin-top:8px; color:#555;">
+                Yes, only verified NGOs approved by admin can handle complaints.
+            </p>
+        </div>
+
+        <div style="border-bottom:1px solid #eee; padding:10px 0;">
+            <div onclick="toggleFAQ(this)" style="cursor:pointer; font-weight:600; display:flex; justify-content:space-between;">
+                What if complaint is not resolved?
+                <span>+</span>
+            </div>
+            <p style="display:none; margin-top:8px; color:#555;">
+                The system auto-escalates complaints if SLA is breached.
+            </p>
+        </div>
+
+    </div>
+
+    <!-- Contact Section -->
+    <div style="margin-top:30px; padding:20px; background:#f4f7fb; border-radius:10px; text-align:center;">
+        <p style="margin:0; font-weight:600;">Still need help?</p>
+        <p style="margin:5px 0; color:#666;">Contact Support</p>
+        <p style="margin:0;"><strong>Email:</strong> support@jansamadhan.in</p>
+    </div>
+
+    <p style="text-align:center; font-size:12px; color:#999; margin-top:20px;">
+        © 2026 JanSamadhan
+    </p>
+
+</div>
+
+<script>
+// Toggle FAQ
+function toggleFAQ(element) {
+    const answer = element.nextElementSibling;
+    const symbol = element.querySelector("span");
+
+    if (answer.style.display === "block") {
+        answer.style.display = "none";
+        symbol.innerText = "+";
+    } else {
+        answer.style.display = "block";
+        symbol.innerText = "-";
+    }
+}
+
+// Search FAQ
+document.getElementById("searchFAQ").addEventListener("keyup", function() {
+    let filter = this.value.toLowerCase();
+    let items = document.querySelectorAll("#faqContainer > div");
+
+    items.forEach(item => {
+        let text = item.innerText.toLowerCase();
+        item.style.display = text.includes(filter) ? "" : "none";
+    });
+});
+</script>
+
+</body>
+</html>
