@@ -47,9 +47,12 @@
                 <span class="nav-icon">🚨</span> Escalations
                 <span class="nav-badge" id="adminEscBadge" style="background:var(--danger)">0</span>
             </div>
-            <div class="nav-item" onclick="showPage('assignments',this)"><span class="nav-icon">🎯</span> Assignments</div>
-            <div class="nav-item" onclick="showPage('ngoRequests',this)"><span class="nav-icon">🤝</span> NGO Requests</div>
-            <div class="nav-item" onclick="showPage('ngoVerification',this)"><span class="nav-icon">🛡️</span> NGO Verification</div>
+            <div class="nav-item" onclick="showPage('assignments',this)"><span class="nav-icon">🎯</span> Assignments
+            </div>
+            <div class="nav-item" onclick="showPage('ngoRequests',this)"><span class="nav-icon">🤝</span> NGO Requests
+            </div>
+            <div class="nav-item" onclick="showPage('ngoVerification',this)"><span class="nav-icon">🛡️</span> NGO
+                Verification</div>
             <div class="nav-item" onclick="showPage('announcements',this)"><span class="nav-icon">📢</span>
                 Announcements</div>
 
@@ -89,9 +92,13 @@
                 <div class="welcome-banner"
                     style="background: linear-gradient(135deg, #0f172a, #1e3a8a, #2563eb); border-radius: var(--radius-lg); padding: 48px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 32px">
                     <div style="flex: 1">
-                        <div class="wb-title" style="font-size: 2.5rem; font-weight: 800; letter-spacing: -0.04em">🛡️ Command Center</div>
-                        <div class="wb-sub" style="font-size: 1.1rem; opacity: 0.85; margin: 8px 0 16px">Centralized monitoring and unified system intelligence for JanSamadhan.</div>
-                        <div class="wb-time badge" id="adminTime" style="background: rgba(255,255,255,0.1); color: #fff; font-weight: 600; font-size: 0.85rem; padding: 6px 16px"></div>
+                        <div class="wb-title" style="font-size: 2.5rem; font-weight: 800; letter-spacing: -0.04em">🛡️
+                            Command Center</div>
+                        <div class="wb-sub" style="font-size: 1.1rem; opacity: 0.85; margin: 8px 0 16px">Centralized
+                            monitoring and unified system intelligence for JanSamadhan.</div>
+                        <div class="wb-time badge" id="adminTime"
+                            style="background: rgba(255,255,255,0.1); color: #fff; font-weight: 600; font-size: 0.85rem; padding: 6px 16px">
+                        </div>
                     </div>
                     <div style="font-size: 4rem; opacity: 0.2; transform: rotate(-15deg)">🏛️</div>
                 </div>
@@ -99,14 +106,15 @@
                 <!-- KPI Stats -->
                 <div class="stats-grid" id="adminStats"></div>
 
-                <div class="section-divider" style="margin: 50px 0 30px; width: 100%">Real-time Performance</div>
+                <div class="section-divider" style="margin: 50px 0 30px; width: 100%"></div>
 
                 <!-- KPI Bars -->
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-bottom:32px"
                     id="kpiBars"></div>
 
                 <!-- Recent activity -->
-                <div style="display:grid;grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap:24px; margin-top: 40px" id="overviewGrid">
+                <div style="display:grid;grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap:24px; margin-top: 40px"
+                    id="overviewGrid">
                     <div class="card" style="background: rgba(254, 242, 242, 0.3); border-color: #fee2e2">
                         <h4 style="margin-bottom:20px; color: #991b1b; display: flex; align-items:center; gap: 10px">
                             <span style="font-size: 1.2rem">🚨</span> Urgent Priority Queue
@@ -269,7 +277,10 @@
                             </tr>
                         </thead>
                         <tbody id="ngoVerifyTableBody">
-                            <tr><td colspan="5" style="text-align:center;padding:40px">⌛ Loading NGO applications...</td></tr>
+                            <tr>
+                                <td colspan="5" style="text-align:center;padding:40px">⌛ Loading NGO applications...
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -309,7 +320,8 @@
                         <div class="page-subtitle">Assign unassigned grievances to field officers</div>
                     </div>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:20px">
+                <div
+                    style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:20px">
                     <div>
                         <label class="form-label">Priority</label>
                         <select class="form-control" id="assignFilter-priority" onchange="loadAssignmentQueue()">
@@ -347,7 +359,8 @@
                         <div class="page-subtitle">Track all admin and officer actions</div>
                     </div>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px">
+                <div
+                    style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px">
                     <div>
                         <label class="form-label">Action Type</label>
                         <select class="form-control" id="auditFilter-action" onchange="loadAuditLog()">
@@ -361,7 +374,8 @@
                     </div>
                     <div>
                         <label class="form-label">Actor Email (filter)</label>
-                        <input type="text" class="form-control" id="auditFilter-actor" placeholder="Email or leave blank" />
+                        <input type="text" class="form-control" id="auditFilter-actor"
+                            placeholder="Email or leave blank" />
                     </div>
                     <div style="display:flex;align-items:flex-end">
                         <button class="btn btn-primary" onclick="loadAuditLog()">Search</button>
@@ -406,7 +420,8 @@
             <div class="form-group">
                 <label class="form-label">Password</label>
                 <input class="form-control" id="newUserPassword" type="password" placeholder="Strong password" />
-                <div style="font-size:.8rem;color:var(--text-muted);margin-top:4px">Password must be at least 8 characters. Citizen passwords require stronger complexity.</div>
+                <div style="font-size:.8rem;color:var(--text-muted);margin-top:4px">Password must be at least 8
+                    characters. Citizen passwords require stronger complexity.</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Role</label>
@@ -492,7 +507,8 @@
     <!-- COMPLAINT DETAILS MODAL -->
     <div class="modal-overlay" id="complaintDetailsModal">
         <div class="modal-box" style="max-width:700px; max-height:85vh; overflow-y:auto; padding:0">
-            <div class="modal-header" style="position:sticky; top:0; background:rgba(255,255,255,0.9); backdrop-filter:blur(10px); z-index:10; padding:24px; border-bottom:1px solid var(--border)">
+            <div class="modal-header"
+                style="position:sticky; top:0; background:rgba(255,255,255,0.9); backdrop-filter:blur(10px); z-index:10; padding:24px; border-bottom:1px solid var(--border)">
                 <h3 id="complaintDetailsTitle">📋 Complaint Details</h3>
                 <button class="modal-close" onclick="closeModal('complaintDetailsModal')">✕</button>
             </div>
@@ -507,7 +523,8 @@
                 <h3>🎯 Assign Complaint to Officer</h3>
                 <button class="modal-close" onclick="closeModal('assignComplaintModal')">✕</button>
             </div>
-            <div id="assignComplaintInfo" style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:16px;font-size:.88rem"></div>
+            <div id="assignComplaintInfo"
+                style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:16px;font-size:.88rem"></div>
             <div class="form-group">
                 <label class="form-label">Select Officer</label>
                 <select class="form-control" id="assignOfficerSelect">
@@ -586,7 +603,7 @@
             try {
                 const stats = await window.JanSamadhanAPI.getAnalytics();
                 const regions = stats.by_region || {};
-                
+
                 if (mapContainer) {
                     mapContainer.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);flex-direction:column;gap:15px">
                         <div style="font-size:3rem">🗺️</div>
@@ -594,8 +611,8 @@
                     </div>`;
                 }
 
-                const regionEntries = Object.entries(regions).sort((a,b) => b[1] - a[1]);
-                container.innerHTML = `<div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(200px, 1fr))">` + 
+                const regionEntries = Object.entries(regions).sort((a, b) => b[1] - a[1]);
+                container.innerHTML = `<div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(200px, 1fr))">` +
                     regionEntries.map(([name, count]) => `
                         <div class="card" style="padding:15px;display:flex;justify-content:between;align-items:center">
                             <div>
@@ -644,7 +661,7 @@
             // Main stats
             const satisfactionColor = stats.average_satisfaction >= 4 ? 'var(--success)' : stats.average_satisfaction >= 3 ? 'var(--warning)' : '#dc2626';
             const satisfactionBg = stats.average_satisfaction >= 4 ? 'rgba(22,163,74,.1)' : stats.average_satisfaction >= 3 ? 'rgba(217,119,6,.1)' : 'rgba(220,38,38,.1)';
-            
+
             document.getElementById('adminStats').innerHTML = [
                 { label: 'Total Complaints', value: stats.total_complaints, icon: '📋', color: 'var(--primary-light)', bg: 'rgba(37,99,235,.1)', trend: 'System Data' },
                 { label: 'Resolution Rate', value: stats.resolution_rate + '%', icon: '✅', color: 'var(--success)', bg: 'rgba(22,163,74,.1)', trend: '↑ Live Tracking' },
@@ -696,7 +713,7 @@
                   `).join('')
                 : '<div style="text-align:center;padding:16px;color:rgba(22,163,74,0.6)">✅ No emergency cases in queue</div>';
 
-            const resolvedResults = allGrievances.filter(g => g.status === 'resolved' || g.status === 'closed').sort((a,b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)).slice(0, 5);
+            const resolvedResults = allGrievances.filter(g => g.status === 'resolved' || g.status === 'closed').sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)).slice(0, 5);
             document.getElementById('recentResolved').innerHTML = resolvedResults.length
                 ? resolvedResults.map(g => `
                     <div style="padding:16px; border-radius:12px; border:1px solid rgba(22, 163, 74, 0.1); background:white; display:flex; gap:12px; align-items:center; box-shadow: var(--shadow-sm); transition: var(--transition); border-left: 5px solid var(--success)">
@@ -794,7 +811,7 @@
                 const queue = await window.JanSamadhanAPI.getAllGrievances();
                 escalated = queue.filter(g => g.escalated || g.priority?.toLowerCase() === 'emergency');
             } catch (e) { console.warn(e); }
-            
+
             document.getElementById('adminEscBadge').textContent = escalated.length;
             const container = document.getElementById('adminEscList');
             if (!container) return;
@@ -832,9 +849,9 @@
             if (!container) return;
             const user = getSessionUser();
             let announcements = [];
-            try { 
-                announcements = await window.JanSamadhanAPI.getNotices(); 
-            } catch(e) {
+            try {
+                announcements = await window.JanSamadhanAPI.getNotices();
+            } catch (e) {
                 announcements = await window.JanSamadhan.getAnnouncements();
             }
             container.innerHTML = announcements.map(a => {
@@ -868,7 +885,7 @@
                 document.getElementById('newAnnText').value = '';
                 closeModal('addAnnModal');
                 loadAdminAnnouncements();
-            } catch(e) {
+            } catch (e) {
                 showToast('Failed to publish announcement: ' + e.message, 'error');
             }
         }
@@ -879,7 +896,7 @@
                 await window.JanSamadhanAPI.deleteNotice(id);
                 showToast('✅ Notice deleted', 'success');
                 loadAdminAnnouncements();
-            } catch(e) {
+            } catch (e) {
                 showToast('Failed to delete notice: ' + e.message, 'error');
             }
         }
@@ -893,7 +910,7 @@
                 console.warn("Failed to get users from API, using empty array or dummy data", err);
                 users = window.JanSamadhan.users || [];
             }
-            
+
             const roleCounts = { citizen: 0, officer: 0, admin: 0, ngo: 0 };
             users.forEach(u => roleCounts[u.role] = (roleCounts[u.role] || 0) + 1);
 
@@ -938,64 +955,64 @@
                 await window.JanSamadhanAPI.toggleUserVerification(email);
                 showToast(`Verification toggled for ${email}`, 'success');
                 loadUsers();
-            } catch(e) {
+            } catch (e) {
                 showToast(e.message, 'error');
             }
         }
 
-function toggleUserDistrictField() {
-                const role = document.getElementById('newUserRole')?.value;
-                const group = document.getElementById('newUserDistrictGroup');
-                if (group) {
-                    group.style.display = role === 'officer' ? 'block' : 'none';
-                }
+        function toggleUserDistrictField() {
+            const role = document.getElementById('newUserRole')?.value;
+            const group = document.getElementById('newUserDistrictGroup');
+            if (group) {
+                group.style.display = role === 'officer' ? 'block' : 'none';
+            }
+        }
+
+        async function createUserAccount() {
+            const name = document.getElementById('newUserName')?.value.trim();
+            const email = document.getElementById('newUserEmail')?.value.trim();
+            const password = document.getElementById('newUserPassword')?.value;
+            const role = document.getElementById('newUserRole')?.value;
+            const district = document.getElementById('newUserDistrict')?.value;
+
+            if (!name || !email || !password) {
+                showToast('Please fill in all fields to create the account.', 'warning');
+                return;
+            }
+            if (role === 'officer' && !district) {
+                showToast('Please assign a district to the officer.', 'warning');
+                return;
             }
 
-            async function createUserAccount() {
-                const name = document.getElementById('newUserName')?.value.trim();
-                const email = document.getElementById('newUserEmail')?.value.trim();
-                const password = document.getElementById('newUserPassword')?.value;
-                const role = document.getElementById('newUserRole')?.value;
-                const district = document.getElementById('newUserDistrict')?.value;
-
-                if (!name || !email || !password) {
-                    showToast('Please fill in all fields to create the account.', 'warning');
-                    return;
-                }
-                if (role === 'officer' && !district) {
-                    showToast('Please assign a district to the officer.', 'warning');
-                    return;
-                }
-
-                const userPayload = { name, email, password, role };
-                if (role === 'officer') {
-                    userPayload.district = district;
-                }
-
-                try {
-                    await window.JanSamadhanAPI.createUser(userPayload);
-                    showToast('User account created successfully.', 'success');
-                    closeModal('createUserModal');
-                    document.getElementById('newUserName').value = '';
-                    document.getElementById('newUserEmail').value = '';
-                    document.getElementById('newUserPassword').value = '';
-                    document.getElementById('newUserDistrict').value = '';
-                    loadUsers();
-                } catch (e) {
-                    showToast(e.message || 'Failed to create user', 'error');
-                }
+            const userPayload = { name, email, password, role };
+            if (role === 'officer') {
+                userPayload.district = district;
             }
+
+            try {
+                await window.JanSamadhanAPI.createUser(userPayload);
+                showToast('User account created successfully.', 'success');
+                closeModal('createUserModal');
+                document.getElementById('newUserName').value = '';
+                document.getElementById('newUserEmail').value = '';
+                document.getElementById('newUserPassword').value = '';
+                document.getElementById('newUserDistrict').value = '';
+                loadUsers();
+            } catch (e) {
+                showToast(e.message || 'Failed to create user', 'error');
+            }
+        }
 
         async function initHeatmap() {
             const all = await window.JanSamadhanAPI.getAllGrievances();
             renderDummyMap('adminHeatMap', all);
             const stats = await window.JanSamadhanAPI.getAnalytics();
-            
+
             const cats = {};
-            for(let g of all) {
-               cats[g.region || 'Mumbai City'] = (cats[g.region || 'Mumbai City'] || 0) + 1;
+            for (let g of all) {
+                cats[g.region || 'Mumbai City'] = (cats[g.region || 'Mumbai City'] || 0) + 1;
             }
-            
+
             const container = document.getElementById('heatmapGrid');
             if (container) {
                 container.innerHTML = Object.entries(cats).map(([r, c]) => `
@@ -1025,7 +1042,7 @@ function toggleUserDistrictField() {
             try {
                 const data = await window.JanSamadhanAPI.getAllGrievances(status, priority, null, null, null, 0, 100);
                 const unassigned = data.filter(g => !g.assigned_officer || g.assigned_officer === 'null');
-                
+
                 const container = document.getElementById('assignmentQueue');
                 if (!unassigned.length) {
                     container.innerHTML = `<div style="text-align:center;padding:40px"><span style="font-size:2rem">✅</span><p>All complaints assigned!</p></div>`;
@@ -1038,7 +1055,7 @@ function toggleUserDistrictField() {
         <div style="flex:1">
           <div style="font-weight:600;color:var(--primary-light)">${g.id} – ${g.category}</div>
           <div style="font-size:.85rem;color:var(--text-muted);margin-top:4px">👤 ${g.name || 'Citizen'} | 📍 ${g.region || 'N/A'}</div>
-          <div style="font-size:.85rem;margin-top:4px;line-height:1.4">${g.description?.substring(0,80) || 'No description'}...</div>
+          <div style="font-size:.85rem;margin-top:4px;line-height:1.4">${g.description?.substring(0, 80) || 'No description'}...</div>
           <div style="margin-top:6px;display:flex;gap:6px">
             ${priorityBadge((g.priority || 'medium').charAt(0).toUpperCase() + (g.priority || 'medium').slice(1))}
             ${statusBadge((g.status || 'submitted').charAt(0).toUpperCase() + (g.status || 'submitted').slice(1))}
@@ -1056,7 +1073,7 @@ function toggleUserDistrictField() {
         async function openAssignModal(complaintId) {
             _selectedComplaintForAssignment = complaintId;
             document.getElementById('assignComplaintInfo').textContent = `Complaint ID: ${complaintId}`;
-            
+
             // Load officers if not cached
             if (!_cachedOfficers.length) {
                 try {
@@ -1069,9 +1086,9 @@ function toggleUserDistrictField() {
             }
 
             const select = document.getElementById('assignOfficerSelect');
-            select.innerHTML = '<option value="">Choose Officer...</option>' + 
+            select.innerHTML = '<option value="">Choose Officer...</option>' +
                 _cachedOfficers.map(o => `<option value="${o.email}">${o.name} (${o.district || 'No district'})</option>`).join('');
-            
+
             openModal('assignComplaintModal');
         }
 
@@ -1099,7 +1116,7 @@ function toggleUserDistrictField() {
 
             try {
                 const logs = await window.JanSamadhanAPI.getAuditLog(actor || null, action || null, 200);
-                
+
                 const container = document.getElementById('auditList');
                 if (!logs || !logs.length) {
                     container.innerHTML = `<div style="text-align:center;padding:40px">No audit logs found</div>`;
@@ -1160,7 +1177,7 @@ function toggleUserDistrictField() {
                 }
 
                 document.getElementById('complaintDetailsTitle').textContent = `📋 ${complaint.grievanceID || complaint.id}`;
-                
+
                 const html = `
     <div style="font-size:.88rem;line-height:1.6">
       <div style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:12px">
@@ -1237,7 +1254,7 @@ function toggleUserDistrictField() {
       </div>
     </div>
                 `;
-                
+
                 document.getElementById('complaintDetailsContent').innerHTML = html;
                 openModal('complaintDetailsModal');
             } catch (err) {
@@ -1252,7 +1269,7 @@ function toggleUserDistrictField() {
             try {
                 const data = await window.JanSamadhanAPI.getAdminNGORequests('pending');
                 const container = document.getElementById('ngoRequestsTableBody');
-                if(!data.length) {
+                if (!data.length) {
                     container.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:40px">No pending NGO requests.</td></tr>`;
                     return;
                 }
@@ -1272,29 +1289,29 @@ function toggleUserDistrictField() {
                         </td>
                     </tr>
                 `).join('');
-            } catch(e) { console.error(e); }
+            } catch (e) { console.error(e); }
         }
 
         async function processNGORequest(requestId, action) {
             try {
-                if(action === 'approve') {
+                if (action === 'approve') {
                     await window.JanSamadhanAPI.approveNGORequest(requestId);
                     showToast("NGO Assigned and Grievance Activated!", "success");
                 } else {
                     const reason = prompt("Enter rejection reason:");
-                    if(reason === null) return;
+                    if (reason === null) return;
                     await window.JanSamadhanAPI.rejectNGORequest(requestId, reason);
                     showToast("NGO Request Rejected", "info");
                 }
                 loadNGORequests();
-            } catch(e) { showToast(e.message, "error"); }
+            } catch (e) { showToast(e.message, "error"); }
         }
 
         async function loadNGOVerification() {
             try {
                 const data = await window.JanSamadhanAPI.getPendingNGOs();
                 const container = document.getElementById('ngoVerifyTableBody');
-                if(!data.length) {
+                if (!data.length) {
                     container.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px">No pending NGO registrations.</td></tr>`;
                     return;
                 }
@@ -1325,31 +1342,31 @@ function toggleUserDistrictField() {
                         </td>
                     </tr>
                 `).join('');
-            } catch(e) { console.error(e); }
+            } catch (e) { console.error(e); }
         }
 
         async function processNGOAccount(email, action) {
             try {
-                if(action === 'approve') {
+                if (action === 'approve') {
                     const notes = prompt("Verification Notes (e.g. Doc checked, NGO Darpan verified):", "Identity and certificates verified.");
-                    if(notes === null) return;
+                    if (notes === null) return;
                     await window.JanSamadhanAPI.approveNGO(email);
                     showToast(`NGO verified and activated!`, "success");
                 } else {
                     const reason = prompt("Rejection reason for organization:", "Incomplete or invalid documentation.");
-                    if(reason === null) return;
+                    if (reason === null) return;
                     await window.JanSamadhanAPI.rejectNGO(email, reason);
                     showToast("NGO account rejected.", "info");
                 }
                 loadNGOVerification();
-            } catch(e) { showToast(e.message, "error"); }
+            } catch (e) { showToast(e.message, "error"); }
         }
 
     </script>
     <script>
         // Override showPage after all scripts load to add assignment and audit logic
         const originalShowPage = showPage;
-        window.showPage = function(id, navEl) {
+        window.showPage = function (id, navEl) {
             originalShowPage(id, navEl);
             if (id === 'assignments') loadAssignmentQueue();
             if (id === 'audit') loadAuditLog();
