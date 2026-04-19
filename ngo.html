@@ -264,28 +264,31 @@
 
         async function loadNGOProfile() {
             try {
-                const res = await window.JanSamadhanAPI.getNGOProfile();
-                const p = res.data;
+                const p = await window.JanSamadhanAPI.getNGOProfile();
                 const container = document.getElementById('ngoProfileContent');
                 
                 let statusHtml = p.verified ? 
-                    `<div class="alert alert-success">✅ Verifed and Active until ${new Date(p.verification_expiry).toLocaleDateString()}</div>` :
+                    `<div class="alert alert-success">✅ Verified and Active until ${p.verification_expiry ? new Date(p.verification_expiry).toLocaleDateString() : 'Indefinite'}</div>` :
                     (p.rejection_reason ? 
-                        `<div class="alert alert-danger">❌ Registration Rejected: ${p.rejection_reason}<br><small>Update your details below to re-submit.</small></div>` :
+                        `<div class="alert alert-danger">❌ Registration Rejected: ${p.rejection_reason}<br><small>Update your details via registration portal to re-submit.</small></div>` :
                         `<div class="alert alert-warning">⏳ Verification in progress...</div>`);
 
                 container.innerHTML = `
                     ${statusHtml}
                     <div style="margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:16px; font-size:.9rem">
-                        <div><label style="color:var(--text-muted)">Organization</label><div>${p.name}</div></div>
-                        <div><label style="color:var(--text-muted)">Registration ID</label><div>${p.registration_number}</div></div>
-                        <div><label style="color:var(--text-muted)">Sector Type</label><div>${p.organization_type}</div></div>
-                        <div><label style="color:var(--text-muted)">Service Area</label><div>${p.service_area}</div></div>
-                        <div><label style="color:var(--text-muted)">Contact</label><div>${p.contact_person} (${p.phone})</div></div>
-                        <div><label style="color:var(--text-muted)">Categories</label><div>${(p.categories || []).join(', ')}</div></div>
+                        <div><label style="color:var(--text-muted)">Organization</label><div style="font-weight:600">${p.name}</div></div>
+                        <div><label style="color:var(--text-muted)">Registration ID</label><div style="font-weight:600">${p.registration_number || 'N/A'}</div></div>
+                        <div><label style="color:var(--text-muted)">Sector Type</label><div style="font-weight:600">${p.organization_type}</div></div>
+                        <div><label style="color:var(--text-muted)">Service Area</label><div style="font-weight:600">${p.service_area}</div></div>
+                        <div><label style="color:var(--text-muted)">Contact Persona</label><div style="font-weight:600">${p.contact_person || 'N/A'}</div></div>
+                        <div><label style="color:var(--text-muted)">Phone</label><div style="font-weight:600">${p.phone || 'N/A'}</div></div>
+                        <div style="grid-column: span 2"><label style="color:var(--text-muted)">Expertise Categories</label><div style="font-weight:600">${(p.categories || []).join(', ')}</div></div>
                     </div>
                 `;
-            } catch(e) { console.error(e); }
+            } catch(e) { 
+                console.error("Profile Load Error:", e);
+                document.getElementById('ngoProfileContent').innerHTML = `<div class="alert alert-danger">Failed to load profile details.</div>`;
+            }
         }
 
         async function loadNGOStats() {
@@ -329,6 +332,15 @@
             try {
                 const data = await window.JanSamadhanAPI.getNGOAvailableComplaints();
                 const container = document.getElementById('availableList');
+                
+                if(!data || data.length === 0) {
+                    container.innerHTML = `<div class="card" style="text-align:center;padding:60px">
+                        <h4>No match found 🔍</h4>
+                        <p style="color:var(--text-muted)">There are no unassigned grievances in your service area matching your Expertise Categories.</p>
+                    </div>`;
+                    return;
+                }
+
                 container.innerHTML = data.map(g => `
                     <div class="grievance-card">
                         <div class="gc-header">
@@ -343,7 +355,7 @@
                         <button class="btn btn-outline btn-sm" onclick="requestGrievance('${g.id}')">🤝 Request to Handle</button>
                     </div>
                 `).join('');
-            } catch(e) { console.error(e); }
+            } catch(e) { console.error("Available Load Error:", e); }
         }
 
         async function loadRequests() {
@@ -429,6 +441,8 @@
 
             loadWork();
             loadNGOStats();
+            loadAvailable();
+            loadNGOProfile();
         });
 
 
