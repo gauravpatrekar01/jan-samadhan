@@ -197,9 +197,19 @@
             if(id === 'work') loadWork();
             if(id === 'available') loadAvailable();
             if(id === 'requests') loadRequests();
+            if(id === 'impact') loadNGOStats();
             
             document.getElementById('pageTitle').textContent = navEl?.textContent.trim() || 'Dashboard';
             closeSidebar();
+        }
+
+        async function loadNGOStats() {
+            try {
+                const stats = await window.JanSamadhanAPI.getNGOStats();
+                document.getElementById('statResolved').textContent = stats.resolved;
+                document.getElementById('statRating').textContent = stats.avg_rating;
+                document.getElementById('statImpact').textContent = stats.impact_lives;
+            } catch(e) { console.error(e); }
         }
 
         async function loadWork() {

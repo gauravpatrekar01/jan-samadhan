@@ -276,6 +276,10 @@ const JanSamadhanAPI = {
         return this._fetch('/api/ngo/available-complaints');
     },
 
+    async getNGOStats() {
+        return this._fetch('/api/ngo/stats');
+    },
+
     // ── Admin NGO Request Management ──
     async getAdminNGORequests(status = 'pending') {
         return this._fetch(`/api/admin/ngo-requests?status=${status}`);

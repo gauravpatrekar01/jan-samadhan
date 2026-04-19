@@ -90,3 +90,39 @@ def get_available_complaints(user=Depends(require_role(["ngo"]))):
     }
     complaints = list(db.get_collection("complaints").find(query, {"_id": 0}).sort("createdAt", -1).limit(50))
     return {"success": True, "data": complaints}
+
+@router.get("/stats")
+def get_ngo_stats(user=Depends(require_role(["ngo"]))):
+    """Calculate performance metrics for the logged-in NGO."""
+    complaint_coll = db.get_collection("complaints")
+    
+    # Total Resolved by this NGO
+    resolved_count = complaint_coll.count_documents({
+        "assigned_to_ngo": user["sub"],
+        "status": {"$in": ["resolved", "closed"]}
+    })
+    
+    # Avg Rating from public feedback on this NGO's cases
+    pipeline = [
+        {"$match": {"assigned_to_ngo": user["sub"], "feedback": {"$exists": True}}},
+        {"$group": {"_id": None, "avgRating": {"$avg": "$feedback.rating"}}}
+    ]
+    rating_result = list(complaint_coll.aggregate(pipeline))
+    avg_rating = round(rating_result[0]["avgRating"], 1) if rating_result else 0.0
+    
+    # Active cases currently being handled
+    active_count = complaint_coll.count_documents({
+        "assigned_to_ngo": user["sub"],
+        "status": "in_progress"
+    })
+
+    return {
+        "success": True, 
+        "data": {
+            "resolved": resolved_count,
+            "avg_rating": avg_rating,
+            "active": active_count,
+            "impact_lives": resolved_count * 4 # Estimated families helped
+        }
+    }
+
