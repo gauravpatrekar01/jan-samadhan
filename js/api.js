@@ -117,8 +117,23 @@ const JanSamadhanAPI = {
     },
 
     async uploadFileDirectly(file) {
-        const { url, fields, file_url } = await this.getNGOUploadUrl(file.name, file.type);
+        const data = await this.getNGOUploadUrl(file.name, file.type);
         
+        // Handle Local Fallback
+        if (data.use_local) {
+            const formData = new FormData();
+            formData.append('file', file);
+            // Use the endpoint provided by the server, prefix with base URL
+            const res = await this._fetch(data.endpoint, {
+                method: 'POST',
+                body: formData
+            });
+            // If backend returns absolute URL, use it, else prefix with server host
+            return res.file_url.startsWith('http') ? res.file_url : `${API_BASE_URL}${res.file_url}`;
+        }
+
+        // Standard S3 Upload
+        const { url, fields, file_url } = data;
         const formData = new FormData();
         Object.entries(fields).forEach(([k, v]) => formData.append(k, v));
         formData.append('file', file);

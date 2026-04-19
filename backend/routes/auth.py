@@ -3,7 +3,8 @@ from schemas.user import UserCreate, UserLogin, NGORegistrationSchema
 from db import db
 from security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token, verify_token_type
 from limiter import limiter
-from fastapi import Request
+from fastapi import Request, UploadFile, File, Form
+import os, uuid, shutil
 from government_registry import verify_citizen_record
 from errors import APIError, AuthenticationError, ValidationError, ConflictError, TokenExpiredError
 from datetime import datetime, timezone
@@ -83,15 +84,43 @@ def register_ngo(request: Request, ngo: NGORegistrationSchema):
 
 @router.get("/ngo-upload-url")
 def get_ngo_upload_url(file_name: str, file_type: str):
-    """Generate a presigned URL for NGO registration document upload."""
+    """Generate a presigned URL or signal local fallback."""
     if not file_type.startswith(('image/', 'application/pdf')):
         raise ValidationError("Only PDF and Image files are allowed.")
         
+    # Check if AWS is configured
+    from config import settings
+    if not settings.AWS_ACCESS_KEY or not settings.S3_BUCKET_NAME:
+        # Signal frontend to use local upload via special response
+        return {
+            "success": True, 
+            "data": {
+                "use_local": True,
+                "endpoint": "/api/auth/upload-local-doc"
+            }
+        }
+
     upload_data = s3_service.generate_presigned_url(file_name, file_type)
     if not upload_data:
-        raise APIError("Failed to generate upload URL", status_code=500)
+        raise APIError(500, "UPLOAD_INIT_FAILED", "Failed to generate upload URL")
         
     return {"success": True, "data": upload_data}
+
+
+@router.post("/upload-local-doc")
+async def upload_local_doc(file: UploadFile = File(...)):
+    """Local fallback for document uploads when S3 is not available."""
+    os.makedirs("static/uploads", exist_ok=True)
+    ext = file.filename.split(".")[-1]
+    unique_name = f"{uuid.uuid4()}.{ext}"
+    path = f"static/uploads/{unique_name}"
+    
+    with open(path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    # Standard URL for frontend
+    file_url = f"/static/uploads/{unique_name}"
+    return {"success": True, "data": {"file_url": file_url}}
 
 
 @router.post("/login")

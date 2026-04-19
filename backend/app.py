@@ -202,11 +202,17 @@ def stop_scheduler():
     scheduler.shutdown()
 
 
+from fastapi.staticfiles import StaticFiles
+
 # ── Routes ──
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(complaints.router, prefix="/api/complaints", tags=["complaints"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(ngo.router, prefix="/api/ngo", tags=["ngo"])
+
+# ── Static Files (Uploads Fallback) ──
+os.makedirs("static/uploads", exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # ── Root Endpoints ──
