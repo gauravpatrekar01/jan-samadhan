@@ -112,6 +112,26 @@ const JanSamadhanAPI = {
         return this._fetch('/api/auth/register-ngo', { method: 'POST', body: JSON.stringify(ngoData) });
     },
 
+    async getNGOUploadUrl(fileName, fileType) {
+        return this._fetch(`/api/auth/ngo-upload-url?file_name=${encodeURIComponent(fileName)}&file_type=${encodeURIComponent(fileType)}`);
+    },
+
+    async uploadFileDirectly(file) {
+        const { url, fields, file_url } = await this.getNGOUploadUrl(file.name, file.type);
+        
+        const formData = new FormData();
+        Object.entries(fields).forEach(([k, v]) => formData.append(k, v));
+        formData.append('file', file);
+
+        const response = await fetch(url, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) throw new Error("Cloud storage upload failed.");
+        return file_url;
+    },
+
 
     async login(credentials) {
         const response = await this._fetch('/api/auth/login', {

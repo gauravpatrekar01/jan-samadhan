@@ -5,8 +5,9 @@ from security import hash_password, verify_password, create_access_token, create
 from limiter import limiter
 from fastapi import Request
 from government_registry import verify_citizen_record
-from errors import AuthenticationError, ValidationError, ConflictError, TokenExpiredError
+from errors import APIError, AuthenticationError, ValidationError, ConflictError, TokenExpiredError
 from datetime import datetime, timezone
+from services.s3_service import s3_service
 
 router = APIRouter()
 
@@ -78,6 +79,19 @@ def register_ngo(request: Request, ngo: NGORegistrationSchema):
     ngo_dict.pop("password", None)
     
     return {"success": True, "data": ngo_dict}
+
+
+@router.get("/ngo-upload-url")
+def get_ngo_upload_url(file_name: str, file_type: str):
+    """Generate a presigned URL for NGO registration document upload."""
+    if not file_type.startswith(('image/', 'application/pdf')):
+        raise ValidationError("Only PDF and Image files are allowed.")
+        
+    upload_data = s3_service.generate_presigned_url(file_name, file_type)
+    if not upload_data:
+        raise APIError("Failed to generate upload URL", status_code=500)
+        
+    return {"success": True, "data": upload_data}
 
 
 @router.post("/login")

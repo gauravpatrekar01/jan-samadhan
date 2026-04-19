@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NGO Partner Portal | JanSamadhan</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ngo-primary: #0f172a;
+            --ngo-accent: #2563eb;
+        }
+
+        body {
+            background: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        .ngo-header {
+            background: white;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        .auth-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            padding: 60px 0;
+            align-items: start;
+        }
+
+        @media (max-width: 968px) {
+            .auth-layout {
+                grid-template-columns: 1fr;
+                gap: 40px;
+                padding: 40px 0;
+            }
+        }
+
+        .info-side {
+            position: sticky;
+            top: 120px;
+        }
+
+        .info-side h1 {
+            font-size: 3rem;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            color: var(--ngo-primary);
+        }
+
+        .info-side p {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            margin-bottom: 32px;
+            max-width: 480px;
+        }
+
+        .features-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .feature-item {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+        }
+
+        .feature-icon {
+            width: 44px;
+            height: 44px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .feature-text h4 {
+            margin-bottom: 4px;
+            font-weight: 700;
+        }
+
+        .feature-text p {
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        .form-side {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: var(--shadow-xl);
+            border: 1px solid var(--border);
+        }
+
+        .auth-toggle {
+            display: flex;
+            background: #f1f5f9;
+            padding: 6px;
+            border-radius: 12px;
+            margin-bottom: 32px;
+        }
+
+        .auth-toggle-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-muted);
+        }
+
+        .auth-toggle-btn.active {
+            background: white;
+            color: var(--ngo-primary);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 500px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+
+        .ngo-categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .cat-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .cat-checkbox:hover { background: white; }
+
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+
+        .drop-zone:hover { border-color: var(--ngo-accent); background: #f0f7ff; }
+
+        .hidden-auth { display: none; }
+
+        .form-footer {
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOAST -->
+    <div class="toast-container"></div>
+
+    <header class="ngo-header">
+        <div class="container" style="display:flex; align-items:center; justify-content:space-between">
+            <a href="index.html" class="nav-brand" style="display:flex; align-items:center; gap:12px">
+                <div class="nav-logo">🏛️</div>
+                <div>
+                    <div class="nav-title">JanSamadhan</div>
+                    <div class="nav-tagline">NGO Partner Portal</div>
+                </div>
+            </a>
+            <a href="index.html" class="btn btn-ghost btn-sm">Home</a>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="auth-layout">
+            
+            <section class="info-side">
+                <div class="badge" style="background:var(--secondary-light); color:var(--ngo-accent); margin-bottom:16px">For Non-Profits</div>
+                <h1>Partner with JanSamadhan</h1>
+                <p>Join India's leading smart grievance resolution network. Empower your NGO to drive real impact in your community.</p>
+                
+                <div class="features-list">
+                    <div class="feature-item">
+                        <div class="feature-icon">🔍</div>
+                        <div class="feature-text">
+                            <h4>Direct Assignment</h4>
+                            <p>Get government-vetted grievances assigned directly based on your expertise.</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🛡️</div>
+                        <div class="feature-text">
+                            <h4>Government Recognition</h4>
+                            <p>Formalize your social work with state-level resolution certification.</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">📊</div>
+                        <div class="feature-text">
+                            <h4>Impact Analytics</h4>
+                            <p>Track your organization's performance and impact with automated reporting.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="form-side">
+                <div class="auth-toggle">
+                    <button class="auth-toggle-btn active" onclick="switchMode('login')">Login</button>
+                    <button class="auth-toggle-btn" onclick="switchMode('register')">Register NGO</button>
+                </div>
+
+                <!-- LOGIN FORM -->
+                <div id="loginSection">
+                    <h3 style="margin-bottom:8px">Welcome Back</h3>
+                    <p style="color:var(--text-muted); margin-bottom:24px; font-size:0.9rem">Access your NGO dashboard</p>
+                    
+                    <form onsubmit="handleNGOPortalAuth(event, 'login')">
+                        <div class="form-group">
+                            <label class="form-label">Office Email</label>
+                            <input type="email" class="form-control" id="loginEmail" placeholder="ngo@example.org" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" id="loginPass" placeholder="••••••••" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" id="loginBtn">Login to Portal</button>
+                    </form>
+                </div>
+
+                <!-- REGISTER FORM -->
+                <div id="registerSection" class="hidden-auth">
+                    <h3 style="margin-bottom:8px">Join the Network</h3>
+                    <p style="color:var(--text-muted); margin-bottom:24px; font-size:0.9rem">Submit your registration for verification</p>
+                    
+                    <form onsubmit="handleNGOPortalAuth(event, 'register')">
+                        <div class="form-group">
+                            <label class="form-label">NGO / Organization Name</label>
+                            <input type="text" class="form-control" id="regName" placeholder="Help Foundation" required>
+                        </div>
+
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Registration Number</label>
+                                <input type="text" class="form-control" id="regNum" placeholder="XYZ123456" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Organization Type</label>
+                                <select class="form-control" id="regType" required>
+                                    <option value="">Select Type</option>
+                                    <option>Trust</option>
+                                    <option>Society</option>
+                                    <option>Section 8 Company</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Expertise Categories (Select max 3)</label>
+                            <div class="ngo-categories">
+                                <label class="cat-checkbox"><input type="checkbox" name="ngoCat" value="Health" onchange="limitChecks(this)"> Health</label>
+                                <label class="cat-checkbox"><input type="checkbox" name="ngoCat" value="Environment" onchange="limitChecks(this)"> Environment</label>
+                                <label class="cat-checkbox"><input type="checkbox" name="ngoCat" value="Education" onchange="limitChecks(this)"> Education</label>
+                                <label class="cat-checkbox"><input type="checkbox" name="ngoCat" value="Sanitation" onchange="limitChecks(this)"> Sanitation</label>
+                                <label class="cat-checkbox"><input type="checkbox" name="ngoCat" value="Disaster Relief" onchange="limitChecks(this)"> Relief</label>
+                                <label class="cat-checkbox"><input type="checkbox" name="ngoCat" value="Social Welfare" onchange="limitChecks(this)"> Welfare</label>
+                            </div>
+                        </div>
+
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Service Area (City/Region)</label>
+                                <input type="text" class="form-control" id="regArea" placeholder="e.g., Mumbai North" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Primary Email</label>
+                                <input type="email" class="form-control" id="regEmail" placeholder="contact@ngo.org" required>
+                            </div>
+                        </div>
+
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Contact Person</label>
+                                <input type="text" class="form-control" id="regContact" placeholder="Full Name" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="regPhone" placeholder="10-digit mobile" maxlength="10" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Office Address</label>
+                            <textarea class="form-control" id="regAddr" rows="2" placeholder="Complete address..." required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" id="regPass" placeholder="Min 8 characters" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Verification Document (PDF/JPG/PNG)</label>
+                            <div class="drop-zone" id="regDropZone" onclick="document.getElementById('regFile').click()">
+                                <div id="regFileLabel">
+                                    <span style="font-size:1.5rem">📄</span><br>
+                                    Click to upload proof
+                                </div>
+                            </div>
+                            <input type="file" id="regFile" hidden accept=".pdf,.jpg,.jpeg,.png" onchange="handleNGOPortalFile(this)">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100" id="regBtn">Register for Verification</button>
+                    </form>
+                </div>
+
+                <div class="form-footer">
+                    🔒 Secure government-encrypted portal. All registration documents are stored under PDPA guidelines.
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Chatbot Widget -->
+    <div id="chatbot-widget">
+        <button class="chatbot-toggle" id="chatbotToggle">🤖</button>
+        <div class="chatbot-window" id="chatbotWindow">
+            <div class="chat-header">
+                <div class="chat-avatar">🤖</div>
+                <div>
+                    <div class="chat-name">JanBot</div>
+                    <div class="chat-status">● NGO Assistant</div>
+                </div>
+                <button class="chat-close" id="chatClose">✕</button>
+            </div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-suggestions">
+                <button class="chat-suggestion">How to verify?</button>
+                <button class="chat-suggestion">Documents needed?</button>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Ask JanBot...">
+                <button class="chat-send" id="chatSend">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/chatbot.js"></script>
+    <script>
+        function switchMode(mode) {
+            const login = document.getElementById('loginSection');
+            const register = document.getElementById('registerSection');
+            const btns = document.querySelectorAll('.auth-toggle-btn');
+            
+            if (mode === 'login') {
+                login.classList.remove('hidden-auth');
+                register.classList.add('hidden-auth');
+                btns[0].classList.add('active');
+                btns[1].classList.remove('active');
+            } else {
+                login.classList.add('hidden-auth');
+                register.classList.remove('hidden-auth');
+                btns[0].classList.remove('active');
+                btns[1].classList.add('active');
+            }
+        }
+
+        function handleNGOPortalFile(input) {
+            const label = document.getElementById('regFileLabel');
+            const zone = document.getElementById('regDropZone');
+            if (input.files && input.files[0]) {
+                label.innerHTML = `<div style="font-size:1.5rem">✅</div><div style="font-weight:600; color:var(--success)">${input.files[0].name}</div>`;
+                zone.style.borderColor = 'var(--success)';
+            }
+        }
+
+        function limitChecks(cb) {
+            const checks = document.querySelectorAll('input[name="ngoCat"]:checked');
+            if (checks.length > 3) {
+                cb.checked = false;
+                showToast("Maximum 3 categories allowed.", "warning");
+            }
+        }
+
+        async function handleNGOPortalAuth(e, mode) {
+            e.preventDefault();
+            const btn = mode === 'login' ? document.getElementById('loginBtn') : document.getElementById('regBtn');
+            const original = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+
+            try {
+                if (mode === 'login') {
+                    const email = document.getElementById('loginEmail').value;
+                    const password = document.getElementById('loginPass').value;
+                    const res = await window.JanSamadhanAPI.login({ email, password });
+                    if (res.role !== 'ngo') throw new Error("Please use an NGO account.");
+                    showToast("Login successful!", "success");
+                    setTimeout(() => window.location.href = 'ngo.html', 800);
+                } else {
+                    const categories = Array.from(document.querySelectorAll('input[name="ngoCat"]:checked')).map(cb => cb.value);
+                    if (categories.length === 0) throw new Error("Select at least one category.");
+                    
+                    const fileInput = document.getElementById('regFile');
+                    if (!fileInput.files || !fileInput.files[0]) {
+                        throw new Error("Please upload your Registration Certificate.");
+                    }
+
+                    showToast("Uploading certificate...", "info");
+                    const documentUrl = await window.JanSamadhanAPI.uploadFileDirectly(fileInput.files[0]);
+
+                    const data = {
+                        name: document.getElementById('regName').value,
+                        email: document.getElementById('regEmail').value,
+                        password: document.getElementById('regPass').value,
+                        registration_number: document.getElementById('regNum').value,
+                        organization_type: document.getElementById('regType').value,
+                        categories: categories,
+                        service_area: document.getElementById('regArea').value,
+                        contact_person: document.getElementById('regContact').value,
+                        phone: document.getElementById('regPhone').value,
+                        address: document.getElementById('regAddr').value,
+                        document_url: documentUrl
+                    };
+                    
+                    await window.JanSamadhanAPI.registerNGO(data);
+                    showToast("Application submitted! Redirecting to login...", "success");
+                    setTimeout(() => switchMode('login'), 1500);
+                }
+            } catch (err) {
+                showToast(err.message, "error");
+                btn.disabled = false;
+                btn.textContent = original;
+            }
+        }
+    </script>
+</body>
+</html>

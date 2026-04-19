@@ -905,128 +905,7 @@
         No account? <a href="#" onclick="setAuthMode('signup')"
           style="color:var(--primary-light);font-weight:600">Register as Citizen →</a>
       </p>
-  <!-- ════════════ NGO PARTNER PORTAL MODAL ════════════ -->
-  <div class="modal-overlay" id="ngoPartnerModal">
-    <div class="modal-box" style="width:100%; max-width:650px">
-      <div class="modal-header" style="background:var(--bg-alt); margin:-24px -24px 20px -24px; padding:24px; border-radius:12px 12px 0 0">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div style="font-size:2rem; background:#fff; width:50px; height:50px; display:flex; align-items:center; justify-content:center; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05)">🤝</div>
-          <div>
-            <h3 style="margin:0">NGO Partner Portal</h3>
-            <p style="font-size:.85rem; margin:0; opacity:.7" id="ngoPortalSub">Access your resolution dashboard or join as a partner</p>
-          </div>
-        </div>
-        <button class="modal-close" onclick="closeModal('ngoPartnerModal')">✕</button>
-      </div>
-
-      <!-- NGO Auth Tabs -->
-      <div style="display:flex; margin-bottom:24px; background:var(--bg-alt); padding:4px; border-radius:10px">
-        <button class="auth-mode-tab active" id="ngoModeLogin" onclick="toggleNGOAuth('login')" style="flex:1; border:none; border-radius:8px">Login</button>
-        <button class="auth-mode-tab" id="ngoModeSignup" onclick="toggleNGOAuth('signup')" style="flex:1; border:none; border-radius:8px">Apply for Partnership</button>
-      </div>
-
-      <!-- NGO LOGIN FORM -->
-      <form id="ngoLoginForm" onsubmit="handleAuth(event)">
-        <div class="form-group">
-          <label class="form-label">Authorized Email</label>
-          <input type="email" class="form-control" id="ngoLoginEmail" placeholder="verified@org.com" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Password</label>
-          <input type="password" class="form-control" id="ngoLoginPass" placeholder="••••••••" required>
-        </div>
-        <button type="submit" class="btn btn-primary w-full" style="height:48px; font-weight:600">🔑 Enter Partner Portal</button>
-      </form>
-
-      <!-- NGO SIGNUP FORM (Hidden by default) -->
-      <form id="ngoSignupForm" onsubmit="handleNGORegister(event)" style="display:none">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:15px">
-          <div class="form-group">
-            <label class="form-label">Organization Name <span class="req">*</span></label>
-            <input type="text" class="form-control" id="ngoRegName" placeholder="Legally registered name" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Reg. Number <span class="req">*</span></label>
-            <input type="text" class="form-control" id="ngoRegNum" placeholder="e.g. MH/2023/12345" required>
-          </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:15px">
-          <div class="form-group">
-            <label class="form-label">Organization Type <span class="req">*</span></label>
-            <select class="form-control" id="ngoRegType" required>
-              <option value="" disabled selected>Select type...</option>
-              <option value="Trust">Trust (Charitable)</option>
-              <option value="Society">Registered Society</option>
-              <option value="Section 8">Section 8 Company</option>
-              <option value="International">International NGO</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Primary Service Area <span class="req">*</span></label>
-            <input type="text" class="form-control" id="ngoRegArea" placeholder="City or District" required>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Expertise Categories (Max 3) <span class="req">*</span></label>
-          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; background:var(--bg-alt); padding:12px; border-radius:10px; border:1px solid var(--border)">
-            <label style="font-size:.8rem; display:flex; align-items:center; gap:6px"><input type="checkbox" name="ngoCat" value="Healthcare" onchange="limitChecks(this)"> Health</label>
-            <label style="font-size:.8rem; display:flex; align-items:center; gap:6px"><input type="checkbox" name="ngoCat" value="Environment" onchange="limitChecks(this)"> Environment</label>
-            <label style="font-size:.8rem; display:flex; align-items:center; gap:6px"><input type="checkbox" name="ngoCat" value="Infrastructure" onchange="limitChecks(this)"> Infrastructure</label>
-            <label style="font-size:.8rem; display:flex; align-items:center; gap:6px"><input type="checkbox" name="ngoCat" value="Water Supply" onchange="limitChecks(this)"> Water Supply</label>
-            <label style="font-size:.8rem; display:flex; align-items:center; gap:6px"><input type="checkbox" name="ngoCat" value="Education" onchange="limitChecks(this)"> Education</label>
-            <label style="font-size:.8rem; display:flex; align-items:center; gap:6px"><input type="checkbox" name="ngoCat" value="Social Welfare" onchange="limitChecks(this)"> Social Welfare</label>
-
-          </div>
-          <p style="font-size:.7rem; color:var(--text-muted); margin-top:6px">Select the domains where you have field capability.</p>
-        </div>
-
-        <div style="display:grid; grid-template-columns:1.2fr 1fr; gap:20px; margin-bottom:15px">
-          <div class="form-group">
-            <label class="form-label">Contact Person Name <span class="req">*</span></label>
-            <input type="text" class="form-control" id="ngoRegContact" placeholder="Full name of representative" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Mobile Number <span class="req">*</span></label>
-            <input type="tel" class="form-control" id="ngoRegPhone" placeholder="10-digit primary contact" required>
-          </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:15px">
-          <div class="form-group">
-            <label class="form-label">Work Email <span class="req">*</span></label>
-            <input type="email" class="form-control" id="ngoRegEmail" placeholder="Official email address" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Access Password <span class="req">*</span></label>
-            <input type="password" class="form-control" id="ngoRegPass" placeholder="Min 8 characters" required>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Office Address <span class="req">*</span></label>
-          <textarea class="form-control" id="ngoRegAddress" placeholder="Full physical address" required style="height:80px; resize:none"></textarea>
-        </div>
-
-        <div class="form-group">
-           <label class="form-label">Registration Certificate (PDF/JPG) <span class="req">*</span></label>
-
-           <div style="position:relative; border:2px dashed var(--border); border-radius:10px; padding:20px; text-align:center; transition:all .3s" id="ngoDropZone">
-             <input type="file" id="ngoRegDoc" required accept=".pdf,.jpg,.jpeg,.png" style="position:absolute; inset:0; opacity:0; cursor:pointer" onchange="updateNGOFileName(this)">
-             <div id="ngoFileLabel">
-               <div style="font-size:1.5rem">📄</div>
-               <div style="font-weight:600; font-size:.9rem">Click to upload or drag & drop</div>
-               <div style="font-size:.75rem; color:var(--text-muted)">Valid registration papers required for verification</div>
-             </div>
-           </div>
-        </div>
-
-        <button type="submit" class="btn btn-primary w-full" id="ngoSubmitBtn" style="height:48px; font-weight:600">📝 Send Application for Verification</button>
-        <p style="text-align:center; font-size:.75rem; color:var(--text-muted); margin-top:12px">By applying, you agree to comply with the JanSamadhan resolution SLAs.</p>
-      </form>
-    </div>
-  </div>
+  <!-- NGO Partner Portal migrated to ngo-portal.html -->
 
 
   <!-- ════════════════════════════════════════════
@@ -1226,8 +1105,8 @@
     function setLoginRole(role) {
       console.log("👤 Setting role to:", role);
       if (role === 'ngo') {
-          // Direct switch to specialized NGO portal without flickering
-          openModal('ngoPartnerModal');
+          // Redirect to the new dedicated NGO Portal page
+          window.location.href = 'ngo-portal.html';
           return;
       }
       window.JanSamadhanAuth.role = role;
