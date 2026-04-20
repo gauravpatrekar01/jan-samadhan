@@ -11,6 +11,7 @@
 
     <!-- Main Styles -->
     <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/heatmap.css">
 
     <!-- Leaflet Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -21,8 +22,15 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.1/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet.markercluster@1.5.1/dist/leaflet.markercluster.js"></script>
 
+    <!-- Heatmap.js for heat layer visualization -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/heatmap.js/2.0.5/heatmap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-heat/1.0.5/leaflet-heat.min.js"></script>
+
     <!-- Map Styles -->
     <link rel="stylesheet" href="css/map.css">
+    
+    <!-- Heatmap Advanced Manager -->
+    <script src="js/heatmap-advanced.js"></script>
 
     <style>
         body {
@@ -457,16 +465,42 @@
          * Initialize map and load complaints
          */
         async function initializeMap() {
-            mapManager = new MapManager('dashboardMap', {
-                defaultZoom: 11,
-                defaultCity: 'Nashik',
-                defaultLat: 19.9975,
-                defaultLng: 73.7898,
-                markerColor: '#4f46e5'
-            });
+            const mapContainer = document.getElementById('dashboardMap');
+            
+            try {
+                // Check if Leaflet is loaded
+                if (typeof L === 'undefined') {
+                    throw new Error('Leaflet library not loaded. Check your internet connection.');
+                }
 
-            console.log('✓ Map initialized');
-            await loadComplaints();
+                if (!mapContainer) {
+                    throw new Error('Map container with ID "dashboardMap" not found');
+                }
+
+                // Use the new Advanced Heatmap Manager
+                mapManager = new AdvancedHeatmapManager('dashboardMap', {
+                    defaultCenter: [19.9975, 73.7898],
+                    defaultZoom: 11
+                });
+
+                // Initialize and load data
+                await mapManager.initialize();
+                await mapManager.loadData();
+                
+                console.log('✓ Advanced Heatmap Map initialized');
+            } catch (err) {
+                console.error('❌ Map initialization failed:', err);
+                const errorMsg = err.message || 'Unknown error occurred';
+                if (mapContainer) {
+                    mapContainer.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--danger);flex-direction:column;gap:10px;padding:20px;text-align:center">
+                        <div style="font-size:2rem">⚠️</div>
+                        <div style="font-weight:600">Map failed to load</div>
+                        <div style="font-size:0.85rem;color:var(--text-muted)">${errorMsg}</div>
+                        <button class="btn btn-sm btn-outline" onclick="initializeMap()" style="margin-top:10px">🔄 Retry</button>
+                    </div>`;
+                }
+                showToast(errorMsg, 'error');
+            }
         }
 
         /**

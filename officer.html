@@ -11,7 +11,19 @@
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧑‍💼</text></svg>">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/heatmap.css">
+    <!-- Leaflet Map Library -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <!-- Leaflet MarkerCluster -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/MarkerCluster.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/MarkerCluster.Default.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/leaflet.markercluster.min.js"></script>
+    <!-- Heatmap.js for heat layer visualization -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/heatmap.js/2.0.5/heatmap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-heat/1.0.5/leaflet-heat.min.js"></script>
+    <script src="js/heatmap-advanced.js"></script>
 </head>
 
 <body>
@@ -209,8 +221,12 @@
                 <div class="page-header">
                     <div class="page-title">🗺️ Complaint Map</div>
                 </div>
-                <div class="card">
-                    <div class="dummy-map" id="officerMap" style="height:420px"></div>
+                <!-- Heatmap Statistics Container -->
+                <div id="heatmapStats" style="margin-bottom: 20px"></div>
+                
+                <!-- Map Container -->
+                <div class="card" style="padding:0;overflow:hidden;border-radius:var(--radius-lg)">
+                    <div id="officerMap" style="height:500px;width:100%"></div>
                 </div>
             </div>
 
@@ -373,7 +389,7 @@
             document.getElementById('topbarTitle').textContent = navEl?.textContent?.trim() || id;
             closeSidebar();
             if (id === 'analytics') initAnalytics();
-            if (id === 'mapView') renderDummyMap('officerMap', window.JanSamadhan.getPriorityQueue({}));
+            if (id === 'mapView') initOfficerMap();
             if (id === 'allComplaints') loadAllComplaints();
             if (id === 'escalations') loadEscalations();
             if (id === 'notices') loadOfficerNotices();
@@ -563,6 +579,44 @@
         async function quickEscalate(gid) {
             // Backend doesn't have an explicit 'escalate' endpoint yet, but we could update priority to emergency
             showToast('Escalation logic to be implemented in backend', 'info');
+        }
+
+        async function initOfficerMap() {
+            const mapContainer = document.getElementById('officerMap');
+            
+            if (!mapContainer) {
+                console.error('Map container not found');
+                return;
+            }
+
+            try {
+                // Check if Leaflet is loaded
+                if (typeof L === 'undefined') {
+                    throw new Error('Leaflet library not loaded. Check your internet connection.');
+                }
+
+                // Initialize the Advanced Heatmap Manager for officer view
+                if (!window.officerHeatmapManager) {
+                    window.officerHeatmapManager = new AdvancedHeatmapManager('officerMap', {
+                        defaultCenter: [19.5937, 75.7164],
+                        defaultZoom: 6
+                    });
+                    
+                    // Initialize and load data
+                    await window.officerHeatmapManager.initialize();
+                    await window.officerHeatmapManager.loadData();
+                }
+                
+            } catch (err) {
+                console.error('❌ Map initialization error:', err);
+                const errorMsg = err.message || 'Unknown error occurred';
+                mapContainer.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--danger);flex-direction:column;gap:10px;padding:20px;text-align:center">
+                    <div style="font-size:2rem">⚠️</div>
+                    <div style="font-weight:600">Map failed to load</div>
+                    <div style="font-size:0.85rem;color:var(--text-muted)">${errorMsg}</div>
+                    <button class="btn btn-sm btn-outline" onclick="initOfficerMap()" style="margin-top:10px">🔄 Retry</button>
+                </div>`;
+            }
         }
 
         async function loadAllComplaints() {

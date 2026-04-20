@@ -10,6 +10,18 @@
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👤</text></svg>">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/heatmap.css">
+    <!-- Leaflet Map Library -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <!-- Leaflet MarkerCluster -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/MarkerCluster.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/MarkerCluster.Default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/leaflet.markercluster.min.js"></script>
+    <!-- Heatmap.js for heat layer visualization -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/heatmap.js/2.0.5/heatmap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-heat/1.0.5/leaflet-heat.min.js"></script>
+    <script src="js/heatmap-advanced.js"></script>
 </head>
 
 <body>
@@ -184,13 +196,17 @@
                         <div class="page-subtitle">View complaint locations across the city</div>
                     </div>
                 </div>
-                <div class="card">
-                    <div class="dummy-map" id="citizenMap" style="height:420px"></div>
-                    <div style="margin-top:16px;font-size:.85rem;color:var(--text-muted)">
+                <!-- Heatmap Statistics Container -->
+                <div id="heatmapStats" style="margin-bottom: 20px"></div>
+                
+                <!-- Map Container -->
+                <div class="card" style="padding:0;overflow:hidden;border-radius:var(--radius-lg);margin-bottom:16px">
+                    <div id="citizenMap" style="height:500px;width:100%"></div>
+                    <div style="padding:16px;border-top:1px solid var(--border);font-size:.85rem;color:var(--text-muted)">
                         🔴 Emergency &nbsp; 🟠 High &nbsp; 🟡 Medium &nbsp; 🟢 Low &nbsp; | Click markers for details
                     </div>
                 </div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-top:16px"
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px"
                     id="regionStats"></div>
             </div>
 
@@ -551,18 +567,41 @@
 
         // ── Map ──
         async function initMapPage() {
-            const all = await window.JanSamadhanAPI.getAllGrievances();
-            renderDummyMap('citizenMap', all);
-            const stats = await window.JanSamadhanAPI.getAnalytics();
-            const container = document.getElementById('regionStats');
-            if (container && stats.byRegion) {
-                container.innerHTML = Object.entries(stats.byRegion).map(([r, c]) => `
-      <div class="stat-card" style="--stat-color:var(--primary-light);--stat-bg:rgba(37,99,235,.08)">
-        <div class="stat-icon">📍</div>
-        <div class="stat-value">${c}</div>
-        <div class="stat-label">${r}</div>
-      </div>
-    `).join('');
+            const mapContainer = document.getElementById('citizenMap');
+            
+            if (!mapContainer) {
+                console.error('Map container not found');
+                return;
+            }
+
+            try {
+                // Check if Leaflet is loaded
+                if (typeof L === 'undefined') {
+                    throw new Error('Leaflet library not loaded. Check your internet connection.');
+                }
+
+                // Initialize the Advanced Heatmap Manager for citizen view
+                if (!window.citizenHeatmapManager) {
+                    window.citizenHeatmapManager = new AdvancedHeatmapManager('citizenMap', {
+                        defaultCenter: [19.5937, 75.7164],
+                        defaultZoom: 6,
+                        readonly: true  // Citizens can view but not edit filters
+                    });
+                    
+                    // Initialize and load data
+                    await window.citizenHeatmapManager.initialize();
+                    await window.citizenHeatmapManager.loadData();
+                }
+                
+            } catch (err) {
+                console.error('❌ Map initialization error:', err);
+                const errorMsg = err.message || 'Unknown error occurred';
+                mapContainer.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--danger);flex-direction:column;gap:10px;padding:20px;text-align:center">
+                    <div style="font-size:2rem">⚠️</div>
+                    <div style="font-weight:600">Map failed to load</div>
+                    <div style="font-size:0.85rem;color:var(--text-muted)">${errorMsg}</div>
+                    <button class="btn btn-sm btn-outline" onclick="initMapPage()" style="margin-top:10px">🔄 Retry</button>
+                </div>`;
             }
         }
 

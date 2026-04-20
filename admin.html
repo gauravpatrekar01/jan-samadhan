@@ -11,7 +11,19 @@
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/heatmap.css">
+    <!-- Leaflet Map Library -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <!-- Leaflet MarkerCluster -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/MarkerCluster.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/MarkerCluster.Default.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/leaflet.markercluster.min.js"></script>
+    <!-- Heatmap.js for heat layer visualization -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/heatmap.js/2.0.5/heatmap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-heat/1.0.5/leaflet-heat.min.js"></script>
+    <script src="js/heatmap-advanced.js"></script>
 </head>
 
 <body>
@@ -161,9 +173,15 @@
                 <div class="page-header">
                     <div class="page-title">🌡️ Region Heatmap</div>
                 </div>
-                <div class="card" style="margin-bottom:20px">
-                    <div class="dummy-map" id="adminHeatMap" style="height:400px"></div>
+                <!-- Heatmap Statistics Container -->
+                <div id="heatmapStats" style="margin-bottom: 20px"></div>
+                
+                <!-- Heatmap Container -->
+                <div class="card" style="margin-bottom:20px;padding:0;overflow:hidden;border-radius:var(--radius-lg)">
+                    <div id="adminHeatMap" style="height:500px;width:100%"></div>
                 </div>
+                
+                <!-- Regional Statistics -->
                 <h4 style="margin-bottom:12px">Complaint Count by Region</h4>
                 <div id="heatmapGrid"></div>
             </div>
@@ -596,35 +614,40 @@
         });
 
         async function initHeatmap() {
-            const container = document.getElementById('heatmapGrid');
             const mapContainer = document.getElementById('adminHeatMap');
-            if (!container) return;
+            
+            if (!mapContainer) {
+                console.error('Map container not found');
+                return;
+            }
 
             try {
-                const stats = await window.JanSamadhanAPI.getAnalytics();
-                const regions = stats.by_region || {};
-
-                if (mapContainer) {
-                    mapContainer.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);flex-direction:column;gap:15px">
-                        <div style="font-size:3rem">🗺️</div>
-                        <div style="text-align:center">Interactive Heatmap loaded with ${Object.keys(regions).length} active regions.<br/><small>Spatial Query Engine Active</small></div>
-                    </div>`;
+                // Check if Leaflet is loaded
+                if (typeof L === 'undefined') {
+                    throw new Error('Leaflet library not loaded. Check your internet connection.');
                 }
 
-                const regionEntries = Object.entries(regions).sort((a, b) => b[1] - a[1]);
-                container.innerHTML = `<div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(200px, 1fr))">` +
-                    regionEntries.map(([name, count]) => `
-                        <div class="card" style="padding:15px;display:flex;justify-content:between;align-items:center">
-                            <div>
-                                <div style="font-weight:700;font-size:1rem">${name}</div>
-                                <div style="font-size:.8rem;color:var(--text-muted)">Region Activity</div>
-                            </div>
-                            <div class="badge ${count > 10 ? 'badge-emergency' : (count > 5 ? 'badge-high' : 'badge-primary')}">${count} Cases</div>
-                        </div>
-                    `).join('') + `</div>`;
-
+                // Initialize the Advanced Heatmap Manager
+                if (!window.adminHeatmapManager) {
+                    window.adminHeatmapManager = new AdvancedHeatmapManager('adminHeatMap', {
+                        defaultCenter: [19.5937, 75.7164],
+                        defaultZoom: 6
+                    });
+                    
+                    // Initialize and load data
+                    await window.adminHeatmapManager.initialize();
+                    await window.adminHeatmapManager.loadData();
+                }
+                
             } catch (err) {
-                container.innerHTML = `<div style="color:var(--danger)">Failed to load region analytics</div>`;
+                console.error('❌ Heatmap initialization error:', err);
+                const errorMsg = err.message || 'Unknown error occurred';
+                mapContainer.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--danger);flex-direction:column;gap:10px;padding:20px;text-align:center">
+                    <div style="font-size:2rem">⚠️</div>
+                    <div style="font-weight:600">Heatmap failed to load</div>
+                    <div style="font-size:0.85rem;color:var(--text-muted)">${errorMsg}</div>
+                    <button class="btn btn-sm btn-outline" onclick="initHeatmap()" style="margin-top:10px">🔄 Retry</button>
+                </div>`;
             }
         }
 
