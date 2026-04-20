@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/heatmap.css">
+    <link rel="stylesheet" href="css/analytics.css">
     <!-- Leaflet Map Library -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
     <!-- Leaflet MarkerCluster -->
@@ -189,30 +190,39 @@
             <div class="dash-page" id="page-analytics">
                 <div class="page-header">
                     <div>
-                        <div class="page-title">📊 Analytics Overview</div>
-                        <div class="page-subtitle">Mini analytics dashboard for your assigned complaints</div>
+                        <div class="page-title">📊 My Performance Analytics</div>
+                        <div class="page-subtitle">Personal performance metrics and complaint management dashboard</div>
                     </div>
                 </div>
-                <div class="stats-grid" id="analyticsStats"><!-- Dynamic --></div>
-                <div class="charts-grid">
-                    <div class="chart-card">
-                        <div class="chart-title">🗂️ Category Distribution</div>
-                        <div class="chart-wrap"><canvas id="offCatPie"></canvas></div>
-                    </div>
-                    <div class="chart-card">
-                        <div class="chart-title">🎯 Priority Distribution</div>
-                        <div class="chart-wrap"><canvas id="offPriorityBar"></canvas></div>
-                    </div>
-                    <div class="chart-card">
-                        <div class="chart-title">📈 Status Breakdown</div>
-                        <div class="chart-wrap"><canvas id="offStatusPie"></canvas></div>
-                    </div>
+                
+                <!-- Officer KPIs -->
+                <div class="stats-grid" id="officerAnalyticsKPIs"></div>
+
+                <div class="section-divider" style="margin: 40px 0 30px; width: 100%"></div>
+
+                <!-- Priority Queue Section -->
+                <div style="margin-bottom: 32px">
+                    <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 20px">⚡ Your Priority Queue</h3>
+                    <div id="officerPriorityQueue"></div>
                 </div>
 
-                <!-- Priority count table -->
-                <div class="card" style="margin-top:4px">
-                    <h4 style="margin-bottom:16px">Priority Count Breakdown</h4>
-                    <div id="priorityCountTable"></div>
+                <!-- Performance Chart Section -->
+                <div style="margin-top: 48px; margin-bottom: 32px">
+                    <h3 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 24px">📈 Performance Trends</h3>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:24px">
+                        <div class="card" style="padding: 20px">
+                            <h4 style="margin-bottom:16px; font-weight: 600">📊 Resolution Timeline</h4>
+                            <div style="height: 300px; position: relative">
+                                <canvas id="officerAnalyticsTimeline"></canvas>
+                            </div>
+                        </div>
+                        <div class="card" style="padding: 20px">
+                            <h4 style="margin-bottom:16px; font-weight: 600">🗂️ Category Breakdown</h4>
+                            <div style="height: 300px; position: relative">
+                                <canvas id="officerAnalyticsCategory"></canvas>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -374,7 +384,30 @@
     <script src="js/app.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/chatbot.js"></script>
+    <script src="js/analytics-advanced.js"></script>
     <script>
+        // ════════════════════════════════════════════════════════════
+        // ADVANCED ANALYTICS INITIALIZATION FOR OFFICERS
+        // ════════════════════════════════════════════════════════════
+        let analyticsManager = null;
+
+        async function initAdvancedAnalytics() {
+            try {
+                const user = sessionStorage.getItem('js_user') ? JSON.parse(sessionStorage.getItem('js_user')) : null;
+                analyticsManager = new AdvancedAnalyticsManager({
+                    apiBase: window.API_BASE_URL || '/api',
+                    userRole: 'officer',
+                    userId: user?.id || user?.email,
+                    refreshInterval: 30000
+                });
+                
+                await analyticsManager.initialize();
+                console.log('✅ Advanced Analytics initialized for Officer');
+            } catch (error) {
+                console.error('Analytics initialization failed:', error);
+            }
+        }
+
         // ── Sidebar ──
         function openSidebar() { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('visible'); }
         function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('visible'); }
@@ -387,8 +420,9 @@
             document.getElementById(`page-${id}`)?.classList.add('active');
             if (navEl) navEl.classList.add('active');
             document.getElementById('topbarTitle').textContent = navEl?.textContent?.trim() || id;
+            if (id === 'overview') initAdvancedAnalytics();
             closeSidebar();
-            if (id === 'analytics') initAnalytics();
+            if (id === 'analytics') initAdvancedAnalytics();  // Show advanced analytics
             if (id === 'mapView') initOfficerMap();
             if (id === 'allComplaints') loadAllComplaints();
             if (id === 'escalations') loadEscalations();

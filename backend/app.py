@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
-from routes import auth, complaints, admin, ngo
+from routes import auth, complaints, admin, ngo, analytics
 from db import db
 from config import settings
 from limiter import limiter
@@ -209,6 +209,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(complaints.router, prefix="/api/complaints", tags=["complaints"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(ngo.router, prefix="/api/ngo", tags=["ngo"])
+app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 
 # ── Static Files (Uploads Fallback) ──
 os.makedirs("static/uploads", exist_ok=True)

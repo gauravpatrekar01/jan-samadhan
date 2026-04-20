@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/heatmap.css">
+    <link rel="stylesheet" href="css/analytics.css">
     <!-- Leaflet Map Library -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
     <!-- Leaflet MarkerCluster -->
@@ -138,6 +139,37 @@
                             <span style="font-size: 1.2rem">✅</span> Success Resolutions
                         </h4>
                         <div id="recentResolved" style="display: flex; flex-direction: column; gap: 12px"></div>
+                    </div>
+                </div>
+
+                <!-- Analytics Charts -->
+                <div style="margin-top: 48px; margin-bottom: 32px">
+                    <h3 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 24px">📊 Analytics Charts</h3>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:24px">
+                        <div class="card" style="padding: 20px">
+                            <h4 style="margin-bottom:16px; font-weight: 600">📈 Complaints Over Time</h4>
+                            <div style="height: 300px; position: relative">
+                                <canvas id="adminAnalyticsTimeline"></canvas>
+                            </div>
+                        </div>
+                        <div class="card" style="padding: 20px">
+                            <h4 style="margin-bottom:16px; font-weight: 600">🗂️ Category Distribution</h4>
+                            <div style="height: 300px; position: relative">
+                                <canvas id="adminAnalyticsCategory"></canvas>
+                            </div>
+                        </div>
+                        <div class="card" style="padding: 20px">
+                            <h4 style="margin-bottom:16px; font-weight: 600">🎯 Priority Distribution</h4>
+                            <div style="height: 300px; position: relative">
+                                <canvas id="adminAnalyticsPriority"></canvas>
+                            </div>
+                        </div>
+                        <div class="card" style="padding: 20px">
+                            <h4 style="margin-bottom:16px; font-weight: 600">📊 Regional Performance</h4>
+                            <div style="height: 300px; position: relative">
+                                <canvas id="adminAnalyticsRegion"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -581,7 +613,29 @@
     <script src="js/app.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/chatbot.js"></script>
+    <script src="js/analytics-advanced.js"></script>
     <script>
+        // ════════════════════════════════════════════════════════════
+        // ADVANCED ANALYTICS INITIALIZATION
+        // ════════════════════════════════════════════════════════════
+        let analyticsManager = null;
+
+        async function initAdvancedAnalytics() {
+            try {
+                analyticsManager = new AdvancedAnalyticsManager({
+                    apiBase: window.API_BASE_URL || '/api',
+                    userRole: 'admin',
+                    userId: sessionStorage.getItem('js_user') ? JSON.parse(sessionStorage.getItem('js_user')).id : null,
+                    refreshInterval: 30000
+                });
+                
+                await analyticsManager.initialize();
+                console.log('✅ Advanced Analytics initialized for Admin');
+            } catch (error) {
+                console.error('Analytics initialization failed:', error);
+            }
+        }
+
         function openSidebar() { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('visible'); }
         function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('visible'); }
 
@@ -594,6 +648,7 @@
             document.getElementById(`page-${id}`)?.classList.add('active');
             if (navEl) { navEl.classList.add('active'); document.getElementById('topbarTitle').textContent = navEl.textContent.trim(); }
             closeSidebar();
+            if (id === 'overview') initAdvancedAnalytics();
             if (id === 'charts') initCharts();
             if (id === 'heatmap') initHeatmap();
             if (id === 'grievances') loadAdminGrievances();
