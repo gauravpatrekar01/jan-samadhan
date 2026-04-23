@@ -198,6 +198,45 @@
                 <!-- Officer KPIs -->
                 <div class="stats-grid" id="officerAnalyticsKPIs"></div>
 
+                <!-- ADD ADVANCED FILTERS HERE -->
+                <div class="card" style="margin-top: 30px; padding: 24px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); border-radius: var(--radius-lg)">
+                    <h4 style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; color: var(--text-dark);">
+                        <span><span style="font-size: 1.2rem;">🔍</span> Filter Analytics Data</span>
+                        <button class="btn btn-sm btn-outline" onclick="analyticsManager.exportData('csv')">📥 Export CSV</button>
+                    </h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                        <div>
+                            <label class="form-label" style="font-weight: 600;">Date Range</label>
+                            <select class="form-control" data-filter="days">
+                                <option value="7">Last 7 Days</option>
+                                <option value="30" selected>Last 30 Days</option>
+                                <option value="90">Last 90 Days</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-weight: 600;">Category</label>
+                            <select class="form-control" data-filter="category">
+                                <option value="">All Categories</option>
+                                <option>Water Supply</option>
+                                <option>Electricity</option>
+                                <option>Roads</option>
+                                <option>Sanitation</option>
+                                <option>Healthcare</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-weight: 600;">Priority</label>
+                            <select class="form-control" data-filter="priority">
+                                <option value="">All Priorities</option>
+                                <option value="emergency">Emergency</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="section-divider" style="margin: 40px 0 30px; width: 100%"></div>
 
                 <!-- Priority Queue Section -->

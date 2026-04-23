@@ -5,7 +5,6 @@ Provides comprehensive data-driven insights for Officers and Admins
 
 from fastapi import APIRouter, Query
 from datetime import datetime, timedelta
-from functools import lru_cache
 import json
 from pydantic import BaseModel
 from typing import Optional, List
@@ -66,7 +65,8 @@ async def admin_overview(days: int = Query(30)):
     Returns: Total complaints, resolution rate, trends, department performance
     """
     try:
-        from ..db import complaints_collection, users_collection
+        from db import db
+        complaints_collection = db.get_collection('complaints')
         
         date_filter = get_date_range_filter(days)
         
@@ -94,6 +94,9 @@ async def admin_overview(days: int = Query(30)):
             {'$sort': {'count': -1}}
         ]))
         
+        # Convert to proper dicts
+        category_dist = [{'_id': doc['_id'], 'count': doc['count']} for doc in category_dist]
+        
         # Region performance
         region_perf = list(complaints_collection.aggregate([
             {
@@ -109,31 +112,32 @@ async def admin_overview(days: int = Query(30)):
             {'$limit': 10}
         ]))
         
+        # Convert to proper dicts
+        region_perf = [{'_id': doc['_id'], 'total': doc['total'], 'resolved': doc['resolved']} for doc in region_perf]
+        
         # SLA breaches
         sla_breaches = complaints_collection.count_documents({
             'status': {'$nin': ['resolved', 'closed']},
             'createdAt': {'$lt': datetime.now() - timedelta(hours=72)}
         })
         
-        # Average resolution time
-        resolved_complaints = list(complaints_collection.aggregate([
-            {'$match': {'status': {'$in': ['resolved', 'closed']}}},
-            {
-                '$group': {
-                    '_id': None,
-                    'avg_resolution_hours': {
-                        '$avg': {
-                            '$divide': [
-                                {'$subtract': ['$updatedAt', '$createdAt']},
-                                3600000  # Convert ms to hours
-                            ]
-                        }
-                    }
-                }
-            }
-        ]))
+        # Average resolution time - using simple Python calculation
+        avg_resolution_time = 0
+        resolved_docs = list(complaints_collection.find(
+            {'status': {'$in': ['resolved', 'closed']}, 'updatedAt': {'$exists': True}, 'createdAt': {'$exists': True}},
+            {'updatedAt': 1, 'createdAt': 1}
+        ))
         
-        avg_resolution_time = resolved_complaints[0]['avg_resolution_hours'] if resolved_complaints else 0
+        if resolved_docs:
+            total_hours = 0
+            for doc in resolved_docs:
+                try:
+                    if isinstance(doc.get('updatedAt'), datetime) and isinstance(doc.get('createdAt'), datetime):
+                        delta = doc['updatedAt'] - doc['createdAt']
+                        total_hours += delta.total_seconds() / 3600
+                except:
+                    pass
+            avg_resolution_time = total_hours / len(resolved_docs) if resolved_docs else 0
         
         return {
             'success': True,
@@ -157,7 +161,8 @@ async def admin_overview(days: int = Query(30)):
 async def admin_officer_performance(limit: int = Query(20)):
     """Officer ranking leaderboard with performance metrics"""
     try:
-        from ..db import complaints_collection, users_collection
+        from db import db
+        complaints_collection = db.get_collection('complaints')
         
         # Officer performance aggregation
         officer_stats = list(complaints_collection.aggregate([
@@ -216,7 +221,8 @@ async def admin_officer_performance(limit: int = Query(20)):
 async def admin_trends(period: str = Query('daily'), days: int = Query(30)):
     """Daily/Weekly/Monthly trend analysis"""
     try:
-        from ..db import complaints_collection
+        from db import db
+        complaints_collection = db.get_collection('complaints')
         
         if period == 'daily':
             group_format = '%Y-%m-%d'
@@ -265,7 +271,8 @@ async def admin_trends(period: str = Query('daily'), days: int = Query(30)):
 async def officer_performance(officer_id: str):
     """Personal performance metrics for officers"""
     try:
-        from ..db import complaints_collection
+        from db import db
+        complaints_collection = db.get_collection('complaints')
         
         # Get officer's complaints
         total_assigned = complaints_collection.count_documents({'assigned_officer': officer_id})
@@ -274,36 +281,36 @@ async def officer_performance(officer_id: str):
             'status': {'$in': ['resolved', 'closed']}
         })
         
-        # Calculate stats
-        stats = list(complaints_collection.aggregate([
-            {'$match': {'assigned_officer': officer_id}},
-            {
-                '$group': {
-                    '_id': None,
-                    'avg_resolution_time': {
-                        '$avg': {
-                            '$cond': [
-                                {'$in': ['$status', ['resolved', 'closed']]},
-                                {'$divide': [{'$subtract': ['$updatedAt', '$createdAt']}, 3600000]},
-                                None
-                            ]
-                        }
-                    },
-                    'avg_rating': {'$avg': '$feedback.rating'},
-                    'total': {'$sum': 1},
-                    'pending': {
-                        '$sum': {'$cond': [{'$nin': ['$status', ['resolved', 'closed']]}, 1, 0]}
-                    }
-                }
-            }
-        ]))
-        
-        data = stats[0] if stats else {
+        # Calculate stats - use simple approach
+        stats = {
             'avg_resolution_time': 0,
             'avg_rating': 0,
             'total': 0,
             'pending': 0
         }
+        
+        # Get officer's documents
+        officer_docs = list(complaints_collection.find({'assigned_officer': officer_id}))
+        
+        if officer_docs:
+            ratings = []
+            total_hours = 0
+            resolved_count = 0
+            
+            for doc in officer_docs:
+                if doc.get('status') in ['resolved', 'closed'] and doc.get('updatedAt') and doc.get('createdAt'):
+                    try:
+                        delta = doc['updatedAt'] - doc['createdAt']
+                        total_hours += delta.total_seconds() / 3600
+                        resolved_count += 1
+                    except:
+                        pass
+                
+                if doc.get('feedback', {}).get('rating'):
+                    ratings.append(doc['feedback']['rating'])
+            
+            stats['avg_resolution_time'] = total_hours / resolved_count if resolved_count > 0 else 0
+            stats['avg_rating'] = sum(ratings) / len(ratings) if ratings else 0
         
         return {
             'success': True,
@@ -312,11 +319,11 @@ async def officer_performance(officer_id: str):
                 'total_assigned': total_assigned,
                 'resolved': resolved,
                 'resolution_rate': round((resolved / total_assigned * 100) if total_assigned > 0 else 0, 1),
-                'avg_resolution_time_hours': round(data.get('avg_resolution_time', 0), 1),
-                'avg_rating': round(data.get('avg_rating', 0), 1),
+                'avg_resolution_time_hours': round(stats.get('avg_resolution_time', 0), 1),
+                'avg_rating': round(stats.get('avg_rating', 0), 1),
                 'efficiency_score': round(
                     ((resolved / total_assigned) * 60 if total_assigned > 0 else 0) +
-                    ((data.get('avg_rating', 0) / 5) * 40),
+                    ((stats.get('avg_rating', 0) / 5) * 40),
                     1
                 )
             }
@@ -329,7 +336,8 @@ async def officer_performance(officer_id: str):
 async def officer_queue(officer_id: str):
     """Priority queue and SLA status for officer"""
     try:
-        from ..db import complaints_collection
+        from db import db
+        complaints_collection = db.get_collection('complaints')
         
         # Get pending complaints
         pending = list(complaints_collection.find({
@@ -364,7 +372,8 @@ async def filtered_analytics(filter_req: FilterRequest):
     Get analytics based on custom filters
     """
     try:
-        from ..db import complaints_collection
+        from db import db
+        complaints_collection = db.get_collection('complaints')
         
         filters = filter_req.dict(exclude_none=True)
         mongo_filter = {}
@@ -425,7 +434,8 @@ async def filtered_analytics(filter_req: FilterRequest):
 async def export_analytics(export_req: ExportRequest):
     """Export analytics data as CSV/JSON"""
     try:
-        from ..db import complaints_collection
+        from db import db
+        complaints_collection = db.get_collection('complaints')
         import csv
         from io import StringIO
         
@@ -444,7 +454,7 @@ async def export_analytics(export_req: ExportRequest):
                     'priority': complaint.get('priority', ''),
                     'status': complaint.get('status', ''),
                     'region': complaint.get('region', ''),
-                    'createdAt': complaint.get('createdAt', '')
+                    'createdAt': str(complaint.get('createdAt', ''))
                 })
             
             return {'content': output.getvalue(), 'format': 'csv'}
@@ -456,5 +466,117 @@ async def export_analytics(export_req: ExportRequest):
                     item['createdAt'] = item['createdAt'].isoformat()
             
             return {'success': True, 'data': data}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+
+@router.get('/admin/ngo-contribution')
+async def admin_ngo_contribution():
+    try:
+        from db import db
+        complaints_collection = db.get_collection('complaints')
+        
+        pipeline = [
+            { '$match': { 'assigned_ngo': { '$ne': None } } },
+            {
+                '$group': {
+                    '_id': '$assigned_ngo',
+                    'total_assigned': { '$sum': 1 },
+                    'resolved': {
+                        '$sum': { '$cond': [{ '$in': ['$status', ['resolved', 'closed']] }, 1, 0] }
+                    }
+                }
+            },
+            {
+                '$project': {
+                    'ngo_id': '$_id',
+                    'total_assigned': 1,
+                    'resolved': 1,
+                    'success_rate': {
+                        '$round': [
+                            { '$multiply': [{ '$divide': ['$resolved', '$total_assigned'] }, 100] },
+                            1
+                        ]
+                    }
+                }
+            },
+            { '$sort': { 'success_rate': -1 } }
+        ]
+        
+        ngo_stats = list(complaints_collection.aggregate(pipeline))
+        return {'success': True, 'data': ngo_stats}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+@router.get('/admin/escalation-advanced')
+async def admin_escalation_advanced():
+    try:
+        from db import db
+        complaints_collection = db.get_collection('complaints')
+        
+        # Get count of escalating complaints and reason
+        escalated = list(complaints_collection.find({ 'escalation_level': { '$gte': 1 } }))
+        total_escalated = len(escalated)
+        unresolved_sla_breaches = len([c for c in escalated if c.get('status') not in ['resolved', 'closed']])
+        
+        return {
+            'success': True,
+            'data': {
+                'total_escalated': total_escalated,
+                'unresolved_sla_breaches': unresolved_sla_breaches,
+                'escalation_list': [
+                    {
+                        'id': str(c.get('_id')),
+                        'grievanceID': c.get('grievanceID', c.get('id')),
+                        'category': c.get('category'),
+                        'escalation_level': c.get('escalation_level'),
+                        'status': c.get('status')
+                    } for c in escalated[:50]
+                ]
+            }
+        }
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+@router.get('/admin/peak-times')
+async def admin_peak_times():
+    try:
+        from db import db
+        complaints_collection = db.get_collection('complaints')
+        
+        # Basic prediction: Group by hour of day
+        pipeline = [
+            {
+                '$project': {
+                    'hour': { '$hour': { 'date': '$createdAt', 'timezone': 'UTC' } } # MongoDB 5.0+ feature
+                }
+            },
+            {
+                '$group': {
+                    '_id': '$hour',
+                    'count': { '$sum': 1 }
+                }
+            },
+            { '$sort': { 'count': -1 } }
+        ]
+        
+        # We'll use python if '$hour' aggregation string fails due to simple schema dates
+        data = list(complaints_collection.find({}, {'createdAt': 1}))
+        hour_counts = {}
+        for d in data:
+            if isinstance(d.get('createdAt'), datetime):
+                h = d['createdAt'].hour
+                hour_counts[h] = hour_counts.get(h, 0) + 1
+                
+        sorted_hours = sorted(hour_counts.items(), key=lambda x: x[1], reverse=True)
+        peak_hours = [{'hour': f"{h:02d}:00", 'count': c} for h, c in sorted_hours[:5]]
+        
+        return {
+            'success': True,
+            'data': {
+                'peak_hours': peak_hours,
+                'prediction': f"High activity detected around {peak_hours[0]['hour'] if peak_hours else 'N/A'}"
+            }
+        }
     except Exception as e:
         return {'success': False, 'error': str(e)}

@@ -70,10 +70,13 @@ class AdvancedAnalyticsManager {
     async loadAdminDashboard() {
         console.log('📈 Loading Admin Dashboard...');
         
-        const [overview, performance, trends] = await Promise.all([
+        const [overview, performance, trends, peakTimes, ngoStats, escalations] = await Promise.all([
             this.fetchAdminOverview(),
             this.fetchOfficerPerformance(),
-            this.fetchTrends()
+            this.fetchTrends(),
+            this.fetchPeakTimes(),
+            this.fetchNGOContribution(),
+            this.fetchEscalationsAdvanced()
         ]);
 
         // Render KPI cards
@@ -84,6 +87,9 @@ class AdvancedAnalyticsManager {
         
         // Render officer leaderboard
         this.renderOfficerLeaderboard(performance);
+
+        // Render advanced ML/System insights
+        this.renderAdvancedInsights(peakTimes, ngoStats, escalations);
     }
 
     /**
@@ -163,26 +169,33 @@ class AdvancedAnalyticsManager {
             ['#3b82f6', '#10b981']
         );
 
-        // Category distribution
+        // Category distribution - robust check for proper structure
+        let categoryData = overview.category_distribution || [];
+        if (categoryData.length === 0 && overview.category_breakdown) {
+            categoryData = overview.category_breakdown;
+        }
+
         this.createBarChart(
             'adminAnalyticsCategory',
-            overview.category_distribution,
+            categoryData,
             'Complaints by Category',
             '#3b82f6'
         );
 
-        // Priority distribution
+        // Priority distribution - robust check
+        let priorityDist = overview.priority_distribution || { emergency: 0, high: 0, medium: 0, low: 0 };
         this.createPieChart(
             'adminAnalyticsPriority',
-            Object.values(overview.priority_distribution),
-            Object.keys(overview.priority_distribution).map(p => p.charAt(0).toUpperCase() + p.slice(1)),
+            Object.values(priorityDist),
+            Object.keys(priorityDist).map(p => p.charAt(0).toUpperCase() + p.slice(1)),
             'Priority Distribution'
         );
 
         // Region performance
+        let regionData = overview.region_performance || [];
         this.createHorizontalBarChart(
             'adminAnalyticsRegion',
-            overview.region_performance,
+            regionData,
             'Top Performing Regions',
             '#10b981'
         );
@@ -224,9 +237,56 @@ class AdvancedAnalyticsManager {
 
         // Insert after KPI cards
         const insertPoint = document.querySelector('.analytics-kpi-card')?.parentElement;
-        if (insertPoint) {
+        if (insertPoint && !document.querySelector('.analytics-leaderboard')) {
             insertPoint.insertAdjacentHTML('afterend', leaderboardHTML);
         }
+    }
+
+    renderAdvancedInsights(peakTimes, ngoStats, escalations) {
+        const insertPoint = document.querySelector('.analytics-leaderboard') || document.querySelector('.analytics-kpi-card')?.parentElement;
+        if (!insertPoint || document.querySelector('.advanced-insights-container')) return;
+
+        let ngoHTML = '';
+        if (ngoStats && ngoStats.length > 0) {
+            ngoHTML = `
+            <div class="card" style="padding:20px; background: rgba(59, 130, 246, 0.05); border: 1px solid #bfdbfe;">
+                <h4 style="margin-bottom:12px; color: #1e40af;">🤝 NGO Partner Impact</h4>
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <span style="color:#475569;">Top Contributor:</span> 
+                    <strong style="color:#0f172a;">${ngoStats[0].ngo_id}</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                    <span style="color:#475569;">Resolution Rate:</span> 
+                    <strong style="color:#10b981;">${ngoStats[0].success_rate}%</strong>
+                </div>
+            </div>`;
+        }
+
+        const html = `
+        <div class="advanced-insights-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 30px; margin-bottom: 30px;">
+            <div class="card" style="padding:20px; background: rgba(245, 158, 11, 0.05); border: 1px solid #fde68a;">
+                <h4 style="margin-bottom:12px; color: #b45309;">🔮 Peak Complaint Times</h4>
+                <p style="color: #78350f; font-size: 0.95rem; line-height: 1.5; margin-bottom: 8px;">
+                    ${peakTimes?.prediction || 'Analyzing system peaks...'}
+                </p>
+                <div style="font-size: 0.85rem; color: #92400e;">Recommendation: Align primary support shifts for these times.</div>
+            </div>
+            
+            <div class="card" style="padding:20px; background: rgba(239, 68, 68, 0.05); border: 1px solid #fecaca;">
+                <h4 style="margin-bottom:12px; color: #b91c1c;">⚠️ Escalation Deep Dive</h4>
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <span style="color:#475569;">Active Escalated Cases:</span> 
+                    <strong style="color:#b91c1c; font-size:1.1rem;">${escalations?.total_escalated || 0}</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                    <span style="color:#475569;">Unresolved SLA Breaches:</span> 
+                    <strong style="color:#991b1b;">${escalations?.unresolved_sla_breaches || 0}</strong>
+                </div>
+            </div>
+            ${ngoHTML}
+        </div>
+        `;
+        insertPoint.insertAdjacentHTML('afterend', html);
     }
 
     /**
@@ -558,6 +618,24 @@ class AdvancedAnalyticsManager {
             .then(r => r.data || []);
     }
 
+    async fetchPeakTimes() {
+        return await fetch(`${this.apiBase}/analytics/admin/peak-times`)
+            .then(r => r.json())
+            .then(r => r.data || {});
+    }
+
+    async fetchNGOContribution() {
+        return await fetch(`${this.apiBase}/analytics/admin/ngo-contribution`)
+            .then(r => r.json())
+            .then(r => r.data || []);
+    }
+
+    async fetchEscalationsAdvanced() {
+        return await fetch(`${this.apiBase}/analytics/admin/escalation-advanced`)
+            .then(r => r.json())
+            .then(r => r.data || {});
+    }
+
     /**
      * Filtering system
      */
@@ -565,6 +643,17 @@ class AdvancedAnalyticsManager {
         // Add event listeners for filter controls
         document.addEventListener('change', (e) => {
             if (e.target.matches('[data-filter]')) {
+                const filterKey = e.target.getAttribute('data-filter');
+                const value = e.target.value;
+                if (filterKey === 'days') {
+                    this.filters.dateRange = { start: this.getDateBefore(parseInt(value)), end: new Date() };
+                } else {
+                    if (value) {
+                        this.filters[filterKey] = [value];
+                    } else {
+                        delete this.filters[filterKey];
+                    }
+                }
                 this.applyFilters();
             }
         });
@@ -572,15 +661,40 @@ class AdvancedAnalyticsManager {
 
     async applyFilters() {
         try {
+            const bodyPayload = { ...this.filters };
+            // Ensure date strings are sent if JS Dates
+            if (bodyPayload.dateRange) {
+                bodyPayload.date_range = {
+                    start: bodyPayload.dateRange.start.toISOString(),
+                    end: bodyPayload.dateRange.end.toISOString()
+                };
+                delete bodyPayload.dateRange;
+            }
+
             const response = await fetch(`${this.apiBase}/analytics/filtered`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filters: this.filters })
+                body: JSON.stringify(bodyPayload)
             });
             
             const result = await response.json();
-            if (result.success) {
-                this.loadDashboard();
+            if (result.success && result.data) {
+                // Update basic stats temporarily
+                const data = result.data;
+                const container = document.getElementById(this.userRole === 'admin' ? 'adminAnalyticsKPIs' : 'officerAnalyticsKPIs') || document.getElementById('adminStats');
+                if (container) {
+                    // Update only resolution rate and total and pending, as filtering drops advanced fields
+                    const currentHTML = container.innerHTML;
+                    // For simplicity, refresh standard dashboard to refetch with actual query params if backend supports it
+                    // The backend does support it, but it only returns total, resolved, resolution_rate, category_breakdown.
+                }
+
+                // If admin, update category chart directly
+                if (this.userRole === 'admin' && data.category_breakdown) {
+                    this.createBarChart('adminAnalyticsCategory', data.category_breakdown, 'Filtered Complaints by Category', '#3b82f6');
+                } else if (this.userRole === 'officer' && data.category_breakdown) {
+                    this.createBarChart('officerAnalyticsCategory', data.category_breakdown, 'Filtered Case Status/Category', '#3b82f6');
+                }
             }
         } catch (error) {
             console.error('Filter application failed:', error);
