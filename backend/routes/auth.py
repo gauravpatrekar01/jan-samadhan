@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from schemas.user import UserCreate, UserLogin, NGORegistrationSchema
 from db import db
 from security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token, verify_token_type
@@ -9,9 +9,24 @@ from government_registry import verify_citizen_record
 from errors import APIError, AuthenticationError, ValidationError, ConflictError, TokenExpiredError
 from datetime import datetime, timezone
 from services.s3_service import s3_service
+from dependencies import get_current_user
 
 router = APIRouter()
 
+@router.get("/user")
+def get_user_profile(user_payload: dict = Depends(get_current_user)):
+    email = user_payload.get("sub")
+    collection = db.get_collection("users")
+    db_user = collection.find_one({"email": email})
+    if not db_user:
+        raise AuthenticationError("User not found")
+    
+    # Return flat structure for registration-map.js compat, but also include nested pattern for other usages
+    db_user.pop("_id", None)
+    db_user.pop("password", None)
+    response_data = {"success": True, "data": db_user}
+    response_data.update(db_user) # Add flat properties for registration-map.js
+    return response_data
 
 @router.post("/register", status_code=201)
 @limiter.limit("5/minute")

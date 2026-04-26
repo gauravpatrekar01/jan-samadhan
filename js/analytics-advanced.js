@@ -704,29 +704,41 @@ class AdvancedAnalyticsManager {
     /**
      * Export functionality
      */
-    async exportData(format = 'json') {
+    async exportData(format = 'csv') {
         try {
+            const bodyPayload = { ...this.filters };
+            // Ensure date strings are sent if JS Dates
+            if (bodyPayload.dateRange) {
+                bodyPayload.date_range = {
+                    start: bodyPayload.dateRange.start.toISOString(),
+                    end: bodyPayload.dateRange.end.toISOString()
+                };
+                delete bodyPayload.dateRange;
+            }
+
             const response = await fetch(`${this.apiBase}/analytics/export`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    filters: this.filters,
+                    filters: bodyPayload,
                     format: format
                 })
             });
 
-            if (format === 'csv') {
-                const blob = await response.blob();
-                this.downloadFile(blob, 'analytics.csv');
-            } else {
-                const data = await response.json();
+            const result = await response.json();
+            
+            if (format === 'csv' && result.content) {
+                const blob = new Blob([result.content], { type: 'text/csv;charset=utf-8;' });
+                this.downloadFile(blob, `jansamadhan-analytics-${new Date().toISOString().split('T')[0]}.csv`);
+            } else if (result.success && result.data) {
                 this.downloadFile(
-                    new Blob([JSON.stringify(data, null, 2)]),
-                    'analytics.json'
+                    new Blob([JSON.stringify(result.data, null, 2)], { type: 'application/json' }),
+                    `jansamadhan-analytics-${new Date().toISOString().split('T')[0]}.json`
                 );
             }
         } catch (error) {
             console.error('Export failed:', error);
+            this.showError('Export failed. Please try again.');
         }
     }
 

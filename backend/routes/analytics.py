@@ -281,21 +281,27 @@ async def officer_performance(officer_id: str):
             'status': {'$in': ['resolved', 'closed']}
         })
         
-        # Calculate stats - use simple approach
+        pending = total_assigned - resolved
+        
+        # Calculate stats
         stats = {
+            'total_assigned': total_assigned,
+            'resolved': resolved,
+            'pending': pending,
+            'resolution_rate': round((resolved / total_assigned * 100) if total_assigned > 0 else 0, 1),
             'avg_resolution_time': 0,
             'avg_rating': 0,
-            'total': 0,
-            'pending': 0
+            'avg_response_time': 0
         }
         
-        # Get officer's documents
+        # Get officer's documents for detailed stats
         officer_docs = list(complaints_collection.find({'assigned_officer': officer_id}))
         
         if officer_docs:
             ratings = []
             total_hours = 0
             resolved_count = 0
+            response_times = []
             
             for doc in officer_docs:
                 if doc.get('status') in ['resolved', 'closed'] and doc.get('updatedAt') and doc.get('createdAt'):
@@ -578,5 +584,260 @@ async def admin_peak_times():
                 'prediction': f"High activity detected around {peak_hours[0]['hour'] if peak_hours else 'N/A'}"
             }
         }
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+
+# ════════════════════════════════════════════════════════════════
+# ADVANCED INTELLIGENCE & RECOMMENDATIONS
+# ════════════════════════════════════════════════════════════════
+
+@router.get('/admin/high-risk-zones')
+async def admin_high_risk_zones():
+    """Detect high-risk zones with frequent complaints"""
+    try:
+        from db import db
+        complaints_collection = db.get_collection('complaints')
+        
+        # Group complaints by region/zone
+        zone_data = list(complaints_collection.aggregate([
+            {
+                '$group': {
+                    '_id': '$region',
+                    'total_complaints': {'$sum': 1},
+                    'pending': {
+                        '$sum': {'$cond': [{'$nin': ['$status', ['resolved', 'closed']]}, 1, 0]}
+                    },
+                    'avg_resolution_time': {'$avg': 1},
+                    'emergency_count': {
+                        '$sum': {'$cond': [{'$eq': ['$priority', 'emergency']}, 1, 0]}
+                    }
+                }
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'zone': '$_id',
+                    'total_complaints': 1,
+                    'pending': 1,
+                    'emergency_count': 1,
+                    'risk_score': {
+                        '$round': [
+                            {'$add': [
+                                {'$multiply': [{'$divide': ['$emergency_count', {'$max': [1, '$total_complaints']}]}, 40]},
+                                {'$multiply': [{'$divide': ['$pending', {'$max': [1, '$total_complaints']}]}, 60]}
+                            ]}, 1
+                        ]
+                    }
+                }
+            },
+            {'$sort': {'risk_score': -1}},
+            {'$limit': 10}
+        ]))
+        
+        return {'success': True, 'data': zone_data}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+
+@router.get('/admin/underperforming-officers')
+async def admin_underperforming_officers(threshold: float = Query(50.0)):
+    """Identify underperforming officers based on resolution rate"""
+    try:
+        from db import db
+        complaints_collection = db.get_collection('complaints')
+        
+        # Get all officers with their stats
+        officers = list(complaints_collection.aggregate([
+            {'$match': {'assigned_officer': {'$ne': None}}},
+            {
+                '$group': {
+                    '_id': '$assigned_officer',
+                    'total_assigned': {'$sum': 1},
+                    'resolved': {
+                        '$sum': {'$cond': [{'$in': ['$status', ['resolved', 'closed']]}, 1, 0]}
+                    },
+                    'avg_rating': {'$avg': '$feedback.rating'},
+                    'sla_breaches': {
+                        '$sum': {'$cond': [
+                            {'$and': [
+                                {'$nin': ['$status', ['resolved', 'closed']]},
+                                {'$lt': [{'$subtract': [datetime.now(), '$createdAt']}, 72 * 3600000]}
+                            ]}, 1, 0
+                        ]}
+                    }
+                }
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'officer': '$_id',
+                    'total_assigned': 1,
+                    'resolved': 1,
+                    'resolution_rate': {'$round': [{'$multiply': [{'$divide': ['$resolved', '$total_assigned']}, 100]}, 1]},
+                    'avg_rating': {'$round': ['$avg_rating', 1]},
+                    'sla_breaches': 1
+                }
+            },
+            {'$match': {'resolution_rate': {'$lt': threshold}}},
+            {'$sort': {'resolution_rate': 1}}
+        ]))
+        
+        return {'success': True, 'data': officers, 'threshold': threshold}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+
+@router.get('/admin/resource-recommendations')
+async def admin_resource_recommendations():
+    """Recommend resource allocation based on demand"""
+    try:
+        from db import db
+        complaints_collection = db.get_collection('complaints')
+        
+        # Get category demand
+        categories = list(complaints_collection.aggregate([
+            {
+                '$group': {
+                    '_id': '$category',
+                    'total': {'$sum': 1},
+                    'pending': {
+                        '$sum': {'$cond': [{'$nin': ['$status', ['resolved', 'closed']]}, 1, 0]}
+                    },
+                    'avg_time': {'$avg': 1}
+                }
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'category': '$_id',
+                    'total': 1,
+                    'pending': 1,
+                    'avg_time': 1,
+                    'allocation_priority': {
+                        '$round': [
+                            {'$multiply': [
+                                {'$divide': ['$pending', {'$max': [1, '$total']}]}, 100
+                            ]}, 1
+                        ]
+                    }
+                }
+            },
+            {'$sort': {'allocation_priority': -1}}
+        ]))
+        
+        recommendations = []
+        for cat in categories[:5]:
+            if cat['allocation_priority'] > 30:
+                recommendations.append({
+                    'category': cat['category'],
+                    'action': 'INCREASE',
+                    'reason': f"High pending rate ({cat['allocation_priority']}%)",
+                    'priority': 'HIGH'
+                })
+            elif cat['allocation_priority'] > 15:
+                recommendations.append({
+                    'category': cat['category'],
+                    'action': 'MAINTAIN',
+                    'reason': f"Moderate activity ({cat['allocation_priority']}%)",
+                    'priority': 'MEDIUM'
+                })
+        
+        return {'success': True, 'data': recommendations, 'categories': categories}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+
+@router.get('/admin/satisfaction-analysis')
+async def admin_satisfaction_analysis():
+    """Analyze citizen satisfaction feedback"""
+    try:
+        from db import db
+        complaints_collection = db.get_collection('complaints')
+        
+        # Get satisfaction feedback
+        feedback = list(complaints_collection.find(
+            {'feedback.rating': {'$exists': True}},
+            {'feedback.rating': 1, 'feedback.satisfaction': 1, 'category': 1}
+        ))
+        
+        if not feedback:
+            return {'success': True, 'data': {'average_rating': 0, 'satisfaction_breakdown': {}}}
+        
+        ratings = [f.get('feedback', {}).get('rating', 0) for f in feedback if f.get('feedback', {}).get('rating')]
+        
+        satisfaction_counts = {}
+        for f in feedback:
+            satisfaction = f.get('feedback', {}).get('satisfaction', 'Neutral')
+            satisfaction_counts[satisfaction] = satisfaction_counts.get(satisfaction, 0) + 1
+        
+        return {
+            'success': True,
+            'data': {
+                'average_rating': round(sum(ratings) / len(ratings), 2) if ratings else 0,
+                'total_feedback': len(feedback),
+                'satisfaction_breakdown': satisfaction_counts,
+                'ratings_distribution': {
+                    '5-stars': len([r for r in ratings if r >= 4.5]),
+                    '4-stars': len([r for r in ratings if 3.5 <= r < 4.5]),
+                    '3-stars': len([r for r in ratings if 2.5 <= r < 3.5]),
+                    '2-stars': len([r for r in ratings if 1.5 <= r < 2.5]),
+                    '1-star': len([r for r in ratings if r < 1.5])
+                }
+            }
+        }
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+
+@router.get('/admin/department-performance')
+async def admin_department_performance():
+    """Compare performance across departments"""
+    try:
+        from db import db
+        complaints_collection = db.get_collection('complaints')
+        
+        # Assuming category represents department
+        dept_perf = list(complaints_collection.aggregate([
+            {
+                '$group': {
+                    '_id': '$category',
+                    'total_filed': {'$sum': 1},
+                    'resolved': {
+                        '$sum': {'$cond': [{'$in': ['$status', ['resolved', 'closed']]}, 1, 0]}
+                    },
+                    'pending': {
+                        '$sum': {'$cond': [{'$nin': ['$status', ['resolved', 'closed']]}, 1, 0]}
+                    },
+                    'avg_rating': {'$avg': '$feedback.rating'},
+                    'emergency_count': {
+                        '$sum': {'$cond': [{'$eq': ['$priority', 'emergency']}, 1, 0]}
+                    }
+                }
+            },
+            {
+                '$project': {
+                    '_id': 0,
+                    'department': '$_id',
+                    'total_filed': 1,
+                    'resolved': 1,
+                    'pending': 1,
+                    'resolution_rate': {'$round': [{'$multiply': [{'$divide': ['$resolved', '$total_filed']}, 100]}, 1]},
+                    'avg_rating': {'$round': ['$avg_rating', 1]},
+                    'emergency_count': 1,
+                    'performance_score': {
+                        '$round': [
+                            {'$add': [
+                                {'$multiply': [{'$divide': ['$resolved', '$total_filed']}, 70]},
+                                {'$multiply': [{'$divide': [{'$ifNull': ['$avg_rating', 3.5]}, 5]}, 30]}
+                            ]}, 1
+                        ]
+                    }
+                }
+            },
+            {'$sort': {'performance_score': -1}}
+        ]))
+        
+        return {'success': True, 'data': dept_perf}
     except Exception as e:
         return {'success': False, 'error': str(e)}

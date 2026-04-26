@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Officer Dashboard - Advanced Analytics | JanSamadhan</title>
+  <meta name="description" content="Performance metrics, priority queue, and regional analytics for field officers">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧑‍💼</text></svg>">
+  <link rel="stylesheet" href="css/main.css">
+  <style>
+    /* Advanced Analytics Dashboard Styles */
+    .analytics-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .analytics-title {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .analytics-controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .control-btn {
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      cursor: pointer;
+      transition: all var(--transition);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .control-btn:hover {
+      background: var(--primary-light);
+      color: #fff;
+      border-color: var(--primary-light);
+    }
+
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      text-align: center;
+      transition: all var(--transition);
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--primary-light);
+    }
+
+    .kpi-icon {
+      font-size: 2rem;
+      margin-bottom: 12px;
+    }
+
+    .kpi-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+    }
+
+    .kpi-value {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--primary-light);
+      transition: all 0.3s ease;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    /* Charts Grid */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    .chart-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+    }
+
+    .chart-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 300px;
+    }
+
+    /* Filters Section */
+    .filters-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 32px;
+    }
+
+    .filters-title {
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    .filter-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .filter-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .filter-input {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.9rem;
+      max-width: 200px;
+    }
+
+    .filter-tag {
+      display: inline-block;
+      padding: 4px 12px;
+      background: var(--primary-light);
+      color: #fff;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      margin: 4px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .filter-tag:hover {
+      background: var(--accent);
+      transform: scale(1.05);
+    }
+
+    /* Priority Queue */
+    .queue-item {
+      background: var(--bg);
+      border-left: 4px solid var(--primary-light);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      transition: all var(--transition);
+    }
+
+    .queue-item:hover {
+      transform: translateX(4px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .queue-item.priority-emergency {
+      border-left-color: var(--danger);
+      background: rgba(220, 38, 38, 0.05);
+    }
+
+    .queue-item.priority-high {
+      border-left-color: var(--warning);
+      background: rgba(217, 119, 6, 0.05);
+    }
+
+    .queue-item.priority-medium {
+      border-left-color: var(--accent);
+      background: rgba(249, 115, 22, 0.05);
+    }
+
+    .queue-item.priority-low {
+      border-left-color: var(--success);
+      background: rgba(16, 185, 129, 0.05);
+    }
+
+    .priority-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      background: var(--primary-light);
+      color: #fff;
+      min-width: 80px;
+      text-align: center;
+    }
+
+    .queue-item.priority-emergency .priority-badge {
+      background: var(--danger);
+    }
+
+    .queue-item.priority-high .priority-badge {
+      background: var(--warning);
+    }
+
+    .queue-item.priority-medium .priority-badge {
+      background: var(--accent);
+    }
+
+    .queue-item.priority-low .priority-badge {
+      background: var(--success);
+    }
+
+    .complaint-info {
+      flex: 1;
+    }
+
+    .complaint-id {
+      font-weight: 700;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+
+    .complaint-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .sla-status {
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 0.85rem;
+      min-width: 100px;
+      text-align: center;
+    }
+
+    .sla-status.ok {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+    }
+
+    .sla-status.breach {
+      background: rgba(220, 38, 38, 0.1);
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    /* Performance Metrics */
+    .metrics-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+    }
+
+    .metric-item {
+      text-align: center;
+      padding: 12px;
+      background: var(--bg);
+      border-radius: var(--radius-md);
+    }
+
+    .metric-value {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--primary-light);
+    }
+
+    .metric-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      text-transform: uppercase;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .analytics-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .kpi-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      }
+
+      .chart-wrapper {
+        height: 250px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <img src="JanSamadhanLogo.png" alt="Logo" class="logo-img-sm">
+      <div>
+        <div class="nav-title">JanSamadhan</div>
+        <div class="nav-tagline">Field Officer Dashboard</div>
+      </div>
+    </div>
+    <div class="nav-links">
+      <a href="officer.html">📊 Dashboard</a>
+      <a href="#" class="active">📈 Analytics</a>
+    </div>
+    <div class="nav-actions">
+      <button class="dark-toggle" onclick="toggleDark()">🌙</button>
+      <button class="btn btn-ghost btn-sm" onclick="window.location.href='index.html'">Logout</button>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <div class="container" style="padding: 32px 0; margin-bottom: 40px;">
+    <!-- Header -->
+    <div class="analytics-header">
+      <h1 class="analytics-title">📈 Performance Analytics</h1>
+      <div class="analytics-controls">
+        <button class="control-btn" id="refreshBtn">🔄 Refresh</button>
+        <button class="control-btn" id="exportBtn">📥 Export</button>
+        <label style="display: flex; align-items: center; gap: 8px; margin: 0;">
+          <input type="checkbox" id="autoRefreshToggle" checked>
+          <span style="font-size: 0.9rem;">Auto-refresh</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section">
+      <div class="filters-title">⏰ Date Range Filter</div>
+      <div class="filter-group">
+        <div>
+          <label class="filter-label">From:</label>
+          <input type="date" class="filter-input" id="filterDateStart">
+        </div>
+        <div>
+          <label class="filter-label">To:</label>
+          <input type="date" class="filter-input" id="filterDateEnd">
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card" id="kpiAssigned">
+        <div class="kpi-icon">📋</div>
+        <div class="kpi-label">Total Assigned</div>
+        <div class="kpi-value">0</div>
+      </div>
+      <div class="kpi-card" id="kpiResolved">
+        <div class="kpi-icon">✅</div>
+        <div class="kpi-label">Resolved</div>
+        <div class="kpi-value">0</div>
+      </div>
+      <div class="kpi-card" id="kpiResolutionRate">
+        <div class="kpi-icon">📊</div>
+        <div class="kpi-label">Resolution Rate</div>
+        <div class="kpi-value">0%</div>
+      </div>
+      <div class="kpi-card" id="kpiEfficiency">
+        <div class="kpi-icon">⚡</div>
+        <div class="kpi-label">Efficiency Score</div>
+        <div class="kpi-value">0</div>
+      </div>
+      <div class="kpi-card" id="kpiAvgRating">
+        <div class="kpi-icon">⭐</div>
+        <div class="kpi-label">Avg Rating</div>
+        <div class="kpi-value">0.0★</div>
+      </div>
+      <div class="kpi-card" id="kpiAvgTime">
+        <div class="kpi-icon">⏱️</div>
+        <div class="kpi-label">Avg Resolution Time</div>
+        <div class="kpi-value">0h</div>
+      </div>
+    </div>
+
+    <!-- Priority Queue Section -->
+    <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 32px;">
+      <h2 style="margin-bottom: 20px; color: var(--text);">🚨 Priority Queue</h2>
+      <div id="queueContainer">
+        <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+          Loading priority queue...
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+      <div class="chart-container">
+        <h3 class="chart-title">📊 Priority Distribution</h3>
+        <div class="chart-wrapper">
+          <canvas id="priorityChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/advanced-analytics.js"></script>
+  <script>
+    // Initialize analytics on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Get user ID from session/localStorage
+      const userEmail = localStorage.getItem('userEmail') || sessionStorage.getItem('userEmail');
+      const userId = localStorage.getItem('userId') || sessionStorage.getItem('userId');
+
+      if (!userId) {
+        window.location.href = 'officer.html';
+        return;
+      }
+
+      // Initialize analytics
+      await initAdvancedAnalytics({
+        apiBase: '/api',
+        userRole: 'officer',
+        userId: userId,
+        refreshInterval: 30000 // 30 seconds
+      });
+
+      showToast('📈 Analytics loaded successfully', 'success');
+    });
+  </script>
+</body>
+
+</html>
