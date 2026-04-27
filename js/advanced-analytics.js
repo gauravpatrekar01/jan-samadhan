@@ -10,7 +10,7 @@ class AdvancedAnalytics {
     this.userRole = options.userRole || 'officer'; // 'officer' or 'admin'
     this.userId = options.userId || null;
     this.refreshInterval = options.refreshInterval || 30000;
-    
+
     this.charts = {};
     this.data = {};
     this.filters = {
@@ -20,7 +20,7 @@ class AdvancedAnalytics {
       region: [],
       status: []
     };
-    
+
     this.cache = {};
     this.cacheExpiry = {};
     this.autoRefreshEnabled = true;
@@ -32,24 +32,24 @@ class AdvancedAnalytics {
   async init() {
     try {
       console.log('📊 Initializing Advanced Analytics...');
-      
+
       // Load Chart.js
       if (typeof Chart === 'undefined') {
         await this.loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js');
       }
-      
+
       // Initialize UI
       this.initializeUI();
-      
+
       // Load initial data
       await this.loadDashboard();
-      
+
       // Setup event listeners
       this.setupEventListeners();
-      
+
       // Start auto-refresh
       this.startAutoRefresh();
-      
+
       console.log('✅ Analytics initialized');
     } catch (error) {
       console.error('❌ Analytics init failed:', error);
@@ -64,7 +64,7 @@ class AdvancedAnalytics {
     // Filter listeners
     const dateStartInput = document.getElementById('filterDateStart');
     const dateEndInput = document.getElementById('filterDateEnd');
-    
+
     if (dateStartInput) {
       dateStartInput.value = this.formatDate(this.filters.dateRange.start);
       dateStartInput.addEventListener('change', (e) => {
@@ -72,7 +72,7 @@ class AdvancedAnalytics {
         this.applyFilters();
       });
     }
-    
+
     if (dateEndInput) {
       dateEndInput.value = this.formatDate(this.filters.dateRange.end);
       dateEndInput.addEventListener('change', (e) => {
@@ -93,7 +93,7 @@ class AdvancedAnalytics {
 
     // Export button
     document.getElementById('exportBtn')?.addEventListener('click', () => this.exportData());
-    
+
     // Refresh button
     document.getElementById('refreshBtn')?.addEventListener('click', () => this.loadDashboard());
   }
@@ -119,7 +119,7 @@ class AdvancedAnalytics {
           this.loadRegionalHeatmap()
         ]);
       }
-      
+
       this.updateDashboard();
     } catch (error) {
       console.error('Error loading dashboard:', error);
@@ -142,7 +142,7 @@ class AdvancedAnalytics {
 
       const response = await fetch(`${this.apiBase}/analytics/admin/overview`);
       const result = await response.json();
-      
+
       if (result.success) {
         this.data.adminOverview = result.data;
         this.setCache('adminOverview', result.data);
@@ -162,7 +162,7 @@ class AdvancedAnalytics {
 
       const response = await fetch(`${this.apiBase}/analytics/admin/officer-performance?limit=20`);
       const result = await response.json();
-      
+
       if (result.success) {
         this.data.officerPerformance = result.data;
         this.setCache('officerPerf', result.data);
@@ -182,7 +182,7 @@ class AdvancedAnalytics {
 
       const response = await fetch(`${this.apiBase}/analytics/admin/trends?period=daily&days=30`);
       const result = await response.json();
-      
+
       if (result.success) {
         this.data.trends = result.data;
         this.setCache('trends', result.data);
@@ -196,7 +196,7 @@ class AdvancedAnalytics {
     try {
       const response = await fetch(`${this.apiBase}/analytics/admin/ngo-contribution`);
       const result = await response.json();
-      
+
       if (result.success) {
         this.data.ngoContribution = result.data;
       }
@@ -209,7 +209,7 @@ class AdvancedAnalytics {
     try {
       const response = await fetch(`${this.apiBase}/analytics/admin/escalation-advanced`);
       const result = await response.json();
-      
+
       if (result.success) {
         this.data.escalations = result.data;
       }
@@ -222,7 +222,7 @@ class AdvancedAnalytics {
     try {
       const response = await fetch(`${this.apiBase}/analytics/admin/peak-times`);
       const result = await response.json();
-      
+
       if (result.success) {
         this.data.peakTimes = result.data;
       }
@@ -240,10 +240,10 @@ class AdvancedAnalytics {
   async loadOfficerMetrics() {
     try {
       if (!this.userId) return;
-      
+
       const response = await fetch(`${this.apiBase}/analytics/officer/${this.userId}/performance`);
       const result = await response.json();
-      
+
       if (result.success) {
         this.data.officerMetrics = result.data;
       }
@@ -255,10 +255,10 @@ class AdvancedAnalytics {
   async loadQueue() {
     try {
       if (!this.userId) return;
-      
+
       const response = await fetch(`${this.apiBase}/analytics/officer/${this.userId}/queue`);
       const result = await response.json();
-      
+
       if (result.success) {
         this.data.queue = result.data;
       }
@@ -272,10 +272,10 @@ class AdvancedAnalytics {
     // Implementation depends on your data structure
     try {
       if (!this.userId) return;
-      
+
       const response = await fetch(`${this.apiBase}/analytics/officer/${this.userId}/performance`);
       const result = await response.json();
-      
+
       if (result.success) {
         // Use this data to create heatmap visualization
         this.data.regionalHeatmap = result.data;
@@ -301,7 +301,7 @@ class AdvancedAnalytics {
 
   renderAdminDashboard() {
     const overview = this.data.adminOverview || {};
-    
+
     // Update KPI cards
     this.updateKPI('kpiTotal', overview.total_complaints || 0);
     this.updateKPI('kpiResolved', overview.resolved_complaints || 0);
@@ -321,7 +321,7 @@ class AdvancedAnalytics {
 
   renderOfficerDashboard() {
     const metrics = this.data.officerMetrics || {};
-    
+
     // Update KPI cards
     this.updateKPI('kpiAssigned', metrics.total_assigned || 0);
     this.updateKPI('kpiResolved', metrics.resolved || 0);
@@ -337,10 +337,13 @@ class AdvancedAnalytics {
   updateKPI(elementId, value) {
     const element = document.getElementById(elementId);
     if (element) {
-      const valueEl = element.querySelector('.kpi-value');
+      const valueEl = element.querySelector('.stat-value');
       if (valueEl) {
         valueEl.textContent = value;
-        valueEl.style.animation = 'pulse 0.5s ease';
+        valueEl.style.animation = 'none';
+        // Trigger reflow to restart animation
+        valueEl.offsetHeight;
+        valueEl.style.animation = 'pulse 0.2s ease';
       }
     }
   }
@@ -457,7 +460,7 @@ class AdvancedAnalytics {
   renderOfficerLeaderboard() {
     const leaderboard = this.data.officerPerformance || [];
     const container = document.getElementById('leaderboardContainer');
-    
+
     if (!container) return;
 
     container.innerHTML = leaderboard.slice(0, 10).map((officer, idx) => `
@@ -481,7 +484,7 @@ class AdvancedAnalytics {
   renderEscalationChart() {
     const escalations = this.data.escalations || {};
     const container = document.getElementById('escalationContainer');
-    
+
     if (!container) return;
 
     const total = escalations.total_escalated || 0;
@@ -505,12 +508,12 @@ class AdvancedAnalytics {
   renderPeakTimesChart() {
     const peakTimes = this.data.peakTimes?.peak_hours || [];
     const ctx = document.getElementById('peakTimesChart')?.getContext('2d');
-    
+
     if (!ctx) return;
 
     const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
     const counts = new Array(24).fill(0);
-    
+
     peakTimes.forEach(pt => {
       const hour = parseInt(pt.hour.split(':')[0]);
       counts[hour] = pt.count;
@@ -538,7 +541,7 @@ class AdvancedAnalytics {
   renderPriorityQueue() {
     const queue = this.data.queue || [];
     const container = document.getElementById('queueContainer');
-    
+
     if (!container) return;
 
     container.innerHTML = queue.slice(0, 10).map(complaint => `
@@ -563,14 +566,14 @@ class AdvancedAnalytics {
 
   toggleFilter(type, value) {
     if (!this.filters[type]) this.filters[type] = [];
-    
+
     const index = this.filters[type].indexOf(value);
     if (index > -1) {
       this.filters[type].splice(index, 1);
     } else {
       this.filters[type].push(value);
     }
-    
+
     this.applyFilters();
   }
 
@@ -624,13 +627,13 @@ class AdvancedAnalytics {
       });
 
       const result = await response.json();
-      
+
       if (format === 'csv' && result.content) {
         this.downloadCSV(result.content, 'analytics-report.csv');
       } else if (result.data) {
         this.downloadJSON(result.data, 'analytics-report.json');
       }
-      
+
       showToast('✅ Report exported successfully', 'success');
     } catch (error) {
       console.error('Export error:', error);

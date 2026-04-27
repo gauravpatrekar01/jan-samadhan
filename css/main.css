@@ -1980,6 +1980,7 @@ select.form-control {
   flex: 1;
   font-size: .9rem;
   font-weight: 500;
+  color: var(--text);
 }
 
 .toast-close {
@@ -2126,8 +2127,6 @@ body.modal-open {
   position: fixed;
   inset: 0;
   z-index: 9000;
-  background: rgba(0, 0, 0, .6);
-  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2135,6 +2134,16 @@ body.modal-open {
   visibility: hidden;
   transition: all .25s;
 }
+
+.modal-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .6);
+  backdrop-filter: blur(4px);
+  z-index: -1;
+}
+
 
 .modal-overlay.show {
   opacity: 1;
@@ -2147,8 +2156,9 @@ body.modal-open {
   padding: 32px;
   max-width: 520px;
   width: 90%;
+  position: relative;
   box-shadow: var(--shadow-xl);
-  z-index: 9500;
+  z-index: 1;
   transform: scale(.9) translateY(20px);
   transition: all .3s cubic-bezier(.4, 0, .2, 1);
   max-height: 90vh;
