@@ -38,9 +38,43 @@ def create_refresh_token(data: dict) -> str:
     return jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.ALGORITHM)
 
 def decode_token(token: str) -> dict | None:
+    """
+    Safely decode JWT token with comprehensive error handling
+    """
+    if not token:
+        logger.warning("Empty token provided for decoding")
+        return None
+    
+    if not isinstance(token, str):
+        logger.warning(f"Invalid token type: {type(token)}")
+        return None
+    
+    # Check token format before decoding
+    if "." not in token:
+        logger.warning("Token missing required separators")
+        return None
+    
+    segments = token.split(".")
+    if len(segments) != 3:
+        logger.warning(f"Invalid token segments: {len(segments)} (expected 3)")
+        return None
+    
     try:
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.ALGORITHM])
+        
+        # Validate payload structure
+        if not isinstance(payload, dict):
+            logger.warning("Invalid payload structure: not a dictionary")
+            return None
+        
+        required_fields = ["exp", "type", "sub"]
+        missing_fields = [field for field in required_fields if field not in payload]
+        if missing_fields:
+            logger.warning(f"Token missing required fields: {missing_fields}")
+            return None
+        
         return payload
+        
     except JWTError as e:
         logger.warning(f"JWT decode error: {str(e)}")
         return None

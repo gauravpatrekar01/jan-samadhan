@@ -4,8 +4,9 @@ from pythonjsonlogger import jsonlogger
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from jose import JWTError
 import os
-from routes import auth, complaints, admin, ngo, analytics, translations, chatbot, reports, predictions, public
+from routes import auth, complaints, admin, ngo, analytics, translations, chatbot, reports, predictions, public, kpis
 from db import db
 from config import settings
 from limiter import limiter
@@ -42,24 +43,53 @@ app.add_middleware(
 # ── Security Headers Middleware (Helmet-like) ──
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
-    response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    return response
+    try:
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
+    except Exception as e:
+        logger.error({
+            "type": "security_headers_middleware_error",
+            "path": request.url.path,
+            "error": str(e)
+        })
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": {
+                    "code": "MIDDLEWARE_ERROR",
+                    "message": "Internal server error in security middleware"
+                }
+            }
+        )
 
 
 @app.middleware("http")
 async def detect_user_language(request: Request, call_next):
-    raw_lang = request.headers.get("Accept-Language", "en")
-    normalized = (raw_lang.split(",")[0].split("-")[0] or "en").lower()
-    if normalized not in {"en", "mr", "hi"}:
-        normalized = "en"
-    request.state.preferred_language = normalized
-    response = await call_next(request)
-    response.headers["Content-Language"] = normalized
-    return response
+    try:
+        raw_lang = request.headers.get("Accept-Language", "en")
+        normalized = (raw_lang.split(",")[0].split("-")[0] or "en").lower()
+        if normalized not in {"en", "mr", "hi"}:
+            normalized = "en"
+        request.state.preferred_language = normalized
+        response = await call_next(request)
+        response.headers["Content-Language"] = normalized
+        return response
+    except Exception as e:
+        logger.error({
+            "type": "language_detection_middleware_error",
+            "path": request.url.path,
+            "error": str(e)
+        })
+        # Fallback to English
+        request.state.preferred_language = "en"
+        response = await call_next(request)
+        response.headers["Content-Language"] = "en"
+        return response
 
 
 # ── Exception Handlers ──
@@ -85,39 +115,124 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 # ── Request Logging Middleware ──
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    start_time = time.time()
-    response = await call_next(request)
-    process_time = time.time() - start_time
-    
-    log_data = {
-        "method": request.method,
-        "path": request.url.path,
-        "duration": f"{process_time:.4f}s",
-        "status_code": response.status_code,
-        "client": request.client.host if request.client else "unknown"
-    }
-    
-    if response.status_code >= 400:
-        logger.error(log_data)
-    else:
-        logger.info(log_data)
+    try:
+        start_time = time.time()
+        response = await call_next(request)
+        process_time = time.time() - start_time
         
-    response.headers["X-Process-Time"] = str(process_time)
-    return response
+        log_data = {
+            "method": request.method,
+            "path": request.url.path,
+            "duration": f"{process_time:.4f}s",
+            "status_code": response.status_code,
+            "client": request.client.host if request.client else "unknown"
+        }
+        
+        if response.status_code >= 400:
+            logger.error(log_data)
+        else:
+            logger.info(log_data)
+            
+        response.headers["X-Process-Time"] = str(process_time)
+        return response
+    except Exception as e:
+        logger.error({
+            "type": "request_logging_middleware_error",
+            "path": request.url.path if request else "unknown",
+            "error": str(e)
+        })
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": {
+                    "code": "MIDDLEWARE_ERROR",
+                    "message": "Internal server error in logging middleware"
+                }
+            }
+        )
 
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    logger.error({
+        "type": "unhandled_exception",
+        "path": request.url.path,
+        "method": request.method,
+        "error": str(exc),
+        "error_type": type(exc).__name__
+    })
+    
     return JSONResponse(
         status_code=500,
         content={
             "success": False,
             "error": {
-                "code": 500,
+                "code": "INTERNAL_SERVER_ERROR",
                 "message": "Internal Server Error",
                 "details": str(exc) if os.getenv("DEBUG") else None,
             },
         },
+    )
+
+@app.exception_handler(JWTError)
+async def jwt_exception_handler(request: Request, exc: JWTError):
+    logger.warning({
+        "type": "jwt_error",
+        "path": request.url.path,
+        "method": request.method,
+        "error": str(exc)
+    })
+    
+    return JSONResponse(
+        status_code=401,
+        content={
+            "success": False,
+            "error": {
+                "code": "TOKEN_INVALID",
+                "message": "Invalid token format or signature"
+            }
+        }
+    )
+
+@app.exception_handler(ValueError)
+async def value_error_handler(request: Request, exc: ValueError):
+    logger.warning({
+        "type": "value_error",
+        "path": request.url.path,
+        "method": request.method,
+        "error": str(exc)
+    })
+    
+    return JSONResponse(
+        status_code=400,
+        content={
+            "success": False,
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": str(exc)
+            }
+        }
+    )
+
+@app.exception_handler(KeyError)
+async def key_error_handler(request: Request, exc: KeyError):
+    logger.error({
+        "type": "key_error",
+        "path": request.url.path,
+        "method": request.method,
+        "error": str(exc)
+    })
+    
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "error": {
+                "code": "DATA_ERROR",
+                "message": "Required data field is missing"
+            }
+        }
     )
 
 
@@ -228,6 +343,7 @@ app.include_router(ngo.router, prefix="/api/ngo", tags=["ngo"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(predictions.router, prefix="/api/analytics", tags=["predictions"])
 app.include_router(public.router, prefix="/api/public", tags=["public"])
+app.include_router(kpis.router, prefix="/api/kpis", tags=["kpis"])
 app.include_router(translations.router, prefix="/api/translations", tags=["translations"])
 app.include_router(chatbot.router, prefix="/api/chatbot", tags=["chatbot"])
 app.include_router(reports.router, prefix="/api/reports", tags=["reports"])

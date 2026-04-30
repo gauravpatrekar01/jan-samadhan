@@ -1257,18 +1257,24 @@
           }
         }, 800);
       } catch (err) {
-        console.error("❌ Auth Error:", err.message, err);
+        console.error(" Auth Error:", err.message, err);
         showToast((err.message || 'Login failed') + ' Kindly try once Again !', 'error');
         btn.innerHTML = originalText;
         btn.disabled = false;
       }
     }
 
+    function handleLoginSuccess() {
+      console.log(" Login success - closing modal");
+      closeLoginModal();
+      // Additional success handling can be added here if needed
+    }
+
     async function handleNGORegister(e) {
       e.preventDefault();
       const btn = document.getElementById('ngoSubmitBtn');
       const originalText = btn.innerHTML;
-      btn.innerHTML = '⌛ Validating...';
+      btn.innerHTML = ' Validating...';
       btn.disabled = true;
 
       try {

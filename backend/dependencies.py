@@ -30,8 +30,35 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
 
     token = authorization.split(" ", 1)[1]
     
-    # Debug logging
-    print(f"Access token: {token[:20]}..." if len(token) > 20 else f"Access token: {token}")
+    # Safe token parsing - check format before decoding
+    if not token or len(token.strip()) == 0:
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "success": False,
+                "error": {
+                    "code": "TOKEN_EMPTY",
+                    "message": "Token cannot be empty"
+                }
+            }
+        )
+    
+    # Check JWT format (must have 3 segments separated by dots)
+    if "." not in token or len(token.split(".")) != 3:
+        logger.warning(f"Invalid token format: {len(token.split('.'))} segments")
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "success": False,
+                "error": {
+                    "code": "TOKEN_INVALID_FORMAT",
+                    "message": "Invalid token format"
+                }
+            }
+        )
+    
+    # Debug logging (safe - only shows first 20 chars)
+    logger.debug(f"Access token: {token[:20]}..." if len(token) > 20 else f"Access token: {token}")
     
     try:
         payload = decode_token(token)
@@ -47,6 +74,19 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
                 }
             )
         
+        # Verify required fields in payload
+        if "sub" not in payload:
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "success": False,
+                    "error": {
+                        "code": "TOKEN_INVALID",
+                        "message": "Token missing required subject field"
+                    }
+                }
+            )
+        
         # Verify token type
         if not verify_token_type(payload, "access"):
             raise HTTPException(
@@ -54,7 +94,7 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
                 detail={
                     "success": False,
                     "error": {
-                        "code": "TOKEN_INVALID",
+                        "code": "TOKEN_INVALID_TYPE",
                         "message": "Invalid token type"
                     }
                 }
@@ -83,7 +123,7 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
                 "success": False,
                 "error": {
                     "code": "TOKEN_INVALID",
-                    "message": "Invalid token format"
+                    "message": "Invalid token format or signature"
                 }
             }
         )
@@ -97,7 +137,7 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
             detail={
                 "success": False,
                 "error": {
-                    "code": "TOKEN_INVALID",
+                    "code": "TOKEN_VALIDATION_FAILED",
                     "message": "Token validation failed"
                 }
             }

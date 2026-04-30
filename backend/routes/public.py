@@ -9,35 +9,109 @@ router = APIRouter(prefix="/api/public", tags=["public"])
 @router.get("/stats")
 async def get_public_stats():
     """
-    Get public statistics about complaints
+    Get comprehensive public statistics and KPIs about complaints
     No authentication required, excludes personal data
     """
     try:
         collection = db.get_collection("complaints")
         
+        # Time-based calculations
+        now = datetime.now(timezone.utc)
+        thirty_days_ago = (now - timedelta(days=30)).isoformat()
+        seven_days_ago = (now - timedelta(days=7)).isoformat()
+        one_day_ago = (now - timedelta(days=1)).isoformat()
+        
         # Total complaints
         total_complaints = collection.count_documents({})
         
-        # Status breakdown
+        # Recent activity KPIs
+        complaints_last_24h = collection.count_documents({"createdAt": {"$gte": one_day_ago}})
+        complaints_last_7d = collection.count_documents({"createdAt": {"$gte": seven_days_ago}})
+        complaints_last_30d = collection.count_documents({"createdAt": {"$gte": thirty_days_ago}})
+        
+        # Status breakdown with percentages
         status_pipeline = [
             {"$group": {"_id": "$status", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}}
         ]
         status_breakdown = list(collection.aggregate(status_pipeline))
         
-        # Category breakdown
+        # Calculate percentages
+        status_distribution = []
+        for item in status_breakdown:
+            percentage = (item["count"] / total_complaints * 100) if total_complaints > 0 else 0
+            status_distribution.append({
+                "status": item["_id"],
+                "count": item["count"],
+                "percentage": round(percentage, 2)
+            })
+        
+        # Priority breakdown with percentages
+        priority_pipeline = [
+            {"$group": {"_id": "$priority", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}}
+        ]
+        priority_breakdown = list(collection.aggregate(priority_pipeline))
+        
+        priority_distribution = []
+        for item in priority_breakdown:
+            percentage = (item["count"] / total_complaints * 100) if total_complaints > 0 else 0
+            priority_distribution.append({
+                "priority": item["_id"],
+                "count": item["count"],
+                "percentage": round(percentage, 2)
+            })
+        
+        # Category breakdown with percentages
         category_pipeline = [
             {"$group": {"_id": "$category", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}}
         ]
         category_breakdown = list(collection.aggregate(category_pipeline))
         
-        # Priority breakdown
-        priority_pipeline = [
-            {"$group": {"_id": "$priority", "count": {"$sum": 1}}},
-            {"$sort": {"count": -1}}
+        category_distribution = []
+        for item in category_breakdown:
+            percentage = (item["count"] / total_complaints * 100) if total_complaints > 0 else 0
+            category_distribution.append({
+                "category": item["_id"],
+                "count": item["count"],
+                "percentage": round(percentage, 2)
+            })
+        
+        # Resolution KPIs
+        resolved_complaints = collection.count_documents({"status": {"$in": ["resolved", "closed"]}})
+        pending_complaints = collection.count_documents({"status": "submitted"})
+        in_progress_complaints = collection.count_documents({"status": {"$in": ["under_review", "in_progress"]}})
+        
+        # Resolution rate
+        resolution_rate = (resolved_complaints / total_complaints * 100) if total_complaints > 0 else 0
+        
+        # Average resolution time
+        resolution_pipeline = [
+            {"$match": {"status": {"$in": ["resolved", "closed"]}, "resolution_time_hours": {"$exists": True, "$ne": None}}},
+            {"$group": {
+                "_id": None,
+                "avg_resolution_time": {"$avg": "$resolution_time_hours"},
+                "min_resolution_time": {"$min": "$resolution_time_hours"},
+                "max_resolution_time": {"$max": "$resolution_time_hours"}
+            }}
         ]
-        priority_breakdown = list(collection.aggregate(priority_pipeline))
+        resolution_time_stats = list(collection.aggregate(resolution_pipeline))
+        
+        # SLA compliance
+        sla_met_pipeline = [
+            {"$match": {"status": {"$in": ["resolved", "closed"]}, "sla_met": {"$exists": True}}},
+            {"$group": {
+                "_id": None,
+                "total": {"$sum": 1},
+                "sla_met": {"$sum": {"$cond": [{"$eq": ["$sla_met", True]}, 1, 0]}}
+            }}
+        ]
+        sla_stats = list(collection.aggregate(sla_met_pipeline))
+        
+        sla_compliance_rate = 0
+        if sla_stats and sla_stats[0]["total"] > 0:
+            sla_compliance_rate = (sla_stats[0]["sla_met"] / sla_stats[0]["total"] * 100)
         
         # Regional breakdown (top 10)
         region_pipeline = [
@@ -47,52 +121,63 @@ async def get_public_stats():
         ]
         region_breakdown = list(collection.aggregate(region_pipeline))
         
-        # Last 30 days trends
-        thirty_days_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
-        recent_pipeline = [
+        # Daily trends for last 30 days
+        daily_trends_pipeline = [
             {"$match": {"createdAt": {"$gte": thirty_days_ago}}},
             {"$group": {
                 "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$createdAt"}},
-                "count": {"$sum": 1}
+                "count": {"$sum": 1},
+                "resolved": {"$sum": {"$cond": [{"$in": ["$status", ["resolved", "closed"]]}, 1, 0]}}
             }},
             {"$sort": {"_id": 1}}
         ]
-        daily_trends = list(collection.aggregate(recent_pipeline))
+        daily_trends = list(collection.aggregate(daily_trends_pipeline))
         
-        # Resolution stats (excluding personal data)
-        resolved_pipeline = [
-            {"$match": {"status": {"$in": ["resolved", "closed"]}}},
-            {"$group": {
-                "_id": None,
-                "total_resolved": {"$sum": 1},
-                "avg_resolution_time": {"$avg": "$resolution_time_hours"}
-            }}
-        ]
-        resolution_stats = list(collection.aggregate(resolved_pipeline))
+        # Emergency/high priority alerts
+        emergency_complaints = collection.count_documents({"priority": "emergency", "status": {"$ne": "resolved"}})
+        high_priority_complaints = collection.count_documents({"priority": "high", "status": {"$ne": "resolved"}})
+        
+        # Performance KPIs
+        avg_complaints_per_day = complaints_last_30d / 30
+        growth_rate_7d = ((complaints_last_7d - complaints_last_30d/4) / (complaints_last_30d/4) * 100) if complaints_last_30d > 0 else 0
         
         return {
             "success": True,
             "data": {
+                # Core KPIs
                 "total_complaints": total_complaints,
-                "status_breakdown": [
-                    {"status": item["_id"], "count": item["count"]}
-                    for item in status_breakdown
-                ],
-                "category_breakdown": [
-                    {"category": item["_id"], "count": item["count"]}
-                    for item in category_breakdown
-                ],
-                "priority_breakdown": [
-                    {"priority": item["_id"], "count": item["count"]}
-                    for item in priority_breakdown
-                ],
+                "resolved_complaints": resolved_complaints,
+                "pending_complaints": pending_complaints,
+                "in_progress_complaints": in_progress_complaints,
+                "resolution_rate": round(resolution_rate, 2),
+                
+                # Activity KPIs
+                "complaints_last_24h": complaints_last_24h,
+                "complaints_last_7d": complaints_last_7d,
+                "complaints_last_30d": complaints_last_30d,
+                "avg_complaints_per_day": round(avg_complaints_per_day, 2),
+                "growth_rate_7d": round(growth_rate_7d, 2),
+                
+                # Priority KPIs
+                "emergency_complaints": emergency_complaints,
+                "high_priority_complaints": high_priority_complaints,
+                "priority_distribution": priority_distribution,
+                
+                # Performance KPIs
+                "sla_compliance_rate": round(sla_compliance_rate, 2),
+                "resolution_time_stats": resolution_time_stats[0] if resolution_time_stats else None,
+                
+                # Breakdown data
+                "status_distribution": status_distribution,
+                "category_distribution": category_distribution,
                 "top_regions": [
                     {"region": item["_id"], "count": item["count"]}
                     for item in region_breakdown
                 ],
                 "daily_trends_last_30_days": daily_trends,
-                "resolution_stats": resolution_stats[0] if resolution_stats else None,
-                "last_updated": datetime.now(timezone.utc).isoformat()
+                
+                # Metadata
+                "last_updated": now.isoformat()
             }
         }
         
