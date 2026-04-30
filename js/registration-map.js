@@ -6,7 +6,7 @@
 let mapManager = null;
 
 // API Base URL configuration
-const API_BASE_URL = (() => {
+const REGISTRATION_API_BASE_URL = (() => {
     if (!window.location.hostname || window.location.hostname === '') {
         // Local file (file://) - default to localhost:8000
         return 'http://localhost:8000';
@@ -15,7 +15,7 @@ const API_BASE_URL = (() => {
     return `http://${window.location.hostname}:8000`;
 })();
 
-console.log("📡 Registration API Base URL:", API_BASE_URL);
+console.log("📡 Registration API Base URL:", REGISTRATION_API_BASE_URL);
 
 // Initialize form on page load
 document.addEventListener('DOMContentLoaded', async () => {
@@ -91,7 +91,7 @@ async function loadUserData() {
         const token = sessionStorage.getItem('token') || localStorage.getItem('token');
         if (!token) return;
 
-        const response = await fetch(`${API_BASE_URL}/api/auth/user`, {
+        const response = await fetch(`${REGISTRATION_API_BASE_URL}/api/auth/user`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -313,9 +313,9 @@ async function submitGrievance(event) {
         console.log('📤 Submitting complaint data:', JSON.stringify(complaintData, null, 2));
 
         // Submit to backend
-        console.log('🌐 Sending API request to:', `${API_BASE_URL}/api/complaints/`);
+        console.log('🌐 Sending API request to:', `${REGISTRATION_API_BASE_URL}/api/complaints/`);
         
-        const response = await fetch(`${API_BASE_URL}/api/complaints/`, {
+        const response = await fetch(`${REGISTRATION_API_BASE_URL}/api/complaints/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -498,10 +498,10 @@ window.debugComplaintSystem = async function() {
     
     // Check API connectivity
     console.log('🌐 API Connectivity:');
-    console.log('  API Base URL:', API_BASE_URL);
+    console.log('  API Base URL:', REGISTRATION_API_BASE_URL);
     
     try {
-        const authResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        const authResponse = await fetch(`${REGISTRATION_API_BASE_URL}/api/auth/me`, {
             headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
         console.log('  Auth check status:', authResponse.status);
@@ -536,7 +536,7 @@ window.debugComplaintSystem = async function() {
     // Test API endpoint directly
     console.log('🧪 API Endpoint Test:');
     try {
-        const testResponse = await fetch(`${API_BASE_URL}/api/complaints/debug`, {
+        const testResponse = await fetch(`${REGISTRATION_API_BASE_URL}/api/complaints/debug`, {
             headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
         console.log('  Debug endpoint status:', testResponse.status);

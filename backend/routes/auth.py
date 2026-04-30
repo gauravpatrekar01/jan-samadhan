@@ -43,6 +43,7 @@ def register(request: Request, user: UserCreate):
     user_dict["role"] = user.role
     user_dict["password"] = hash_password(user.password)
     user_dict["createdAt"] = datetime.now(timezone.utc).isoformat()
+    user_dict["language"] = user_dict.get("language") or "en"
     
     if user.role == "citizen":
         user_dict["verified"] = verify_citizen_record(user.name, user.email, user.aadhar)
@@ -150,7 +151,7 @@ def login(request: Request, user: UserLogin):
     if db_user.get("role") == "admin":
         raise AuthenticationError("Admin login not available via standard login")
 
-    access_token = create_access_token({"sub": db_user["email"], "role": db_user["role"]})
+    access_token = create_access_token({"sub": db_user["email"], "role": db_user["role"], "lang": db_user.get("language", "en")})
     refresh_token = create_refresh_token({"sub": db_user["email"], "role": db_user["role"]})
 
     db_user.pop("_id", None)
@@ -173,7 +174,7 @@ def admin_login(request: Request, user: UserLogin):
     if db_user.get("role") != "admin":
         raise AuthenticationError("Admin role required")
 
-    access_token = create_access_token({"sub": db_user["email"], "role": db_user["role"]})
+    access_token = create_access_token({"sub": db_user["email"], "role": db_user["role"], "lang": db_user.get("language", "en")})
     refresh_token = create_refresh_token({"sub": db_user["email"], "role": db_user["role"]})
 
     db_user.pop("_id", None)
@@ -196,7 +197,7 @@ def refresh_access_token(refresh_token: dict):
         raise TokenExpiredError()
 
     # Create new access token using the refresh token's email/role
-    access_token = create_access_token({"sub": payload["sub"], "role": payload["role"]})
+    access_token = create_access_token({"sub": payload["sub"], "role": payload["role"], "lang": payload.get("lang", "en")})
 
     return {
         "success": True,

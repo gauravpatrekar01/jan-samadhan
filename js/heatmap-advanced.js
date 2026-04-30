@@ -45,6 +45,17 @@ class AdvancedHeatmapManager {
             'high': { color: '#f97316', radius: 12, intensity: 0.7 },
             'emergency': { color: '#dc2626', radius: 15, intensity: 0.9 }
         };
+
+        this.categoryColorMap = {
+            'Infrastructure': '#2563eb',
+            'Water Supply': '#0891b2',
+            'Electricity': '#ca8a04',
+            'Sanitation': '#7c3aed',
+            'Transport': '#059669',
+            'Law & Order': '#dc2626',
+            'Healthcare': '#db2777',
+            'Other': '#64748b'
+        };
     }
 
     async initialize() {
@@ -114,9 +125,18 @@ class AdvancedHeatmapManager {
 
     async loadData() {
         try {
-            // Fetch all grievances
-            const response = await window.JanSamadhanAPI.getAllGrievances();
-            this.allComplaints = response || [];
+            const geoResponse = await window.JanSamadhanAPI.getGeoComplaintData();
+            const points = geoResponse?.points || [];
+            if (points.length > 0) {
+                this.allComplaints = points.map(p => ({
+                    ...p,
+                    lat: p.latitude,
+                    lng: p.longitude
+                }));
+            } else {
+                const response = await window.JanSamadhanAPI.getAllGrievances();
+                this.allComplaints = response || [];
+            }
             
             // Apply filters and update visualization
             this.applyFilters();
@@ -234,12 +254,12 @@ class AdvancedHeatmapManager {
         // Add markers for each complaint
         this.filteredComplaints.forEach(complaint => {
             const priority = complaint.priority?.toLowerCase() || 'low';
-            const color = this.priorityMap[priority]?.color || '#4ade80';
+            const categoryColor = this.categoryColorMap[complaint.category] || '#64748b';
 
             const marker = L.circleMarker([complaint.lat || 19.9975, complaint.lng || 73.7898], {
                 radius: this.priorityMap[priority]?.radius || 8,
-                fillColor: color,
-                color: color,
+                fillColor: categoryColor,
+                color: categoryColor,
                 weight: 2,
                 opacity: 0.8,
                 fillOpacity: 0.6,

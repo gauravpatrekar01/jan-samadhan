@@ -325,6 +325,11 @@
 
             loadOverview();
             loadCitizenGrievances();
+
+            const detailModalCloseBtn = document.querySelector('#grievanceDetailModal .modal-close');
+            if (detailModalCloseBtn) {
+                detailModalCloseBtn.addEventListener('click', stopSummaryPolling);
+            }
         });
 
         // ── Overview ──
@@ -438,6 +443,7 @@
         </div>
       </div>
       <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:12px;line-height:1.5">${(g.description || '').substring(0, 120)}...</p>
+      ${renderMarathiSummaryBlock(g, false)}
       <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:12px">📍 ${g.location || 'N/A'} &nbsp;|&nbsp; 🏙️ ${g.region || 'Delhi'}</div>
       ${showProgress ? renderProgressBar(getProgressFromStatus(g.status)) : ''}
       <div class="gc-actions">
@@ -447,6 +453,58 @@
       </div>
     </div>
   `;
+        }
+
+        function renderMarathiSummaryBlock(g, withToggle = false) {
+            const summaryText = (g.marathi_summary || '').trim();
+            const hasSummary = summaryText.length > 0;
+            const status = (g.summary_generation_status || '').toLowerCase();
+            const summaryHtml = hasSummary
+                ? `<div id="summary-${g.id}" style="white-space:pre-line;line-height:1.5">${summaryText}</div>`
+                : status === 'failed'
+                ? `<div style="display:flex;align-items:center;gap:8px;color:var(--danger)">
+                     <span>⚠️ Summary generation failed.</span>
+                     <button class="btn btn-ghost btn-sm" onclick="regenerateSummary('${g.id}')">Retry</button>
+                   </div>`
+                : `<div style="display:flex;align-items:center;gap:8px;color:var(--text-muted)">
+                     <span>⏳ Generating summary...</span>
+                     <button class="btn btn-ghost btn-sm" onclick="regenerateSummary('${g.id}')">Retry</button>
+                   </div>`;
+
+            const toggleHtml = withToggle
+                ? `<button class="btn btn-ghost btn-sm" id="toggle-summary-btn-${g.id}" onclick="toggleSummaryView('${g.id}')">View Summary</button>`
+                : '';
+
+            return `
+              <div style="background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.2);padding:10px 12px;border-radius:8px;margin-bottom:12px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                  <div style="font-size:.82rem;font-weight:700;color:var(--primary-light)">संक्षिप्त माहिती</div>
+                  ${toggleHtml}
+                </div>
+                ${summaryHtml}
+              </div>
+            `;
+        }
+
+        function toggleSummaryView(id) {
+            const desc = document.getElementById(`full-description-${id}`);
+            const summary = document.getElementById(`summary-${id}`);
+            const btn = document.getElementById(`toggle-summary-btn-${id}`);
+            if (!desc || !summary || !btn) return;
+            const isSummaryVisible = summary.style.display !== 'none';
+            summary.style.display = isSummaryVisible ? 'none' : 'block';
+            desc.style.display = isSummaryVisible ? 'block' : 'none';
+            btn.textContent = isSummaryVisible ? 'View Summary' : 'View Full';
+        }
+
+        async function regenerateSummary(id) {
+            try {
+                await window.JanSamadhanAPI.regenerateGrievanceSummary(id);
+                showToast('Summary regeneration started', 'info');
+                setTimeout(() => viewDetail(id), 1500);
+            } catch (e) {
+                showToast(`Failed to regenerate summary: ${e.message}`, 'error');
+            }
         }
 
         async function viewDetail(id) {
@@ -469,15 +527,69 @@
       <div><span style="color:var(--text-muted);font-size:.75rem">FILED ON</span><br><strong>${formatDate(g.created_at)}</strong></div>
       <div style="background:rgba(249,115,22,.05);padding:8px;border-radius:4px"><span style="color:var(--text-muted);font-size:.75rem">🕒 SLA DEADLINE</span><br><strong>${formatDeadline(g.sla_deadline)}</strong><br>${getDeadlineBadge(g.sla_deadline)}</div>
     </div>
-    <div style="background:var(--bg);padding:14px;border-radius:8px;margin-bottom:16px;font-size:.9rem;line-height:1.6">${g.description}</div>
+    ${renderMarathiSummaryBlock(g, true)}
+    <div id="full-description-${g.id}" style="background:var(--bg);padding:14px;border-radius:8px;margin-bottom:16px;font-size:.9rem;line-height:1.6;display:${g.marathi_summary ? 'none' : 'block'}">${g.description}</div>
     <div style="font-weight:700;font-size:.88rem;margin-bottom:8px">Resolution Progress:</div>
     ${renderProgressBar(getProgressFromStatus(g.status))}
     <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+       <button class="btn btn-ghost btn-sm" onclick="regenerateSummary('${g.id}')">🔁 Regenerate Summary</button>
        ${(g.status === 'resolved' || g.status === 'closed') ? `<button class="btn btn-accent btn-sm" onclick="closeModal('grievanceDetailModal');openFeedback('${g.id}')">⭐ Rate Resolution</button>` : ''}
        ${g.feedbackCount ? `<span class="badge badge-success">⭐ ${g.feedbackAverage || g.feedbackRating}/5 · ${g.feedbackCount} ratings</span>` : ''}
     </div>
   `;
             openModal('grievanceDetailModal');
+            startSummaryPolling(id, g);
+        }
+
+        let _summaryPollTimer = null;
+        let _summaryPollAttempts = 0;
+        const SUMMARY_POLL_MAX_ATTEMPTS = 8;
+        const SUMMARY_POLL_INTERVAL_MS = 2500;
+
+        function stopSummaryPolling() {
+            if (_summaryPollTimer) {
+                clearInterval(_summaryPollTimer);
+                _summaryPollTimer = null;
+            }
+            _summaryPollAttempts = 0;
+        }
+
+        function startSummaryPolling(id, complaintData) {
+            stopSummaryPolling();
+            const hasSummary = !!(complaintData?.marathi_summary || '').trim();
+            const status = (complaintData?.summary_generation_status || '').toLowerCase();
+            if (hasSummary || status === 'failed') return;
+
+            _summaryPollTimer = setInterval(async () => {
+                try {
+                    _summaryPollAttempts += 1;
+                    const fresh = await window.JanSamadhanAPI.getGrievanceByID(id);
+                    const freshHasSummary = !!(fresh?.marathi_summary || '').trim();
+                    const freshStatus = (fresh?.summary_generation_status || '').toLowerCase();
+
+                    if (freshHasSummary) {
+                        await viewDetail(id);
+                        showToast('Marathi summary is ready', 'success');
+                        stopSummaryPolling();
+                        return;
+                    }
+
+                    if (freshStatus === 'failed') {
+                        await viewDetail(id);
+                        showToast('Summary generation failed. You can retry.', 'warning');
+                        stopSummaryPolling();
+                        return;
+                    }
+
+                    if (_summaryPollAttempts >= SUMMARY_POLL_MAX_ATTEMPTS) {
+                        stopSummaryPolling();
+                    }
+                } catch (e) {
+                    if (_summaryPollAttempts >= SUMMARY_POLL_MAX_ATTEMPTS) {
+                        stopSummaryPolling();
+                    }
+                }
+            }, SUMMARY_POLL_INTERVAL_MS);
         }
 
         // ── Feedback ──
@@ -684,11 +796,19 @@
 
         // ── Logout ──
         function logoutUser() {
+            stopSummaryPolling();
             window.JanSamadhan.logout();
             sessionStorage.removeItem('js_user');
             showToast('Logged out successfully', 'success');
             setTimeout(() => window.location.href = 'index.html', 800);
         }
+
+        // Stop polling when complaint modal is closed.
+        document.addEventListener('click', (e) => {
+            if (e.target?.id === 'grievanceDetailModal') {
+                stopSummaryPolling();
+            }
+        });
     </script>
 </body>
 

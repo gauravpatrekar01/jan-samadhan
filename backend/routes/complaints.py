@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, UploadFile, File, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Query, UploadFile, File, Form, HTTPException, Request, BackgroundTasks
 from limiter import limiter
 from services.s3_service import s3_service
 from schemas.complaint import ComplaintCreate, VALID_CATEGORIES
@@ -20,6 +20,9 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from search import search_complaints, get_complaint_count
 from notifications import notify_status_change
+from services.summary_service import generate_marathi_summary
+from services.geo_service import normalize_geo_complaint, cluster_geo_points, detect_high_risk_zones
+from services.priority_service import compute_priority_score, escalate_complaint_doc
 
 router = APIRouter()
 
@@ -37,6 +40,71 @@ def find_officer_for_region(region: str) -> str | None:
         return complaints.count_documents({"assigned_officer": officer["email"]})
     officer = min(officers, key=load_count)
     return officer["email"]
+
+
+def is_citizen_owner(complaint: dict, user: dict | None) -> bool:
+    """Support both current and legacy owner fields."""
+    if not user:
+        return False
+    user_email = (user.get("sub") or user.get("email") or "").strip().lower()
+    if not user_email:
+        return False
+    owner_emails = {
+        str(complaint.get("citizen_email") or "").strip().lower(),
+        str(complaint.get("email") or "").strip().lower(),
+    }
+    owner_emails.discard("")
+    return user_email in owner_emails
+
+
+async def generate_and_store_summary(complaint_id: str):
+    """Background task to generate and persist Marathi summary."""
+    collection = db.get_collection("complaints")
+    complaint = collection.find_one({"id": complaint_id})
+    if not complaint:
+        return
+
+    max_attempts = 2
+    for attempt in range(1, max_attempts + 1):
+        try:
+            source_text = (
+                f"{complaint.get('title', '')}. "
+                f"{complaint.get('description', '')}. "
+                f"स्थान: {complaint.get('location', 'उपलब्ध नाही')}. "
+                f"विभाग: {complaint.get('category', 'इतर')}. "
+                f"प्राधान्य: {complaint.get('priority', 'medium')}."
+            )
+            summary = await generate_marathi_summary(source_text)
+            now_iso = datetime.now(timezone.utc).isoformat()
+            collection.update_one(
+                {"id": complaint_id},
+                {
+                    "$set": {
+                        "marathi_summary": summary,
+                        "summary_generated": bool(summary),
+                        "summary_generation_status": "completed" if summary else "failed",
+                        "summary_last_error": None if summary else "Empty summary generated",
+                        "summary_last_generated_at": now_iso,
+                    },
+                    "$inc": {"summary_attempts": 1},
+                },
+            )
+            return
+        except Exception as e:
+            error_text = str(e)
+            collection.update_one(
+                {"id": complaint_id},
+                {
+                    "$set": {
+                        "summary_generated": False,
+                        "summary_generation_status": "failed" if attempt >= max_attempts else "retrying",
+                        "summary_last_error": error_text,
+                    },
+                    "$inc": {"summary_attempts": 1},
+                },
+            )
+            if attempt >= max_attempts:
+                print(f"⚠️ Marathi summary generation failed for {complaint_id}: {error_text}")
 
 
 @router.get("/")
@@ -193,9 +261,51 @@ def debug_complaint_system(request: Request):
         }
 
 
+@router.get("/geo-data")
+def get_complaints_geo_data(
+    region: str = Query(None),
+    category: str = Query(None),
+    priority: str = Query(None),
+    limit: int = Query(1000),
+    user: dict = Depends(get_current_user),
+):
+    """Return normalized geospatial complaints payload for heatmaps and clustering."""
+    query = {}
+    if region:
+        query["region"] = region
+    if category:
+        query["category"] = category
+    if priority:
+        query["priority"] = priority.lower()
+
+    docs = list(
+        db.get_collection("complaints")
+        .find(query, {"_id": 0})
+        .sort("createdAt", -1)
+        .limit(limit)
+    )
+    points = [p for p in (normalize_geo_complaint(d) for d in docs) if p]
+    clusters = cluster_geo_points(points)
+    high_risk = detect_high_risk_zones(clusters)
+    return {
+        "success": True,
+        "data": {
+            "points": points,
+            "clusters": clusters,
+            "high_risk_zones": high_risk,
+            "total_points": len(points),
+        },
+    }
+
+
 @router.post("/", status_code=201)
 @limiter.limit("5/hour")
-def create_complaint(request: Request, complaint: ComplaintCreate, user: dict = Depends(require_citizen)):
+def create_complaint(
+    request: Request,
+    complaint: ComplaintCreate,
+    background_tasks: BackgroundTasks,
+    user: dict = Depends(require_citizen),
+):
     print(f"=== COMPLAINT CREATION REQUEST ===")
     print(f"Request from: {request.client.host if request.client else 'unknown'}")
     print(f"User: {user}")
@@ -272,8 +382,21 @@ def create_complaint(request: Request, complaint: ComplaintCreate, user: dict = 
                 "feedback": [],
                 "feedbackAverage": 0,
                 "feedbackCount": 0,
+                "marathi_summary": None,
+                "summary_generated": False,
+                "summary_generation_status": "pending",
+                "summary_attempts": 0,
+                "summary_last_error": None,
+                "summary_last_generated_at": None,
+                "priority_score": compute_priority_score(c_dict),
+                "source_language": request.headers.get("x-user-language") or user.get("lang") or "en",
             }
         )
+        if complaint.latitude is not None and complaint.longitude is not None:
+            c_dict["location_geo"] = {
+                "type": "Point",
+                "coordinates": [complaint.longitude, complaint.latitude],
+            }
 
         # Auto-assign officer if region is provided
         assigned_officer = find_officer_for_region(c_dict.get("region"))
@@ -298,6 +421,7 @@ def create_complaint(request: Request, complaint: ComplaintCreate, user: dict = 
             raise HTTPException(status_code=500, detail="Failed to save complaint")
         
         print(f"✅ Database insert successful: {result.inserted_id}")
+        background_tasks.add_task(generate_and_store_summary, complaint_id)
         
         # Log the audit
         try:
@@ -348,8 +472,7 @@ def get_complaint(id: str, user: dict = Depends(get_current_user_optional)):
         raise NotFoundError("Complaint")
 
     if not user or user.get("role") == "citizen":
-        sub = user.get("sub") if user else None
-        if complaint.get("citizen_email") != sub:
+        if not is_citizen_owner(complaint, user):
             # Public feed complaints should remain viewable, but hide private identifiers.
             complaint = {k: v for k, v in complaint.items() if k not in {"citizen_email", "email"}}
 
@@ -359,7 +482,82 @@ def get_complaint(id: str, user: dict = Depends(get_current_user_optional)):
             # NGO can see public data to decide whether to request, but not full citizen details
             complaint = {k: v for k, v in complaint.items() if k not in {"citizen_email", "email", "history"}}
 
+    complaint.setdefault("marathi_summary", None)
+    complaint.setdefault("summary_generated", False)
+    complaint.setdefault("summary_generation_status", "pending")
+    complaint.setdefault("summary_attempts", 0)
+    complaint.setdefault("summary_last_error", None)
+    complaint.setdefault("summary_last_generated_at", None)
     return {"success": True, "data": complaint}
+
+
+@router.post("/{id}/generate-summary")
+def regenerate_marathi_summary(
+    id: str,
+    background_tasks: BackgroundTasks,
+    user: dict = Depends(get_current_user),
+):
+    """Regenerate Marathi summary for a complaint."""
+    collection = db.get_collection("complaints")
+    complaint = collection.find_one({"id": id}, {"_id": 0})
+    if not complaint:
+        raise NotFoundError("Complaint")
+
+    if user.get("role") == "citizen" and not is_citizen_owner(complaint, user):
+        raise AuthorizationError("Not authorized to regenerate summary for this complaint")
+
+    collection.update_one(
+        {"id": id},
+        {"$set": {"summary_generated": False, "summary_generation_status": "pending", "summary_last_error": None}},
+    )
+    background_tasks.add_task(generate_and_store_summary, id)
+    return {"success": True, "message": "Summary regeneration started", "id": id}
+
+
+@router.get("/next")
+def get_next_complaints(
+    limit: int = Query(10),
+    user: dict = Depends(require_officer_or_admin),
+):
+    """Priority queue endpoint for officer/admin dashboards."""
+    query = {"status": {"$nin": ["resolved", "closed"]}}
+    if user.get("role") == "officer":
+        query["$or"] = [
+            {"assigned_officer": user.get("sub")},
+            {"assigned_officer": None},
+        ]
+    docs = list(db.get_collection("complaints").find(query, {"_id": 0}).limit(500))
+    for d in docs:
+        d["priority_score"] = d.get("priority_score") or compute_priority_score(d)
+    docs.sort(key=lambda x: x.get("priority_score", 0), reverse=True)
+    return {"success": True, "data": docs[:limit], "total": len(docs)}
+
+
+@router.post("/{id}/escalate")
+def escalate_complaint(
+    id: str,
+    remarks: str = "",
+    user: dict = Depends(require_role(["admin", "officer"])),
+):
+    """Manual escalation endpoint; keeps lifecycle/timeline backward-compatible."""
+    collection = db.get_collection("complaints")
+    complaint = collection.find_one({"id": id}, {"_id": 0})
+    if not complaint:
+        raise NotFoundError("Complaint")
+
+    updates = escalate_complaint_doc(complaint)
+    now = datetime.now(timezone.utc).isoformat()
+    timeline_event = {
+        "stage": "Under Review",
+        "remarks": remarks or f"Escalated to level {updates['escalation_level']}",
+        "timestamp": now,
+        "updated_by_user_id": user.get("sub", "system"),
+    }
+    collection.update_one(
+        {"id": id},
+        {"$set": {**updates, "updatedAt": now}, "$push": {"timeline": timeline_event}},
+    )
+    return {"success": True, "data": {"id": id, **updates}, "message": "Complaint escalated"}
 
 
 @router.patch("/{id}/assign")

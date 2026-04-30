@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
-from routes import auth, complaints, admin, ngo, analytics
+from routes import auth, complaints, admin, ngo, analytics, translations, chatbot, reports
 from db import db
 from config import settings
 from limiter import limiter
@@ -47,6 +47,18 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+
+@app.middleware("http")
+async def detect_user_language(request: Request, call_next):
+    raw_lang = request.headers.get("Accept-Language", "en")
+    normalized = (raw_lang.split(",")[0].split("-")[0] or "en").lower()
+    if normalized not in {"en", "mr", "hi"}:
+        normalized = "en"
+    request.state.preferred_language = normalized
+    response = await call_next(request)
+    response.headers["Content-Language"] = normalized
     return response
 
 
@@ -119,6 +131,7 @@ async def health_check_middleware(request: Request, call_next):
 # ── Background Scheduler (Escalation Hooks) ──
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timezone, timedelta
+from services.priority_service import escalate_complaint_doc
 
 scheduler = BackgroundScheduler()
 
@@ -152,7 +165,8 @@ def check_escalations():
         })
 
         for complaint in complaints:
-            new_level = complaint.get("escalation_level", 0) + 1
+            next_doc = escalate_complaint_doc(complaint)
+            new_level = next_doc.get("escalation_level", complaint.get("escalation_level", 0) + 1)
             if new_level > 3:
                 continue
 
@@ -175,7 +189,9 @@ def check_escalations():
                 {
                     "$set": {
                         "escalation_level": new_level,
-                        "last_escalated_at": now.isoformat()
+                        "last_escalated_at": now.isoformat(),
+                        "priority": next_doc.get("priority", complaint.get("priority", "medium")),
+                        "sla_deadline": next_doc.get("sla_deadline", complaint.get("sla_deadline")),
                     },
                     "$push": {
                         "escalation_history": escalation_entry,
@@ -210,6 +226,9 @@ app.include_router(complaints.router, prefix="/api/complaints", tags=["complaint
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(ngo.router, prefix="/api/ngo", tags=["ngo"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
+app.include_router(translations.router, prefix="/api/translations", tags=["translations"])
+app.include_router(chatbot.router, prefix="/api/chatbot", tags=["chatbot"])
+app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
 
 # ── Static Files (Uploads Fallback) ──
 os.makedirs("static/uploads", exist_ok=True)

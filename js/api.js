@@ -202,6 +202,15 @@ const JanSamadhanAPI = {
         return this._fetch(`/api/complaints/?${params}`);
     },
 
+    async getGeoComplaintData(region = null, category = null, priority = null, limit = 1000) {
+        const params = new URLSearchParams();
+        if (region) params.append('region', region);
+        if (category) params.append('category', category);
+        if (priority) params.append('priority', priority);
+        params.append('limit', String(limit));
+        return this._fetch(`/api/complaints/geo-data?${params}`);
+    },
+
     async getAssignedGrievances(status = null, priority = null, skip = 0, limit = 50) {
         const params = new URLSearchParams();
         if (status) params.append('status', status);
@@ -213,6 +222,10 @@ const JanSamadhanAPI = {
 
     async getGrievanceByID(id) {
         return this._fetch(`/api/complaints/${id}`);
+    },
+
+    async regenerateGrievanceSummary(id) {
+        return this._fetch(`/api/complaints/${id}/generate-summary`, { method: 'POST' });
     },
 
     async assignComplaint(id, officerEmail) {
@@ -362,6 +375,42 @@ const JanSamadhanAPI = {
         return this._fetch(`/api/complaints/${complaintId}/upload-media`, {
             method: 'POST',
             body: formData
+        });
+    },
+
+    async getTranslations(lang = 'en') {
+        return this._fetch(`/api/translations/${encodeURIComponent(lang)}`);
+    },
+
+    async chatbotQuery(query) {
+        return this._fetch('/api/chatbot/query', {
+            method: 'POST',
+            body: JSON.stringify({ query })
+        });
+    },
+
+    async getNextComplaints(limit = 10) {
+        return this._fetch(`/api/complaints/next?limit=${limit}`);
+    },
+
+    async escalateComplaint(id, remarks = '') {
+        const params = new URLSearchParams();
+        if (remarks) params.append('remarks', remarks);
+        return this._fetch(`/api/complaints/${id}/escalate?${params.toString()}`, { method: 'POST' });
+    },
+
+    async getAnalyticsOverview(days = 30) {
+        return this._fetch(`/api/analytics/overview?days=${days}`);
+    },
+
+    async getAnalyticsTrends(days = 30) {
+        return this._fetch(`/api/analytics/trends?days=${days}`);
+    },
+
+    async generateReport(payload = {}) {
+        return this._fetch('/api/reports/generate', {
+            method: 'POST',
+            body: JSON.stringify(payload)
         });
     }
 

@@ -23,7 +23,7 @@ def build_complaint_query(
     if near:
         try:
             lat, lng = map(float, near.split(","))
-            query["location"] = {
+            query["location_geo"] = {
                 "$near": {
                     "$geometry": {
                         "type": "Point",

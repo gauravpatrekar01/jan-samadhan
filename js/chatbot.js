@@ -125,16 +125,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (chatSend) {
-        chatSend.onclick = () => {
+        chatSend.onclick = async () => {
             const val = chatInput.value.trim();
             if (!val) return;
             addMessage(val, false);
             chatInput.value = '';
-            
+
+            try {
+                if (window.JanSamadhanAPI?.chatbotQuery) {
+                    const result = await window.JanSamadhanAPI.chatbotQuery(val);
+                    const answer = result?.answer || result?.data?.answer;
+                    if (answer) {
+                        addMessage(answer, true);
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.warn('Chatbot API unavailable, using local fallback:', error);
+            }
+
             setTimeout(() => {
                 const botResponse = ChatBotLogic.generateResponse(val);
                 addMessage(botResponse, true);
-            }, 600);
+            }, 300);
         };
         if (chatInput) {
             chatInput.addEventListener("keypress", function(e) {

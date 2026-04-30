@@ -65,6 +65,19 @@ window.JanSamadhan = {
     async submitFeedback(id, rating, comment) {
         console.log(`Feedback for ${id}: ${rating} stars, "${comment}"`);
         return await window.JanSamadhanAPI.submitFeedback(id, rating, comment);
+    },
+
+    async applyTranslations(lang = null) {
+        const target = lang || (localStorage.getItem('js_lang') || navigator.language?.split('-')[0] || 'en');
+        try {
+            const tr = await window.JanSamadhanAPI.getTranslations(target);
+            if (!tr) return;
+            document.querySelectorAll('[data-i18n="summary_label"]').forEach(el => { el.textContent = tr.summary_label || el.textContent; });
+            document.querySelectorAll('[data-i18n="view_summary"]').forEach(el => { el.textContent = tr.view_summary || el.textContent; });
+            document.querySelectorAll('[data-i18n="view_full"]').forEach(el => { el.textContent = tr.view_full || el.textContent; });
+        } catch (e) {
+            console.warn('Translation fetch failed:', e);
+        }
     }
 };
 

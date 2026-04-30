@@ -3,13 +3,65 @@ Advanced Analytics Module for JanSamadhan
 Provides comprehensive data-driven insights for Officers and Admins
 """
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends
 from datetime import datetime, timedelta
 import json
 from pydantic import BaseModel
 from typing import Optional, List
+from dependencies import require_role
+from services.analytics_service import build_daily_trend, moving_average_forecast
 
 router = APIRouter()
+
+
+@router.get("/overview")
+async def analytics_overview(
+    days: int = Query(30),
+    user: dict = Depends(require_role(["admin", "officer"])),
+):
+    from db import db
+    collection = db.get_collection("complaints")
+    since = datetime.now() - timedelta(days=days)
+    docs = list(collection.find({"createdAt": {"$gte": since.isoformat()}}, {"_id": 0, "status": 1, "priority": 1, "category": 1, "region": 1}))
+    total = len(docs)
+    resolved = len([d for d in docs if (d.get("status") or "").lower() in {"resolved", "closed"}])
+    pending = total - resolved
+
+    category_distribution = {}
+    for d in docs:
+        key = d.get("category") or "Other"
+        category_distribution[key] = category_distribution.get(key, 0) + 1
+
+    priority_distribution = {"emergency": 0, "high": 0, "medium": 0, "low": 0}
+    for d in docs:
+        p = (d.get("priority") or "medium").lower()
+        priority_distribution[p] = priority_distribution.get(p, 0) + 1
+
+    return {
+        "success": True,
+        "data": {
+            "total_complaints": total,
+            "resolved_complaints": resolved,
+            "pending_complaints": pending,
+            "resolution_rate": round((resolved / total) * 100, 1) if total else 0,
+            "category_distribution": [{"_id": k, "count": v} for k, v in category_distribution.items()],
+            "priority_distribution": priority_distribution,
+        },
+    }
+
+
+@router.get("/trends")
+async def analytics_trends(
+    days: int = Query(30),
+    user: dict = Depends(require_role(["admin", "officer"])),
+):
+    from db import db
+    collection = db.get_collection("complaints")
+    docs = list(collection.find({}, {"_id": 0, "createdAt": 1, "created_at": 1, "timestamp": 1, "status": 1}))
+    trend = build_daily_trend(docs, days=days)
+    series = [p["total"] for p in trend]
+    forecast = moving_average_forecast(series, window=3, steps=3)
+    return {"success": True, "data": {"timeline": trend, "forecast_next_3": forecast}}
 
 # Request models for type validation
 class FilterRequest(BaseModel):
@@ -59,7 +111,7 @@ def calculate_sla_status(created_date, status, priority='low'):
 # ════════════════════════════════════════════════════════════════
 
 @router.get('/admin/overview')
-async def admin_overview(days: int = Query(30)):
+async def admin_overview(days: int = Query(30), user: dict = Depends(require_role(["admin"]))):
     """
     Comprehensive system overview for admins
     Returns: Total complaints, resolution rate, trends, department performance
@@ -158,7 +210,7 @@ async def admin_overview(days: int = Query(30)):
 
 
 @router.get('/admin/officer-performance')
-async def admin_officer_performance(limit: int = Query(20)):
+async def admin_officer_performance(limit: int = Query(20), user: dict = Depends(require_role(["admin"]))):
     """Officer ranking leaderboard with performance metrics"""
     try:
         from db import db
@@ -218,7 +270,7 @@ async def admin_officer_performance(limit: int = Query(20)):
 
 
 @router.get('/admin/trends')
-async def admin_trends(period: str = Query('daily'), days: int = Query(30)):
+async def admin_trends(period: str = Query('daily'), days: int = Query(30), user: dict = Depends(require_role(["admin"]))):
     """Daily/Weekly/Monthly trend analysis"""
     try:
         from db import db
@@ -268,9 +320,11 @@ async def admin_trends(period: str = Query('daily'), days: int = Query(30)):
 # ════════════════════════════════════════════════════════════════
 
 @router.get('/officer/{officer_id}/performance')
-async def officer_performance(officer_id: str):
+async def officer_performance(officer_id: str, user: dict = Depends(require_role(["officer", "admin"]))):
     """Personal performance metrics for officers"""
     try:
+        if user.get("role") == "officer" and user.get("sub") != officer_id:
+            officer_id = user.get("sub")
         from db import db
         complaints_collection = db.get_collection('complaints')
         
@@ -339,9 +393,11 @@ async def officer_performance(officer_id: str):
 
 
 @router.get('/officer/{officer_id}/queue')
-async def officer_queue(officer_id: str):
+async def officer_queue(officer_id: str, user: dict = Depends(require_role(["officer", "admin"]))):
     """Priority queue and SLA status for officer"""
     try:
+        if user.get("role") == "officer" and user.get("sub") != officer_id:
+            officer_id = user.get("sub")
         from db import db
         complaints_collection = db.get_collection('complaints')
         
@@ -483,10 +539,10 @@ async def admin_ngo_contribution():
         complaints_collection = db.get_collection('complaints')
         
         pipeline = [
-            { '$match': { 'assigned_ngo': { '$ne': None } } },
+            { '$match': { 'assigned_to_ngo': { '$ne': None } } },
             {
                 '$group': {
-                    '_id': '$assigned_ngo',
+                    '_id': '$assigned_to_ngo',
                     'total_assigned': { '$sum': 1 },
                     'resolved': {
                         '$sum': { '$cond': [{ '$in': ['$status', ['resolved', 'closed']] }, 1, 0] }

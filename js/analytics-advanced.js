@@ -591,6 +591,9 @@ class AdvancedAnalyticsManager {
      * API methods
      */
     async fetchAdminOverview() {
+        if (window.JanSamadhanAPI?.getAnalyticsOverview) {
+            return await window.JanSamadhanAPI.getAnalyticsOverview(30);
+        }
         return await fetch(`${this.apiBase}/analytics/admin/overview`)
             .then(r => r.json())
             .then(r => r.data || {});
@@ -607,6 +610,10 @@ class AdvancedAnalyticsManager {
     }
 
     async fetchTrends() {
+        if (window.JanSamadhanAPI?.getAnalyticsTrends) {
+            const data = await window.JanSamadhanAPI.getAnalyticsTrends(30);
+            return data.timeline || [];
+        }
         return await fetch(`${this.apiBase}/analytics/admin/trends?period=daily&days=30`)
             .then(r => r.json())
             .then(r => r.data || []);
@@ -739,6 +746,18 @@ class AdvancedAnalyticsManager {
         } catch (error) {
             console.error('Export failed:', error);
             this.showError('Export failed. Please try again.');
+        }
+    }
+
+    async exportPdfReport(days = 30) {
+        try {
+            const response = await window.JanSamadhanAPI.generateReport({ days });
+            if (response?.report_url) {
+                window.open(response.report_url, '_blank');
+            }
+        } catch (error) {
+            console.error('PDF report generation failed:', error);
+            this.showError('PDF report generation failed. Please try again.');
         }
     }
 

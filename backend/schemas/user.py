@@ -10,6 +10,7 @@ class UserCreate(BaseModel):
     aadhar: Optional[str] = ""
     phone: Optional[str] = ""
     district: Optional[str] = ""
+    language: Optional[Literal["en", "mr", "hi"]] = "en"
     role: Literal["citizen", "officer", "admin", "ngo"] = "citizen"
 
     @field_validator("name")
