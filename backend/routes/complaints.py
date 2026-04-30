@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, UploadFile, File, Form, HTTPException, Request
 from limiter import limiter
 from services.s3_service import s3_service
-from schemas.complaint import ComplaintCreate
+from schemas.complaint import ComplaintCreate, VALID_CATEGORIES
 from db import db
 from datetime import datetime, timezone, timedelta
 import uuid
@@ -146,77 +146,198 @@ def get_ngo_assigned_complaints(
     return {"success": True, "data": complaints, "total": total}
 
 
+@router.get("/debug")
+def debug_complaint_system(request: Request):
+    """Debug endpoint for troubleshooting complaint submission issues"""
+    try:
+        # Test database connection
+        collection = db.get_collection("complaints")
+        complaint_count = collection.count_documents({})
+        
+        # Test user collection
+        users_collection = db.get_collection("users")
+        user_count = users_collection.count_documents({})
+        
+        # Get recent complaints for testing
+        recent_complaints = list(collection.find({}, {"id": 1, "title": 1, "status": 1, "createdAt": 1}).sort("createdAt", -1).limit(3))
+        
+        # Format complaints for JSON response
+        formatted_complaints = []
+        for complaint in recent_complaints:
+            formatted_complaints.append({
+                "id": complaint.get("id"),
+                "title": complaint.get("title"),
+                "status": complaint.get("status"),
+                "createdAt": complaint.get("createdAt")
+            })
+        
+        return {
+            "status": "ok",
+            "database_connected": True,
+            "complaints_count": complaint_count,
+            "users_count": user_count,
+            "valid_categories": list(VALID_CATEGORIES),
+            "recent_complaints": formatted_complaints,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "request_headers": dict(request.headers),
+            "client_ip": request.client.host if request.client else "unknown"
+        }
+        
+    except Exception as e:
+        return {
+            "status": "error",
+            "database_connected": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
+
 @router.post("/", status_code=201)
 @limiter.limit("5/hour")
 def create_complaint(request: Request, complaint: ComplaintCreate, user: dict = Depends(require_citizen)):
-    collection = db.get_collection("complaints")
-    now = datetime.now(timezone.utc).isoformat()
-    complaint_id = f"JSM-{datetime.now(timezone.utc).year}-{str(uuid.uuid4())[:8].upper()}"
+    print(f"=== COMPLAINT CREATION REQUEST ===")
+    print(f"Request from: {request.client.host if request.client else 'unknown'}")
+    print(f"User: {user}")
+    print(f"Complaint data: {complaint.model_dump()}")
+    print(f"Request headers: {dict(request.headers)}")
+    
+    try:
+        collection = db.get_collection("complaints")
+        print("✅ Database connection: OK")
+        
+        now = datetime.now(timezone.utc).isoformat()
+        complaint_id = f"JSM-{datetime.now(timezone.utc).year}-{str(uuid.uuid4())[:8].upper()}"
 
-    user_doc = db.get_collection("users").find_one({"email": user["sub"]})
-    citizen_name = user_doc.get("name", "Citizen") if user_doc else "Citizen"
+        user_doc = db.get_collection("users").find_one({"email": user["sub"]})
+        citizen_name = user_doc.get("name", "Citizen") if user_doc else "Citizen"
+        print(f"✅ User lookup: {citizen_name}")
 
-    c_dict = complaint.model_dump()
-    # Set SLA deadline based on priority
-    sla_hours = {"emergency": 24, "high": 48, "medium": 72, "low": 120}
-    priority_key = (complaint.priority or "medium").lower()
-    deadline = datetime.now(timezone.utc) + timedelta(hours=sla_hours.get(priority_key, 72))
+        # Validate complaint data
+        if not complaint.title.strip():
+            print("❌ Validation failed: Empty title")
+            raise HTTPException(status_code=400, detail="Title cannot be empty")
+            
+        if len(complaint.title.strip()) < 5:
+            print("❌ Validation failed: Title too short")
+            raise HTTPException(status_code=400, detail="Title must be at least 5 characters")
+            
+        if len(complaint.title.strip()) > 100:
+            print("❌ Validation failed: Title too long")
+            raise HTTPException(status_code=400, detail="Title must be less than 100 characters")
+            
+        if len(complaint.description.strip()) < 10:
+            print("❌ Validation failed: Description too short")
+            raise HTTPException(status_code=400, detail="Description must be at least 10 characters")
+            
+        if len(complaint.description.strip()) > 2000:
+            print("❌ Validation failed: Description too long")
+            raise HTTPException(status_code=400, detail="Description must be less than 2000 characters")
+            
+        if complaint.category not in VALID_CATEGORIES:
+            print(f"❌ Validation failed: Invalid category '{complaint.category}'")
+            raise HTTPException(status_code=400, detail=f"Invalid category. Must be one of: {list(VALID_CATEGORIES)}")
+        
+        print("✅ Validation: PASSED")
 
-    c_dict.update(
-        {
-            "grievanceID": complaint_id,
-            "id": complaint_id,
-            "status": "submitted",
-            "citizen_email": user["sub"],
-            "email": user["sub"],  # For backward compatibility
-            "name": citizen_name,
-            "assigned_officer": None,
-            "assigned_to_ngo": None,
-            "createdAt": now,
-            "updatedAt": now,
-            "sla_deadline": deadline.isoformat(),
-            "timeline": [
-                {
-                    "stage": "Submitted",
-                    "remarks": "Grievance filed by citizen",
-                    "timestamp": now,
-                    "updated_by_user_id": user["sub"],
-                }
-            ],
-            "media": [],
-            "feedback": [],
-            "feedbackAverage": 0,
-            "feedbackCount": 0,
-        }
-    )
+        c_dict = complaint.model_dump()
+        
+        # Set SLA deadline based on priority
+        sla_hours = {"emergency": 24, "high": 48, "medium": 72, "low": 120}
+        priority_key = (complaint.priority or "medium").lower()
+        deadline = datetime.now(timezone.utc) + timedelta(hours=sla_hours.get(priority_key, 72))
 
-    assigned_officer = find_officer_for_region(c_dict.get("region"))
-    if assigned_officer:
-        c_dict["assigned_officer"] = assigned_officer
-        c_dict["timeline"].append(
+        c_dict.update(
             {
-                "stage": "Under Review",
-                "remarks": f"Auto-assigned to officer {assigned_officer} for district {c_dict.get('region')}",
-                "timestamp": now,
-                "updated_by_user_id": "system"
+                "grievanceID": complaint_id,
+                "id": complaint_id,
+                "status": "submitted",
+                "citizen_email": user["sub"],
+                "email": user["sub"],  # For backward compatibility
+                "name": citizen_name,
+                "assigned_officer": None,
+                "assigned_to_ngo": None,
+                "createdAt": now,
+                "updatedAt": now,
+                "sla_deadline": deadline.isoformat(),
+                "timeline": [
+                    {
+                        "stage": "Submitted",
+                        "remarks": "Grievance filed by citizen",
+                        "timestamp": now,
+                        "updated_by_user_id": user["sub"],
+                    }
+                ],
+                "media": [],
+                "feedback": [],
+                "feedbackAverage": 0,
+                "feedbackCount": 0,
             }
         )
 
-    collection.insert_one(c_dict)
-    c_dict.pop("_id", None)
+        # Auto-assign officer if region is provided
+        assigned_officer = find_officer_for_region(c_dict.get("region"))
+        if assigned_officer:
+            c_dict["assigned_officer"] = assigned_officer
+            c_dict["timeline"].append(
+                {
+                    "stage": "Under Review",
+                    "remarks": f"Auto-assigned to officer: {assigned_officer}",
+                    "timestamp": now,
+                    "updated_by_user_id": "system",
+                }
+            )
+            print(f"✅ Auto-assigned to officer: {assigned_officer}")
 
-    log_audit(
-        action="complaint_created",
-        actor_email=user["sub"],
-        actor_role="citizen",
-        resource_type="complaint",
-        resource_id=complaint_id,
-        details={"category": complaint.category, "priority": complaint.priority},
-    )
-
-    notify_status_change(user["sub"], complaint_id, "Submitted", "Your complaint has been successfully registered.")
-
-    return {"success": True, "data": c_dict}
+        # Insert into database
+        print("📝 Inserting complaint into database...")
+        result = collection.insert_one(c_dict)
+        
+        if not result.inserted_id:
+            print("❌ Database insert failed")
+            raise HTTPException(status_code=500, detail="Failed to save complaint")
+        
+        print(f"✅ Database insert successful: {result.inserted_id}")
+        
+        # Log the audit
+        try:
+            log_audit("complaint_created", user["sub"], {
+                "complaint_id": complaint_id,
+                "category": complaint.category,
+                "priority": complaint.priority,
+                "region": complaint.region
+            })
+            print("✅ Audit log: OK")
+        except Exception as audit_error:
+            print(f"⚠️ Audit log failed: {audit_error}")
+        
+        # Prepare response
+        response_data = {
+            "id": complaint_id,
+            "grievanceID": complaint_id,
+            "status": "submitted",
+            "createdAt": now,
+            "assigned_officer": assigned_officer,
+            "sla_deadline": deadline.isoformat()
+        }
+        
+        print(f"✅ Complaint created successfully: {complaint_id}")
+        print(f"=== END COMPLAINT CREATION ===")
+        
+        return {"success": True, "data": response_data, "message": "Complaint submitted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Unexpected error in complaint creation: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+        
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Internal server error while creating complaint: {str(e)}"
+        )
 
 
 @router.get("/{id}")

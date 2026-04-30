@@ -5,6 +5,18 @@
 
 let mapManager = null;
 
+// API Base URL configuration
+const API_BASE_URL = (() => {
+    if (!window.location.hostname || window.location.hostname === '') {
+        // Local file (file://) - default to localhost:8000
+        return 'http://localhost:8000';
+    }
+    // For any other hostname, assume same host with port 8000
+    return `http://${window.location.hostname}:8000`;
+})();
+
+console.log("📡 Registration API Base URL:", API_BASE_URL);
+
 // Initialize form on page load
 document.addEventListener('DOMContentLoaded', async () => {
     initializeMap();
@@ -67,8 +79,8 @@ function setupFormListeners() {
         });
     });
 
-    // Form submission
-    form.addEventListener('submit', (e) => submitGrievance(e));
+    // Form submission is already wired inline in `register.html` via onsubmit.
+    // Avoid double submission (inline handler + JS listener) which can trigger duplicate API calls.
 }
 
 /**
@@ -144,63 +156,81 @@ function toggleMobileNav() {
  * Validate form inputs
  */
 function validateForm() {
+    clearErrors();
     const errors = {};
-
-    // Personal Info
-    const name = document.getElementById('fName').value.trim();
-    if (!name || name.length < 3) {
-        errors.name = 'Full name is required (minimum 3 characters)';
+    
+    console.log('🔍 Starting form validation...');
+    
+    // Get form values
+    const title = document.getElementById('fSubcategory')?.value || document.getElementById('fCategory')?.value;
+    const category = document.getElementById('fCategory')?.value;
+    const description = document.getElementById('fDescription')?.value;
+    const priority = document.querySelector('input[name="priority"]:checked')?.value;
+    const location = document.getElementById('fAddress')?.value;
+    const region = document.getElementById('fRegion')?.value;
+    
+    console.log('📋 Form values:', {
+        title, category, description, priority, location, region,
+        descriptionLength: description?.length || 0
+    });
+    
+    // Title validation
+    if (!title || title.trim().length < 5) {
+        errors.title = 'Title must be at least 5 characters long';
+        console.error('❌ Title validation failed:', title);
     }
-
-    const email = document.getElementById('fEmail').value.trim();
-    if (!email || !email.includes('@')) {
-        errors.email = 'Valid email is required';
+    
+    // Description validation
+    if (!description || description.trim().length < 10) {
+        errors.description = 'Description must be at least 10 characters long';
+        console.error('❌ Description validation failed:', description?.length || 0);
+    } else if (description.trim().length > 2000) {
+        errors.description = 'Description must be less than 2000 characters';
+        console.error('❌ Description too long:', description.length);
     }
-
-    const contact = document.getElementById('fContact').value.trim();
-    if (!contact || contact.length !== 10 || !/^\d{10}$/.test(contact)) {
-        errors.contact = 'Valid 10-digit contact number is required';
-    }
-
-    // Complaint Details
-    const category = document.getElementById('fCategory').value;
-    if (!category) {
-        errors.cat = 'Please select a category';
-    }
-
-    const description = document.getElementById('fDescription').value.trim();
-    if (!description || description.length < 10) {
-        errors.desc = 'Description must be at least 10 characters';
-    }
-
-    const priority = document.querySelector('input[name="priority"]:checked');
+    
+    // Priority validation
     if (!priority) {
         errors.priority = 'Please select a priority level';
+        console.error('❌ Priority validation failed');
     }
-
-    // Location
-    const location = mapManager?.getSelectedLocation();
-    if (!location || !location.latitude || !location.longitude) {
-        errors.location = 'Please mark your location on the map';
+    
+    // Location validation
+    if (!location || location.trim().length < 5) {
+        errors.location = 'Please provide a valid location (minimum 5 characters)';
+        console.error('❌ Location validation failed:', location);
     }
-
-    // Consent
-    const consent = document.getElementById('fConsent').checked;
-    if (!consent) {
-        errors.consent = 'You must agree to the consent';
+    
+    // Region validation
+    if (!region || region.trim() === '') {
+        errors.region = 'Please select a region';
+        console.error('❌ Region validation failed:', region);
     }
-
+    
+    // Check map location
+    const mapLocation = mapManager?.getSelectedLocation();
+    if (!mapLocation || !mapLocation.latitude || !mapLocation.longitude) {
+        errors.map = 'Please mark the location on the map';
+        console.error('❌ Map location validation failed');
+    }
+    
     // Display errors
-    clearErrors();
-    Object.keys(errors).forEach(key => {
-        const errorDiv = document.getElementById(`err_${key}`);
-        if (errorDiv) {
-            errorDiv.textContent = errors[key];
-            errorDiv.style.display = 'block';
+    Object.keys(errors).forEach(field => {
+        const errorEl = document.getElementById(`err_${field}`);
+        if (errorEl) {
+            errorEl.textContent = errors[field];
+            errorEl.style.display = 'block';
+            errorEl.style.color = 'var(--danger)';
         }
     });
-
-    return Object.keys(errors).length === 0;
+    
+    const isValid = Object.keys(errors).length === 0;
+    console.log('✅ Form validation result:', isValid ? 'PASSED' : 'FAILED');
+    if (!isValid) {
+        console.log('🚨 Validation errors:', errors);
+    }
+    
+    return isValid;
 }
 
 /**
@@ -214,50 +244,77 @@ function clearErrors() {
 }
 
 /**
- * Submit grievance
+ * Submit grievance with enhanced error handling
  */
 async function submitGrievance(event) {
     event.preventDefault();
-
+    
+    console.log('🚀 Starting complaint submission process...');
+    
     if (!validateForm()) {
+        console.log('❌ Form validation failed - aborting submission');
         showToast('Please fix the errors in the form', 'error');
         return;
     }
-
+    
     const submitBtn = document.getElementById('submitBtn');
+    const originalText = submitBtn.innerHTML;
     submitBtn.disabled = true;
     submitBtn.innerHTML = '⏳ Submitting...';
 
     try {
+        // Check authentication
         const token = sessionStorage.getItem('token') || localStorage.getItem('token');
         if (!token) {
+            console.error('❌ No authentication token found');
             showToast('Please login before submitting a grievance', 'error');
-            window.location.href = 'index.html';
+            setTimeout(() => window.location.href = 'index.html', 2000);
             return;
         }
+        
+        console.log('✅ Authentication token found:', token.substring(0, 20) + '...');
 
-        // Get form data
-        const location = mapManager.getSelectedLocation();
+        // Get form data with validation
+        const location = mapManager?.getSelectedLocation();
+        if (!location || !location.latitude || !location.longitude) {
+            throw new Error('Please mark the location on the map');
+        }
+        
         const complaintData = {
-            title: `${document.getElementById('fSubcategory').value || document.getElementById('fCategory').value}`,
-            category: document.getElementById('fCategory').value,
-            subcategory: document.getElementById('fSubcategory').value,
-            priority: document.querySelector('input[name="priority"]:checked').value.toLowerCase(),
-            description: document.getElementById('fDescription').value,
-            location: document.getElementById('fAddress').value || `${location.latitude}, ${location.longitude}`,
-            region: document.getElementById('fRegion').value || 'Not specified',
+            title: document.getElementById('fSubcategory')?.value || document.getElementById('fCategory')?.value || 'General Complaint',
+            category: document.getElementById('fCategory')?.value,
+            subcategory: document.getElementById('fSubcategory')?.value || '',
+            priority: document.querySelector('input[name="priority"]:checked')?.value.toLowerCase() || 'medium',
+            description: document.getElementById('fDescription')?.value,
+            location: document.getElementById('fAddress')?.value || `${location.latitude}, ${location.longitude}`,
+            region: document.getElementById('fRegion')?.value || 'Not specified',
             latitude: location.latitude,
-            longitude: location.longitude
+            longitude: location.longitude,
+            media: []
         };
 
-        // Validate title
-        if (!complaintData.title || complaintData.title.length < 5) {
-            complaintData.title = `${complaintData.category} Complaint`;
+        // Validate required fields
+        const requiredFields = ['title', 'category', 'description', 'location', 'region'];
+        const missingFields = requiredFields.filter(field => !complaintData[field] || complaintData[field].trim() === '');
+        
+        if (missingFields.length > 0) {
+            throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+        }
+        
+        // Validate field lengths
+        if (complaintData.title.length < 5 || complaintData.title.length > 100) {
+            throw new Error('Title must be between 5 and 100 characters');
+        }
+        
+        if (complaintData.description.length < 10 || complaintData.description.length > 2000) {
+            throw new Error('Description must be between 10 and 2000 characters');
         }
 
-        console.log('Submitting complaint:', complaintData);
+        console.log('📤 Submitting complaint data:', JSON.stringify(complaintData, null, 2));
 
         // Submit to backend
+        console.log('🌐 Sending API request to:', `${API_BASE_URL}/api/complaints/`);
+        
         const response = await fetch(`${API_BASE_URL}/api/complaints/`, {
             method: 'POST',
             headers: {
@@ -267,23 +324,57 @@ async function submitGrievance(event) {
             body: JSON.stringify(complaintData)
         });
 
+        console.log('📥 API Response Status:', response.status);
+        console.log('📥 API Response Headers:', Object.fromEntries(response.headers.entries()));
+
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Failed to submit complaint');
+            const errorText = await response.text();
+            console.error('❌ API Error Response:', errorText);
+            
+            let errorDetail = 'Failed to submit complaint';
+            try {
+                const errorData = JSON.parse(errorText);
+                errorDetail = errorData.detail || errorData.message || errorText;
+            } catch (e) {
+                errorDetail = `Server error: ${response.status} ${response.statusText}`;
+            }
+            
+            throw new Error(errorDetail);
         }
 
         const result = await response.json();
-        const complaintId = result.data?.id || result.data?._id || 'JSM-XXXX';
+        console.log('✅ API Success Response:', JSON.stringify(result, null, 2));
+
+        const complaintId = result.data?.id || result.data?._id || result.data?.grievanceID || 'JSM-XXXX';
+        console.log('🎉 Complaint submitted successfully with ID:', complaintId);
 
         // Show success
         showSuccess(complaintId);
+        showToast(`Complaint submitted successfully! ID: ${complaintId}`, 'success');
         
     } catch (error) {
-        console.error('Submission error:', error);
-        showToast(`Error: ${error.message}`, 'error');
+        console.error('💥 Submission error:', error);
+        console.error('💥 Error stack:', error.stack);
+        
+        // User-friendly error messages
+        let userMessage = error.message;
+        if (error.message.includes('fetch')) {
+            userMessage = 'Network error. Please check your internet connection and try again.';
+        } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+            userMessage = 'Session expired. Please login again.';
+            setTimeout(() => window.location.href = 'index.html', 2000);
+        } else if (error.message.includes('429') || error.message.includes('rate limit')) {
+            userMessage = 'Too many requests. Please wait a moment and try again.';
+        } else if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
+            userMessage = 'Server error. Please try again later.';
+        }
+        
+        showToast(`Error: ${userMessage}`, 'error');
+        
     } finally {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '📤 Submit Grievance';
+        submitBtn.innerHTML = originalText;
+        console.log('🏁 Submission process completed');
     }
 }
 
@@ -388,6 +479,84 @@ function updateFormPreview() {
     if (content.includes('div') && content.split('div').length > 3) {
         preview.innerHTML = content;
     }
+}
+
+// Global debug function for troubleshooting
+window.debugComplaintSystem = async function() {
+    console.log('🔍 === COMPLAINT SYSTEM DEBUG ===');
+    
+    // Check authentication
+    const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+    const user = JSON.parse(sessionStorage.getItem('js_user') || localStorage.getItem('js_user') || '{}');
+    
+    console.log('🔐 Authentication Status:');
+    console.log('  Token exists:', !!token);
+    console.log('  Token length:', token?.length || 0);
+    console.log('  User data:', user);
+    console.log('  User role:', user?.role);
+    console.log('  User email:', user?.email);
+    
+    // Check API connectivity
+    console.log('🌐 API Connectivity:');
+    console.log('  API Base URL:', API_BASE_URL);
+    
+    try {
+        const authResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        console.log('  Auth check status:', authResponse.status);
+        if (authResponse.ok) {
+            const authData = await authResponse.json();
+            console.log('  Auth response:', authData);
+        }
+    } catch (error) {
+        console.error('  Auth check failed:', error.message);
+    }
+    
+    // Check form elements
+    console.log('📋 Form Elements:');
+    const formElements = {
+        'fCategory': document.getElementById('fCategory')?.value,
+        'fSubcategory': document.getElementById('fSubcategory')?.value,
+        'fDescription': document.getElementById('fDescription')?.value,
+        'fAddress': document.getElementById('fAddress')?.value,
+        'fRegion': document.getElementById('fRegion')?.value,
+        'priority': document.querySelector('input[name="priority"]:checked')?.value
+    };
+    console.log('  Form values:', formElements);
+    
+    // Check map status
+    console.log('🗺️ Map Status:');
+    console.log('  Map manager exists:', !!mapManager);
+    if (mapManager) {
+        const location = mapManager.getSelectedLocation();
+        console.log('  Selected location:', location);
+    }
+    
+    // Test API endpoint directly
+    console.log('🧪 API Endpoint Test:');
+    try {
+        const testResponse = await fetch(`${API_BASE_URL}/api/complaints/debug`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        console.log('  Debug endpoint status:', testResponse.status);
+        if (testResponse.ok) {
+            const debugData = await testResponse.json();
+            console.log('  Debug response:', debugData);
+        }
+    } catch (error) {
+        console.error('  Debug endpoint failed:', error.message);
+    }
+    
+    console.log('🔍 === END DEBUG ===');
+};
+
+// Auto-run debug on page load (in development)
+if (window.location.hostname === 'localhost' || window.location.hostname === '') {
+    setTimeout(() => {
+        console.log('🔧 Running auto-debug in development mode...');
+        window.debugComplaintSystem();
+    }, 2000);
 }
 
 // Page loader
