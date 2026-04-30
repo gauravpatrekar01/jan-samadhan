@@ -201,7 +201,7 @@
       animation: fade-up .3s ease;
     }
 
-    
+
 
     @keyframes fade-up {
       from {
@@ -307,9 +307,17 @@
     }
 
     @keyframes gradientMove {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
+      0% {
+        background-position: 0% 50%;
+      }
+
+      50% {
+        background-position: 100% 50%;
+      }
+
+      100% {
+        background-position: 0% 50%;
+      }
     }
 
     .loader-logo {
@@ -345,13 +353,25 @@
     }
 
     @keyframes loadFull {
-      0% { width: 0%; }
-      100% { width: 100%; }
+      0% {
+        width: 0%;
+      }
+
+      100% {
+        width: 100%;
+      }
     }
 
     @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-15px); }
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-15px);
+      }
     }
 
     /* Ticker Styles */
@@ -377,8 +397,13 @@
     }
 
     @keyframes ticker-roll {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-50%); }
+      0% {
+        transform: translateX(0);
+      }
+
+      100% {
+        transform: translateX(-50%);
+      }
     }
 
     /* Back to Top Button */
@@ -415,8 +440,15 @@
 
     /* Pulse for Chatbot Toggle */
     @keyframes pulse-ring {
-      0% { transform: scale(.8); opacity: .5; }
-      100% { transform: scale(1.2); opacity: 0; }
+      0% {
+        transform: scale(.8);
+        opacity: .5;
+      }
+
+      100% {
+        transform: scale(1.2);
+        opacity: 0;
+      }
     }
 
     .chatbot-toggle::before {
@@ -485,7 +517,8 @@
 
   <!-- PAGE LOADER -->
   <div class="page-loader" id="pageLoader">
-    <img src="JanSamadhanLogo.png" alt="JanSamadhan Logo" class="logo-img-xl" style="margin-bottom: 20px; filter: drop-shadow(0 4px 12px rgba(37, 99, 235, 0.3));">
+    <img src="JanSamadhanLogo.png" alt="JanSamadhan Logo" class="logo-img-xl"
+      style="margin-bottom: 20px; filter: drop-shadow(0 4px 12px rgba(37, 99, 235, 0.3));">
     <div class="loader-text">JanSamadhan</div>
     <div class="loader-subtext">Transparent Governance. Faster Resolutions.</div>
     <div class="loader-bar-wrap">
@@ -549,7 +582,8 @@
           System Active – 24/7 Digital Grievance Portal
         </div>
         <h1>JanSamadhan<br><span>Smart Grievance</span> Resolution</h1>
-        <p class="hero-sub" style="margin-left:0; margin-right:0; max-width: 580px;">Empowering citizens with a transparent, digital-first platform to file, track, and resolve
+        <p class="hero-sub" style="margin-left:0; margin-right:0; max-width: 580px;">Empowering citizens with a
+          transparent, digital-first platform to file, track, and resolve
           public grievances. Your voice matters. Justice, delivered faster.</p>
         <div class="hero-actions" style="justify-content: flex-start;">
           <a href="register.html" class="btn btn-accent btn-xl">📝 Register Grievance</a>
@@ -557,43 +591,50 @@
             style="background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.25);backdrop-filter:blur(8px);"
             onclick="document.getElementById('track').scrollIntoView({behavior:'smooth'})">🔍 Track Complaint</button>
         </div>
-        
+
         <!-- INLINE STATS -->
-        <div class="hero-stats" style="border-top: none; padding-top: 20px; margin-top: 30px; justify-content: flex-start; gap: 40px; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 30px;">
+        <div class="hero-stats"
+          style="border-top: none; padding-top: 20px; margin-top: 30px; justify-content: flex-start; gap: 40px; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 30px;">
           <div class="hero-stat-item" style="text-align: left;">
-            <div class="hero-stat-value" id="heroTotal" data-counter="12" data-suffix="" style="font-size: 2rem;">0</div>
+            <div class="hero-stat-value" id="heroTotal" data-counter="12" data-suffix="" style="font-size: 2rem;">0
+            </div>
             <div class="hero-stat-label">Total Cases</div>
           </div>
           <div class="hero-stat-item" style="text-align: left;">
-            <div class="hero-stat-value" id="heroResolved" data-counter="42" data-suffix="%" style="font-size: 2rem;">0</div>
+            <div class="hero-stat-value" id="heroResolved" data-counter="42" data-suffix="%" style="font-size: 2rem;">0
+            </div>
             <div class="hero-stat-label">Resolved</div>
           </div>
           <div class="hero-stat-item" style="text-align: left;">
-            <div class="hero-stat-value" id="heroSatisfaction" data-counter="4.5" data-suffix=" ⭐" style="font-size: 2rem;">0</div>
+            <div class="hero-stat-value" id="heroSatisfaction" data-counter="4.5" data-suffix=" ⭐"
+              style="font-size: 2rem;">0</div>
             <div class="hero-stat-label">Satisfaction</div>
           </div>
           <div class="hero-stat-item" style="text-align: left;">
-            <div class="hero-stat-value" id="heroHigh" data-counter="3" data-suffix="" style="font-size: 2rem; color: var(--accent);">0</div>
+            <div class="hero-stat-value" id="heroHigh" data-counter="3" data-suffix=""
+              style="font-size: 2rem; color: var(--accent);">0</div>
             <div class="hero-stat-label">Emergency</div>
           </div>
         </div>
       </div>
-      
+
       <div class="hero-visual" id="heroVisual">
         <img src="hero_illustration.png" alt="JanSamadhan Governance Illustration" loading="eager">
         <!-- Floating Elements for depth -->
         <div class="floating-card" style="top: 10%; right: -5%; animation-delay: 1s;">
           <span>✅</span> Track Real-time
         </div>
-        <div class="floating-card" style="bottom: 25%; left: -8%; animation-delay: 2s; background: rgba(249, 115, 22, 0.15);">
+        <div class="floating-card"
+          style="bottom: 25%; left: -8%; animation-delay: 2s; background: rgba(249, 115, 22, 0.15);">
           <span>🚨</span> High Priority
         </div>
-        <div class="floating-card" style="top: 50%; right: -15%; animation-delay: 3s; font-size: 0.8rem; padding: 8px 15px;">
+        <div class="floating-card"
+          style="top: 50%; right: -15%; animation-delay: 3s; font-size: 0.8rem; padding: 8px 15px;">
           <span>🤖</span> AI Assistant
         </div>
       </div>
     </div>
-    
+
   </section>
 
   <!-- TICKER -->
@@ -782,7 +823,8 @@
           <div class="role-desc">Review complaints, update status, manage assigned cases by department</div>
           <div class="role-badge rb-officer">Officer Portal</div>
         </div>
-        <div class="login-role-card ngo" onclick="window.location.href='ngo-portal.html'" style="border-color:var(--primary-light)">
+        <div class="login-role-card ngo" onclick="window.location.href='ngo-portal.html'"
+          style="border-color:var(--primary-light)">
           <div class="role-emoji">🤝</div>
           <div class="role-name">NGO Partner</div>
           <div class="role-desc">Collaborate on grievances, provide field support, and track community impact</div>
@@ -880,7 +922,8 @@
 
         <div class="form-group" id="aadharGroup" style="display:none">
           <label class="form-label">Aadhaar Number <span class="req">*</span></label>
-          <input type="text" class="form-control" id="loginAadhar" placeholder="12-digit Aadhaar number" pattern="\d{12}">
+          <input type="text" class="form-control" id="loginAadhar" placeholder="12-digit Aadhaar number"
+            pattern="\d{12}">
         </div>
 
         <div class="form-group">
@@ -991,12 +1034,12 @@
         ];
         tickerInner.innerHTML = notices.map(n => `<span class="ticker-item">${n}</span>`).join('');
       }
-      
+
       // Populate Announcements list
       const list = document.getElementById('announcementsList');
       if (list) {
-          const fetchedNotices = await window.JanSamadhanAPI.getNotices();
-          list.innerHTML = fetchedNotices.map(n => `
+        const fetchedNotices = await window.JanSamadhanAPI.getNotices();
+        list.innerHTML = fetchedNotices.map(n => `
               <div class="notice-card" style="padding: 16px; border-bottom: 1px solid var(--border); ${n.pinned ? 'background: rgba(249, 115, 22, 0.05);' : ''}">
                   <div style="font-size: .8rem; color: var(--text-muted); margin-bottom: 4px;">📅 ${new Date(n.date).toLocaleString('en-IN')} ${n.pinned ? '📌 Pinned' : ''}</div>
                   <div style="font-weight: 600; font-size: .95rem;">${n.text}</div>
@@ -1054,7 +1097,7 @@
 
       console.log("🔄 Switching auth mode to:", mode);
       window.JanSamadhanAuth.mode = mode;
-      
+
       const mLogin = document.getElementById('modeLogin');
       const mSignup = document.getElementById('modeSignup');
       if (mLogin) mLogin.classList.toggle('active', mode === 'login');
@@ -1064,10 +1107,10 @@
       const aadharGroup = document.getElementById('aadharGroup');
       if (fullName) fullName.style.display = mode === 'signup' ? 'block' : 'none';
       if (aadharGroup) aadharGroup.style.display = mode === 'signup' ? 'block' : 'none';
-      
+
       const title = document.getElementById('authModalTitle');
       if (title) title.innerText = mode === 'login' ? '🔑 Login to JanSamadhan' : '📝 Create Account';
-      
+
       const btn = document.getElementById('authSubmitBtn');
       if (btn) btn.innerText = mode === 'login' ? '🔑 Login & Enter Portal' : '📝 Sign Up & Register';
     }
@@ -1078,8 +1121,8 @@
       document.getElementById('ngoSignupForm').style.display = isLogin ? 'none' : 'block';
       document.getElementById('ngoModeLogin').classList.toggle('active', isLogin);
       document.getElementById('ngoModeSignup').classList.toggle('active', !isLogin);
-      document.getElementById('ngoPortalSub').textContent = isLogin ? 
-        'Access your resolution dashboard' : 
+      document.getElementById('ngoPortalSub').textContent = isLogin ?
+        'Access your resolution dashboard' :
         'Submit registration for verification';
     }
 
@@ -1104,9 +1147,9 @@
     function setLoginRole(role) {
       console.log("👤 Setting role to:", role);
       if (role === 'ngo') {
-          // Redirect to the new dedicated NGO Portal page
-          window.location.href = 'ngo-portal.html';
-          return;
+        // Redirect to the new dedicated NGO Portal page
+        window.location.href = 'ngo-portal.html';
+        return;
       }
       window.JanSamadhanAuth.role = role;
       document.querySelectorAll('.role-tab').forEach(t => t.classList.toggle('active', t.dataset.role === role));
@@ -1124,9 +1167,9 @@
       const mode = window.JanSamadhanAuth.mode;
       const role = window.JanSamadhanAuth.role;
       console.log("🔐 Auth Submission:", mode, role);
-      
+
       let email, password, name, aadhar;
-      
+
       // Determine source of credentials
       const ngoModal = document.getElementById('ngoPartnerModal');
       if (ngoModal && ngoModal.classList.contains('show')) {
@@ -1145,14 +1188,14 @@
         console.error("❌ Submit button not found!");
         return;
       }
-      
+
       const originalText = btn.innerHTML;
       btn.innerHTML = '⌛ Processing...';
       btn.disabled = true;
 
       try {
         console.log("📡 Contacting backend at:", window.API_BASE_URL || 'unknown');
-        
+
         let response;
         if (mode === 'signup') {
           if (role !== 'citizen') {
@@ -1177,7 +1220,7 @@
         }
 
         console.log("✅ Auth response received:", response);
-        
+
         if (!response) {
           console.error("❌ Empty response from auth endpoint!");
           showToast('Server returned empty response. Please try again.', 'error');
@@ -1196,12 +1239,12 @@
 
         console.log("👤 User role:", response.role);
         handleLoginSuccess();
-        
+
         setTimeout(() => {
 
           const userRole = response.role.toLowerCase();
           console.log("🚀 Redirecting to:", userRole === 'citizen' ? 'citizen.html' : userRole === 'officer' ? 'officer.html' : 'admin.html');
-          
+
           if (userRole === 'citizen') window.location.href = 'citizen.html';
           else if (userRole === 'officer') window.location.href = 'officer.html';
           else if (userRole === 'admin') window.location.href = 'admin.html';
@@ -1215,7 +1258,7 @@
         }, 800);
       } catch (err) {
         console.error("❌ Auth Error:", err.message, err);
-        showToast((err.message || 'Login failed') + ' · Check browser console for details', 'error');
+        showToast((err.message || 'Login failed') + ' Kindly try once Again !', 'error');
         btn.innerHTML = originalText;
         btn.disabled = false;
       }
@@ -1301,20 +1344,20 @@
     async function trackComplaint() {
       const id = document.getElementById('trackInput')?.value.trim().toUpperCase();
       const result = document.getElementById('trackResult');
-      
+
       if (!id) { showToast('Please enter a Grievance ID', 'warning'); return; }
-      
+
       const btn = document.querySelector('.track-input-row button');
       const oldText = btn.innerText;
       btn.innerText = '⏳ Tracking...';
-      
+
       let g = null;
       try {
-          g = await window.JanSamadhanAPI.getGrievanceByID(id);
+        g = await window.JanSamadhanAPI.getGrievanceByID(id);
       } catch (e) {
-          console.error(e);
+        console.error(e);
       }
-      
+
       btn.innerText = oldText;
       if (!g) {
         result.className = 'visible';
@@ -1332,7 +1375,7 @@
     `;
         return;
       }
-      
+
       result.className = 'visible';
       result.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">

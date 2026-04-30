@@ -409,19 +409,19 @@
                         <label class="form-label">Priority Level <span class="req">*</span></label>
                         <div class="priority-pills">
                             <div class="priority-pill low">
-                                <input type="radio" name="priority" id="pLow" value="Low">
+                                <input type="radio" name="priority" id="pLow" value="low">
                                 <label for="pLow">🟢 Low</label>
                             </div>
                             <div class="priority-pill med">
-                                <input type="radio" name="priority" id="pMed" value="Medium" checked>
+                                <input type="radio" name="priority" id="pMed" value="medium" checked>
                                 <label for="pMed">🟠 Medium</label>
                             </div>
                             <div class="priority-pill high">
-                                <input type="radio" name="priority" id="pHigh" value="High">
+                                <input type="radio" name="priority" id="pHigh" value="high">
                                 <label for="pHigh">🔴 High</label>
                             </div>
                             <div class="priority-pill emg">
-                                <input type="radio" name="priority" id="pEmg" value="Emergency">
+                                <input type="radio" name="priority" id="pEmg" value="emergency">
                                 <label for="pEmg">🚨 Emergency</label>
                             </div>
                         </div>
@@ -638,6 +638,37 @@
     <script src="js/app.js"></script>
     <script src="js/chatbot.js"></script>
     <script>
+        // ── Test API Connection Function ──
+        async function testAPIConnection() {
+            console.log('🔧 Testing API Connection...');
+            try {
+                const user = getSessionUser();
+                console.log('Current User:', user);
+                
+                if (!user || !user.token) {
+                    alert('❌ Not logged in. Please login first.');
+                    return;
+                }
+                
+                // Test getting user profile
+                const profile = await fetch('http://localhost:8000/api/auth/user', {
+                    headers: {
+                        'Authorization': `Bearer ${user.token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }).then(r => r.json());
+                
+                console.log('✅ API Connection OK. Profile:', profile);
+                alert('✅ API Connected!\n\nUser: ' + user.email + '\nRole: ' + user.role);
+            } catch (err) {
+                console.error('❌ API Test Failed:', err);
+                alert('❌ API Connection Failed:\n' + err.message);
+            }
+        }
+        
+        // Expose for console testing
+        window.testAPIConnection = testAPIConnection;
+        
         // ── Init map ──
         window.addEventListener("load", function () {
             const loader = document.getElementById("pageLoader");
@@ -647,10 +678,56 @@
                     setTimeout(() => { loader.style.display = "none"; }, 400);
                 }, 800);
             }
+            
+            // Show debugging instructions in console
+            console.log(`
+%c🔍 JanSamadhan Debugging Guide
+%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+%c1. Check Authentication:
+%c   testAPIConnection()
+
+%c2. View Current User:
+%c   getSessionUser()
+
+%c3. Check Form Data (before submit):
+%c   Inspect the 'grievanceData' in console when submitting
+
+%c4. Check API Logs:
+%c   Backend console will show POST request details
+
+%cIf still failing, take these steps:
+%c• Clear browser cache (Ctrl+Shift+Delete)
+%c• Logout and login again
+%c• Check if backend is running (port 8000)
+%c• Verify all form fields are filled correctly
+            `, 'font-weight: bold; color: #2563eb; font-size: 14px',
+               'color: #2563eb; font-size: 12px',
+               'color: #7c3aed; font-weight: bold',
+               'color: #7c3aed',
+               'color: #7c3aed; font-weight: bold',
+               'color: #7c3aed',
+               'color: #7c3aed; font-weight: bold',
+               'color: #7c3aed',
+               'color: #7c3aed; font-weight: bold',
+               'color: #7c3aed',
+               'color: #dc2626; font-weight: bold',
+               'color: #dc2626',
+               'color: #dc2626',
+               'color: #dc2626',
+               'color: #dc2626');
         });
 
         document.addEventListener('DOMContentLoaded', () => {
             const user = getSessionUser();
+            console.log('🔍 Form Load Diagnostics:', {
+                userLoggedIn: !!user,
+                userEmail: user?.email,
+                userRole: user?.role,
+                hasToken: !!user?.token,
+                storageType: localStorage.getItem('js_user') ? 'localStorage' : (sessionStorage.getItem('js_user') ? 'sessionStorage' : 'none'),
+                timestamp: new Date().toISOString()
+            });
+            
             if (user && user.role === 'citizen') {
                 const fName = document.getElementById('fName');
                 const fEmail = document.getElementById('fEmail');
@@ -690,10 +767,10 @@
         });
 
         const priorityHints = {
-            Low: 'ℹ️ <em>Low: Non-urgent issue. Expected resolution in 7–10 working days.</em>',
-            Medium: 'ℹ️ <em>Medium: Moderate issue. Expected resolution in 3–5 working days.</em>',
-            High: '⚠️ <em>High: Urgent issue. Expected resolution in 24–48 hours. Will be prioritized.</em>',
-            Emergency: '🚨 <em><strong>Emergency: Life-threatening or critical. Auto-escalated to senior officers. Response within 24 hours.</strong></em>'
+            low: 'ℹ️ <em>Low: Non-urgent issue. Expected resolution in 7–10 working days.</em>',
+            medium: 'ℹ️ <em>Medium: Moderate issue. Expected resolution in 3–5 working days.</em>',
+            high: '⚠️ <em>High: Urgent issue. Expected resolution in 24–48 hours. Will be prioritized.</em>',
+            emergency: '🚨 <em><strong>Emergency: Life-threatening or critical. Auto-escalated to senior officers. Response within 24 hours.</strong></em>'
         };
         function updatePriorityHint(p) { document.getElementById('priorityHint').innerHTML = priorityHints[p]; updatePreview(); }
 
@@ -764,6 +841,15 @@
             const email = document.getElementById('fEmail').value.trim();
             const desc = document.getElementById('fDescription').value.trim();
             const consent = document.getElementById('fConsent').checked;
+            const region = document.getElementById('fRegion').value?.trim();
+
+            // Check if user is logged in
+            const user = getSessionUser();
+            if (!user || !user.token) {
+                showToast('❌ Authentication Error: Please login as a citizen first', 'error');
+                console.error('❌ User not logged in or no token available', { user });
+                return;
+            }
 
             // Validate
             if (!name) {
@@ -797,6 +883,12 @@
 
             if (!consent) { showToast('Please accept the declaration to proceed', 'warning'); valid = false; }
 
+            // Validate required fields for API
+            if (!region) {
+                showToast('⚠️ Please select a Region / District', 'warning');
+                valid = false;
+            }
+
             if (!valid) { showToast('Please fill all required fields correctly', 'error'); return; }
 
             // Loading state
@@ -806,7 +898,7 @@
             btn.disabled = true;
 
             try {
-                const priority = (document.querySelector('input[name="priority"]:checked')?.value || 'Medium').toLowerCase();
+                const priority = document.querySelector('input[name="priority"]:checked')?.value || 'medium';
                 
                 // Get location from form fields
                 const lat = parseFloat(document.getElementById('latitude').value);
@@ -818,17 +910,32 @@
                     locationObj = { lat, lng, address };
                 }
 
+                // Build title - use subcategory if provided and long enough, otherwise use category + issue
+                let titleText = document.getElementById('fSubcategory').value?.trim();
+                if (!titleText || titleText.length < 5) {
+                    titleText = `${selectedCategory} - Issue Report`;
+                }
+
                 const grievanceData = {
-                    title: document.getElementById('fSubcategory').value || `${selectedCategory} Issue`,
+                    title: titleText,
                     description: desc,
                     category: selectedCategory,
                     subcategory: document.getElementById('fSubcategory').value || '',
                     priority: priority,
                     location: locationObj.address,
-                    region: document.getElementById('fRegion').value || 'Mumbai',
+                    region: region,
                     latitude: locationObj.lat,
                     longitude: locationObj.lng
                 };
+
+                // Debug logging
+                console.log('📝 Complaint Data Being Sent:', {
+                    ...grievanceData,
+                    titleLength: titleText.length,
+                    descLength: desc.length,
+                    categoryValid: ['Infrastructure', 'Water Supply', 'Electricity', 'Sanitation', 'Transport', 'Law & Order', 'Healthcare', 'Other'].includes(selectedCategory),
+                    userEmail: getSessionUser()?.email
+                });
 
                 const response = await window.JanSamadhanAPI.createGrievance(grievanceData);
 
@@ -846,7 +953,40 @@
             } catch (err) {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
-                showToast(err.message || 'Submission failed', 'error');
+                
+                // Enhanced error logging and display
+                const errorDetails = {
+                    message: err.message,
+                    timestamp: new Date().toISOString(),
+                    userEmail: getSessionUser()?.email,
+                    formData: {
+                        category: selectedCategory,
+                        titleLength: titleText?.length || 0,
+                        descLength: desc?.length || 0,
+                        region: region
+                    }
+                };
+                
+                console.error('❌ Complaint Registration Error:', errorDetails);
+                
+                // Try to extract detailed error from response
+                let errorMsg = err.message || 'Submission failed';
+                
+                // Check if it's a validation error with details
+                if (err.message.includes('validation') || err.message.includes('field')) {
+                    errorMsg = `⚠️ Validation Error: ${err.message}`;
+                } else if (err.message.includes('rate')) {
+                    errorMsg = `⏱️ Rate Limited: Too many requests. Try again in a few minutes.`;
+                } else if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+                    errorMsg = `🔒 Authentication Error: Your session may have expired. Please log in again.`;
+                } else if (err.message.includes('403') || err.message.includes('Forbidden')) {
+                    errorMsg = `🚫 Permission Denied: Only citizens can file complaints.`;
+                } else {
+                    errorMsg = `❌ Error: ${errorMsg}`;
+                }
+                
+                console.log('📊 Error Details to Display:', { errorMsg, original: err.message });
+                showToast(errorMsg, 'error');
             }
         }
     </script>
