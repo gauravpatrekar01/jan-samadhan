@@ -38,13 +38,11 @@ class AuthenticationError(APIError):
         )
 
 
-class TokenExpiredError(APIError):
-    def __init__(self):
-        super().__init__(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            error_code="TOKEN_EXPIRED",
-            message="Token has expired. Please login again or use refresh token.",
-        )
+class TokenExpiredError(Exception):
+    """Simple exception for token expiration - converted to HTTPException in dependencies"""
+    def __init__(self, message="TOKEN_EXPIRED"):
+        self.message = message
+        super().__init__(self.message)
 
 
 class AuthorizationError(APIError):

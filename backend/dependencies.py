@@ -3,28 +3,105 @@ Centralized dependency injection for role-based access control and auth.
 """
 
 from fastapi import Depends, Header, HTTPException, status
-from security import decode_token
+from security import decode_token, verify_token_type, is_token_expired
 from errors import AuthenticationError, AuthorizationError, TokenExpiredError
 from typing import Optional, Literal
 from jose import JWTError
+import logging
 
+logger = logging.getLogger(__name__)
 
 async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
     """
     Extract and validate JWT token from Authorization header.
-    Raises TokenExpiredError if token has expired.
+    Converts token errors to proper HTTPException responses.
     """
     if not authorization or not authorization.startswith("Bearer "):
-        raise AuthenticationError("Missing or invalid authorization header")
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "success": False,
+                "error": {
+                    "code": "TOKEN_MISSING",
+                    "message": "Authorization token is required"
+                }
+            }
+        )
 
     token = authorization.split(" ", 1)[1]
+    
+    # Debug logging
+    print(f"Access token: {token[:20]}..." if len(token) > 20 else f"Access token: {token}")
+    
     try:
         payload = decode_token(token)
         if not payload:
-            raise TokenExpiredError()
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "success": False,
+                    "error": {
+                        "code": "TOKEN_INVALID",
+                        "message": "Invalid token"
+                    }
+                }
+            )
+        
+        # Verify token type
+        if not verify_token_type(payload, "access"):
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "success": False,
+                    "error": {
+                        "code": "TOKEN_INVALID",
+                        "message": "Invalid token type"
+                    }
+                }
+            )
+        
+        # Check expiration
+        if is_token_expired(payload):
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "success": False,
+                    "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Token has expired"
+                    }
+                }
+            )
+            
         return payload
-    except JWTError:
-        raise TokenExpiredError()
+        
+    except JWTError as e:
+        logger.warning(f"JWT error: {str(e)}")
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "success": False,
+                "error": {
+                    "code": "TOKEN_INVALID",
+                    "message": "Invalid token format"
+                }
+            }
+        )
+    except HTTPException:
+        # Re-raise HTTPException (already in correct format)
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected auth error: {str(e)}")
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "success": False,
+                "error": {
+                    "code": "TOKEN_INVALID",
+                    "message": "Token validation failed"
+                }
+            }
+        )
 
 async def get_current_user_optional(authorization: Optional[str] = Header(None)) -> dict | None:
     if not authorization or not authorization.startswith("Bearer "):

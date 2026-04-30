@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
-from routes import auth, complaints, admin, ngo, analytics, translations, chatbot, reports
+from routes import auth, complaints, admin, ngo, analytics, translations, chatbot, reports, predictions, public
 from db import db
 from config import settings
 from limiter import limiter
@@ -226,6 +226,8 @@ app.include_router(complaints.router, prefix="/api/complaints", tags=["complaint
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(ngo.router, prefix="/api/ngo", tags=["ngo"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
+app.include_router(predictions.router, prefix="/api/analytics", tags=["predictions"])
+app.include_router(public.router, prefix="/api/public", tags=["public"])
 app.include_router(translations.router, prefix="/api/translations", tags=["translations"])
 app.include_router(chatbot.router, prefix="/api/chatbot", tags=["chatbot"])
 app.include_router(reports.router, prefix="/api/reports", tags=["reports"])

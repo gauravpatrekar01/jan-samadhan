@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends
 from schemas.user import UserCreate, UserLogin, NGORegistrationSchema
 from db import db
-from security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token, verify_token_type
+from security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token, verify_token_type, validate_refresh_token
 from limiter import limiter
-from fastapi import Request, UploadFile, File, Form
-import os, uuid, shutil
+from fastapi import Request, UploadFile, File, Form, HTTPException
+import os, uuid, shutil, logging
+
+logger = logging.getLogger(__name__)
 from government_registry import verify_citizen_record
 from errors import APIError, AuthenticationError, ValidationError, ConflictError, TokenExpiredError
 from datetime import datetime, timezone
@@ -187,22 +189,97 @@ def admin_login(request: Request, user: UserLogin):
 
 @router.post("/refresh")
 def refresh_access_token(refresh_token: dict):
-    """Exchange refresh token for new access token"""
+    """
+    Exchange refresh token for new access token
+    Implements token rotation for enhanced security
+    """
     token_str = refresh_token.get("refresh_token")
-    if not token_str:
-        raise ValidationError("Refresh token is required")
+    
+    # Debug logging
+    print(f"Refresh token: {token_str[:20]}..." if token_str and len(token_str) > 20 else f"Refresh token: {token_str}")
+    
+    if not token_str or token_str == "undefined" or token_str == "":
+        logger.warning("Refresh token missing or empty in request")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "success": False,
+                "error": {
+                    "code": "REFRESH_TOKEN_MISSING",
+                    "message": "Refresh token is required"
+                }
+            }
+        )
 
-    payload = decode_token(token_str)
-    if not payload or not verify_token_type(payload, "refresh"):
-        raise TokenExpiredError()
+    # Validate refresh token format (must have 3 segments for JWT)
+    if len(token_str.split('.')) != 3:
+        logger.warning(f"Invalid refresh token format: {len(token_str.split('.'))} segments")
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "success": False,
+                "error": {
+                    "code": "REFRESH_TOKEN_INVALID",
+                    "message": "Invalid refresh token format"
+                }
+            }
+        )
 
-    # Create new access token using the refresh token's email/role
-    access_token = create_access_token({"sub": payload["sub"], "role": payload["role"], "lang": payload.get("lang", "en")})
+    # Validate refresh token
+    payload = validate_refresh_token(token_str)
+    if not payload:
+        logger.warning(f"Invalid refresh token attempt: {token_str[:20]}...")
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "success": False,
+                "error": {
+                    "code": "REFRESH_TOKEN_INVALID",
+                    "message": "Refresh token is invalid or expired"
+                }
+            }
+        )
 
-    return {
-        "success": True,
-        "data": {
-            "token": access_token,
-            "refresh_token": token_str,
-        },
-    }
+    try:
+        user_email = payload["sub"]
+        user_role = payload.get("role", "citizen")
+        user_lang = payload.get("lang", "en")
+        
+        logger.info(f"Token refresh successful for user: {user_email}")
+        
+        # Create new access token
+        new_access_token = create_access_token({
+            "sub": user_email,
+            "role": user_role,
+            "lang": user_lang
+        })
+        
+        # Create new refresh token (token rotation)
+        new_refresh_token = create_refresh_token({
+            "sub": user_email,
+            "role": user_role,
+            "lang": user_lang
+        })
+        
+        return {
+            "success": True,
+            "data": {
+                "token": new_access_token,
+                "refresh_token": new_refresh_token,  # Rotated refresh token
+                "expires_in": 1800,  # 30 minutes in seconds
+                "token_type": "Bearer"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Token refresh error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "success": False,
+                "error": {
+                    "code": "TOKEN_REFRESH_ERROR",
+                    "message": "Failed to refresh token"
+                }
+            }
+        )

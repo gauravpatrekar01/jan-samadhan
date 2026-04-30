@@ -17,10 +17,13 @@ class GeoPoint(BaseModel):
 
 class MediaAttachment(BaseModel):
     url: str
+    public_id: Optional[str] = None
     media_type: Literal["image", "video", "document"]
     file_name: str
     size_bytes: int
     uploaded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    format: Optional[str] = None
+    original_filename: Optional[str] = None
 
 
 class EscalationLog(BaseModel):
@@ -57,6 +60,9 @@ class ComplaintCreate(BaseModel):
     media: Optional[List[MediaAttachment]] = []
     marathi_summary: Optional[str] = None
     summary_generated: bool = False
+    # Social validation fields
+    votes: int = 0
+    comments: Optional[List[Dict[str, Any]]] = []
 
     @field_validator("title")
     @classmethod

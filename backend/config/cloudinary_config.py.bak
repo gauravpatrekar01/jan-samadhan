@@ -1,0 +1,33 @@
+import cloudinary
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Get environment variables
+cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME")
+api_key = os.getenv("CLOUDINARY_API_KEY")
+api_secret = os.getenv("CLOUDINARY_API_SECRET")
+
+# Configure Cloudinary using environment variables directly
+# This avoids Pydantic validation issues in newer Cloudinary versions
+if cloud_name:
+    os.environ['CLOUDINARY_CLOUD_NAME'] = cloud_name
+if api_key:
+    os.environ['CLOUDINARY_API_KEY'] = api_key
+if api_secret:
+    os.environ['CLOUDINARY_API_SECRET'] = api_secret
+
+def is_configured() -> bool:
+    """Check if Cloudinary is properly configured"""
+    return all([cloud_name, api_key, api_secret])
+
+def get_config() -> dict:
+    """Get Cloudinary configuration"""
+    return {
+        'cloud_name': cloud_name,
+        'api_key': api_key,
+        'api_secret': api_secret,
+        'configured': is_configured()
+    }
