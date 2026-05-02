@@ -205,7 +205,11 @@
                 <div class="card" style="margin-top: 30px; padding: 24px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); border-radius: var(--radius-lg)">
                     <h4 style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; color: var(--text-dark);">
                         <span><span style="font-size: 1.2rem;">🔍</span> Filter Analytics Data</span>
-                        <button class="btn btn-sm btn-outline" onclick="analyticsManager.exportData('csv')">📥 Export CSV</button>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap">
+                            <button class="btn btn-sm btn-outline" onclick="analyticsManager.exportData('csv')">📥 Export CSV</button>
+                            <button class="btn btn-sm btn-outline" id="downloadPdfBtn" onclick="downloadReport('pdf')" style="background:rgba(220,38,38,.08);color:#dc2626;border-color:#fca5a5">📄 PDF Report</button>
+                            <button class="btn btn-sm btn-outline" id="downloadExcelBtn" onclick="downloadReport('excel')" style="background:rgba(22,163,74,.08);color:#16a34a;border-color:#86efac">📊 Excel Report</button>
+                        </div>
                     </h4>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
                         <div>
@@ -987,6 +991,50 @@
                 loadOfficerNotices();
             } catch (err) {
                 showToast('Failed to delete notice: ' + err.message, 'error');
+            }
+        }
+
+        // ── Report Download (PDF / Excel) ──
+        async function downloadReport(format) {
+            const btn = document.getElementById(format === 'pdf' ? 'downloadPdfBtn' : 'downloadExcelBtn');
+            const oldText = btn.textContent;
+            btn.textContent = '⏳ Generating...';
+            btn.disabled = true;
+
+            try {
+                const days = document.querySelector('[data-filter="days"]')?.value || 30;
+                const category = document.querySelector('[data-filter="category"]')?.value || '';
+                const status = document.querySelector('[data-filter="status"]')?.value || '';
+
+                const params = new URLSearchParams({ days });
+                if (category) params.set('category', category);
+                if (status) params.set('status', status);
+
+                const endpoint = format === 'pdf' ? 'officer/pdf' : 'officer/excel';
+                const url = `${window.JanSamadhanAPI?.baseURL || 'http://localhost:8000'}/api/reports/download/${endpoint}?${params}`;
+
+                const user = JSON.parse(sessionStorage.getItem('js_user') || localStorage.getItem('js_user') || '{}');
+                const token = user.token;
+                if (!token) { showToast('Login required to download reports', 'warning'); return; }
+
+                const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!res.ok) throw new Error(`Server returned ${res.status}`);
+
+                const blob = await res.blob();
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = res.headers.get('Content-Disposition')?.split('filename=')[1] || `report.${format === 'pdf' ? 'pdf' : 'xlsx'}`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(a.href);
+                showToast(`${format.toUpperCase()} report downloaded!`, 'success');
+            } catch (e) {
+                console.error(e);
+                showToast(`Failed to generate ${format.toUpperCase()} report: ${e.message}`, 'error');
+            } finally {
+                btn.textContent = oldText;
+                btn.disabled = false;
             }
         }
     </script>
