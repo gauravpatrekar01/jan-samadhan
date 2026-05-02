@@ -1532,9 +1532,9 @@
       ${JanSamadhan.utils.statusBadge(g.status)}
       ${g.escalated ? '<span class="escalation-tag">🚨 ESCALATED</span>' : ''}
       <div style="margin-left: auto; display: flex; align-items: center; gap: 8px; background: rgba(37, 99, 235, 0.05); padding: 4px 12px; border-radius: 20px;">
-        <button class="vote-btn" onclick="voteComplaint('${g.id}', 'up')">🔼</button>
+        <button class="vote-btn ${g.user_vote === 'up' ? 'voted-up' : ''}" id="vote-up-${g.id}" onclick="voteComplaint('${g.id}', 'up')">🔼</button>
         <span class="vote-count" id="vote-count-${g.id}">${g.votes || 0}</span>
-        <button class="vote-btn" onclick="voteComplaint('${g.id}', 'down')">🔽</button>
+        <button class="vote-btn ${g.user_vote === 'down' ? 'voted-down' : ''}" id="vote-down-${g.id}" onclick="voteComplaint('${g.id}', 'down')">🔽</button>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
@@ -1649,7 +1649,17 @@
       } catch (e) { console.error(e); }
     }
 
+    const _votingInFlight = new Set();
     async function voteComplaint(id, type) {
+      // Prevent concurrent votes on the same grievance
+      if (_votingInFlight.has(id)) return;
+      _votingInFlight.add(id);
+
+      // Disable buttons visually
+      const upBtns = document.querySelectorAll(`[id="vote-up-${id}"]`);
+      const downBtns = document.querySelectorAll(`[id="vote-down-${id}"]`);
+      [...upBtns, ...downBtns].forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
+
       try {
         const res = await window.JanSamadhanAPI.voteGrievance(id, type);
         
@@ -1660,21 +1670,21 @@
         });
 
         // Update button states
-        const upBtns = document.querySelectorAll(`[id="vote-up-${id}"]`);
-        const downBtns = document.querySelectorAll(`[id="vote-down-${id}"]`);
-        
         upBtns.forEach(b => b.classList.toggle('voted-up', res.vote_type === 'up'));
         downBtns.forEach(b => b.classList.toggle('voted-down', res.vote_type === 'down'));
 
         showToast(res.message || `Vote recorded`, 'success');
       } catch (e) {
         console.error(e);
-        if (e.message.toLowerCase().includes('token') || e.message.toLowerCase().includes('authorization')) {
+        if (e.message.toLowerCase().includes('token') || e.message.toLowerCase().includes('authorization') || e.message.toLowerCase().includes('not authenticated')) {
           showToast('Please login to vote!', 'warning');
           openLoginModal();
         } else {
           showToast(e.message || "Failed to record vote", "error");
         }
+      } finally {
+        _votingInFlight.delete(id);
+        [...upBtns, ...downBtns].forEach(b => { b.disabled = false; b.style.opacity = '1'; });
       }
     }
 

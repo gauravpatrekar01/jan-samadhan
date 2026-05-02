@@ -152,10 +152,10 @@ def get_complaints(
     )
 
     # Inject user vote status and clean up history
-    user_id = user["sub"] if user else None
+    safe_user_id = user["sub"].replace(".", "_dot_") if user else None
     for c in complaints:
-        if user_id:
-            c["user_vote"] = c.get("votes_history", {}).get(user_id)
+        if safe_user_id:
+            c["user_vote"] = c.get("votes_history", {}).get(safe_user_id)
         if "votes_history" in c:
             del c["votes_history"]
 
@@ -739,9 +739,9 @@ def get_complaint(id: str, user: dict = Depends(get_current_user_optional)):
     complaint.setdefault("summary_last_error", None)
     complaint.setdefault("summary_last_generated_at", None)
     # Inject user vote status
-    user_id = user["sub"] if user else None
-    if user_id:
-        complaint["user_vote"] = complaint.get("votes_history", {}).get(user_id)
+    safe_user_id = user["sub"].replace(".", "_dot_") if user else None
+    if safe_user_id:
+        complaint["user_vote"] = complaint.get("votes_history", {}).get(safe_user_id)
     if "votes_history" in complaint:
         del complaint["votes_history"]
 
@@ -1300,96 +1300,92 @@ def vote_complaint(
     user: dict = Depends(get_current_user)
 ):
     """
-    Vote on a complaint (upvote or downvote)
-    Requires authentication to ensure 'one user, one vote' policy
+    Vote on a complaint (upvote or downvote).
+    Strictly enforces one-user-one-vote via atomic MongoDB update.
+    Toggling the same vote type removes the vote.
     """
     try:
         collection = db.get_collection("complaints")
-        complaint = collection.find_one({"id": id}, {"_id": 0})
-        
-        if not complaint:
-            raise HTTPException(status_code=404, detail="Complaint not found")
-        
-        # Get user identifier (email for authenticated)
         user_id = user["sub"]
         
-        # Check if user already voted
-        existing_vote = complaint.get("votes_history", {}).get(user_id)
-        
-        if existing_vote:
-            # Update or Remove existing vote
-            vote_change = 0
-            if existing_vote == vote_type:
-                # Toggle off: remove the vote
-                vote_change = -1 if vote_type == "up" else 1
-                vote_type = None  # Signal removal
-            elif existing_vote == "up" and vote_type == "down":
-                vote_change = -2  # Remove upvote, add downvote
-            elif existing_vote == "down" and vote_type == "up":
-                vote_change = 2   # Remove downvote, add upvote
-            
-            new_votes = complaint.get("votes", 0) + vote_change
-            
-            # Update complaint
-            update_query = {
-                "$set": {
-                    "votes": new_votes,
-                    "updatedAt": datetime.now(timezone.utc).isoformat()
-                }
-            }
-            
-            if vote_type:
-                update_query["$set"][f"votes_history.{user_id}"] = vote_type
-            else:
-                update_query["$unset"] = {f"votes_history.{user_id}": ""}
+        # Sanitize user_id for use as MongoDB field key (replace dots)
+        safe_user_id = user_id.replace(".", "_dot_")
+        history_field = f"votes_history.{safe_user_id}"
+        now = datetime.now(timezone.utc).isoformat()
 
-            collection.update_one({"id": id}, update_query)
-            
-            return {
-                "success": True,
-                "message": "Vote removed" if not vote_type else f"Vote changed from {existing_vote} to {vote_type}",
-                "new_vote_count": new_votes,
-                "vote_type": vote_type
-            }
-        else:
-            # New vote
-            vote_change = 1 if vote_type == "up" else -1
-            new_votes = complaint.get("votes", 0) + vote_change
-            
-            # Update complaint
+        # Read current state atomically
+        complaint = collection.find_one({"id": id}, {"_id": 0, "votes": 1, "votes_history": 1})
+        if not complaint:
+            raise HTTPException(status_code=404, detail="Complaint not found")
+
+        existing_vote = complaint.get("votes_history", {}).get(safe_user_id)
+        current_votes = complaint.get("votes", 0)
+
+        if existing_vote == vote_type:
+            # TOGGLE OFF: user clicked the same vote again -> remove it
+            vote_change = -1 if vote_type == "up" else 1
+            new_votes = current_votes + vote_change
+
             collection.update_one(
                 {"id": id},
                 {
-                    "$set": {
-                        "votes": new_votes,
-                        f"votes_history.{user_id}": vote_type,
-                        "updatedAt": datetime.now(timezone.utc).isoformat()
-                    }
+                    "$set": {"votes": new_votes, "updatedAt": now},
+                    "$unset": {history_field: ""}
                 }
             )
-            
-            # Log audit for authenticated users
-            if user:
-                try:
-                    log_audit("complaint_voted", user["sub"], {
-                        "complaint_id": id,
-                        "vote_type": vote_type,
-                        "new_votes": new_votes
-                    })
-                except:
-                    pass
-            
             return {
                 "success": True,
-                "message": f"Vote {vote_type}cast successfully",
+                "message": "Vote removed",
+                "new_vote_count": new_votes,
+                "vote_type": None
+            }
+
+        elif existing_vote is not None:
+            # SWITCH: user is changing from up->down or down->up
+            vote_change = 2 if vote_type == "up" else -2
+            new_votes = current_votes + vote_change
+
+            collection.update_one(
+                {"id": id},
+                {"$set": {"votes": new_votes, history_field: vote_type, "updatedAt": now}}
+            )
+            return {
+                "success": True,
+                "message": f"Vote changed to {vote_type}",
                 "new_vote_count": new_votes,
                 "vote_type": vote_type
             }
-        
+
+        else:
+            # NEW VOTE: no prior vote from this user
+            vote_change = 1 if vote_type == "up" else -1
+            new_votes = current_votes + vote_change
+
+            collection.update_one(
+                {"id": id},
+                {"$set": {"votes": new_votes, history_field: vote_type, "updatedAt": now}}
+            )
+
+            try:
+                log_audit("complaint_voted", user["sub"], {
+                    "complaint_id": id,
+                    "vote_type": vote_type,
+                    "new_votes": new_votes
+                })
+            except Exception:
+                pass
+
+            return {
+                "success": True,
+                "message": f"{vote_type.capitalize()}voted successfully",
+                "new_vote_count": new_votes,
+                "vote_type": vote_type
+            }
+
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Error in vote_complaint: {str(e)}")
+        print(f"Error in vote_complaint: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to vote on complaint: {str(e)}"

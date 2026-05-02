@@ -452,7 +452,7 @@
       ${showProgress ? renderProgressBar(getProgressFromStatus(g.status)) : ''}
       <div class="gc-actions">
         <button class="btn btn-ghost btn-sm" onclick="viewDetail('${g.id}')">👁️ View Details</button>
-        <button class="btn btn-ghost btn-sm ${g.user_vote === 'up' ? 'voted' : ''}" onclick="upvote('${g.id}', this)" style="gap:4px">
+        <button class="btn btn-ghost btn-sm ${g.user_vote === 'up' ? 'voted' : ''}" id="upvote-btn-${g.id}" onclick="upvote('${g.id}', this)" style="gap:4px">
             👍 <span class="vote-count">${upvotes}</span>
         </button>
         ${(g.status === 'resolved' || g.status === 'closed') ? `<button class="btn btn-sm" style="background:rgba(249,115,22,.1);color:var(--accent)" onclick="openFeedback('${g.id}')">⭐ Rate Resolution</button>` : ''}
@@ -463,6 +463,11 @@
         }
 
         async function upvote(id, btn) {
+            // Prevent double-click
+            if (btn.disabled) return;
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+
             try {
                 const res = await window.JanSamadhan.upvoteGrievance(id);
                 if (res.success) {
@@ -480,6 +485,9 @@
             } catch (e) {
                 console.error(e);
                 showToast(e.message || 'Failed to vote', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.style.opacity = '1';
             }
         }
 
