@@ -1576,10 +1576,11 @@
     let feedSkip = 0;
     async function loadPublicFeed(append = false) {
       try {
-        const data = await window.JanSamadhanAPI.getAllGrievances(null, null, null, null, null, feedSkip, 6);
+        const res = await window.JanSamadhanAPI.getAllGrievances(null, null, null, null, null, feedSkip, 6);
         const container = document.getElementById('publicGrievanceFeed');
         if (!container) return;
 
+        const data = res.data || [];
         if (!append) container.innerHTML = '';
         
         if (data.length === 0 && !append) {

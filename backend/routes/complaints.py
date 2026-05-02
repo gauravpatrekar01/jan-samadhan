@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Query, UploadFile, File, Form, HTTPException, Request, BackgroundTasks
+from typing import Optional
 from limiter import limiter
 from services.s3_service import s3_service
 from services.media_service import upload_media, delete_media, validate_media_file
@@ -119,7 +120,7 @@ def get_complaints(
     radius: int = Query(5000),
     skip: int = Query(0),
     limit: int = Query(50),
-    user: dict = Depends(get_current_user),
+    user: Optional[dict] = Depends(get_current_user_optional),
 ):
     """
     Get complaints - public feed for all users
@@ -482,7 +483,10 @@ async def create_complaint_with_media(
     region: str = Form(...),
     latitude: float = Form(None),
     longitude: float = Form(None),
-    media_files: list[UploadFile] = File([]),
+    files: list[UploadFile] = File([]),
+    contact_name: str = Form(None),
+    contact_phone: str = Form(None),
+    contact_email: str = Form(None),
     user: dict = Depends(require_citizen),
 ):
     """
@@ -493,7 +497,7 @@ async def create_complaint_with_media(
     print(f"Request from: {request.client.host if request.client else 'unknown'}")
     print(f"User: {user}")
     print(f"Form data: title={title}, category={category}, priority={priority}")
-    print(f"Media files count: {len(media_files)}")
+    print(f"Media files count: {len(files)}")
     
     try:
         collection = db.get_collection("complaints")
@@ -535,7 +539,7 @@ async def create_complaint_with_media(
 
         # Process media files
         media_attachments = []
-        for media_file in media_files:
+        for media_file in files:
             print(f"📁 Processing media file: {media_file.filename}")
             
             # Validate file before upload
@@ -550,10 +554,17 @@ async def create_complaint_with_media(
             # Upload to Cloudinary
             try:
                 upload_result = await upload_media(media_file)
+                
+                # Map Cloudinary resource_type to our schema literal
+                r_type = upload_result.get("type", "image")
+                media_type = "document"
+                if r_type in ["image", "video"]:
+                    media_type = r_type
+                
                 media_attachments.append({
                     "url": upload_result["url"],
                     "public_id": upload_result["public_id"],
-                    "media_type": upload_result["type"],
+                    "media_type": media_type,
                     "file_name": media_file.filename,
                     "size_bytes": upload_result["size_bytes"],
                     "format": upload_result.get("format"),
@@ -584,7 +595,12 @@ async def create_complaint_with_media(
             "votes": 0,
             "comments": [],
             "marathi_summary": None,
-            "summary_generated": False
+            "summary_generated": False,
+            "contact_info": {
+                "name": contact_name,
+                "phone": contact_phone,
+                "email": contact_email
+            } if contact_name else None
         }
         
         # Set SLA deadline based on priority
