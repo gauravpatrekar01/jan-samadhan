@@ -37,10 +37,13 @@ def get_public_stats():
         status_breakdown = list(collection.aggregate(status_pipeline))
         
         # Calculate percentages
-        status_distribution = []
+        # Create status map for frontend compatibility
+        status_map = {item["_id"]: item["count"] for item in status_breakdown}
+        # Keep list format for detailed analytics if needed
+        status_list = []
         for item in status_breakdown:
             percentage = (item["count"] / total_complaints * 100) if total_complaints > 0 else 0
-            status_distribution.append({
+            status_list.append({
                 "status": item["_id"],
                 "count": item["count"],
                 "percentage": round(percentage, 2)
@@ -53,10 +56,12 @@ def get_public_stats():
         ]
         priority_breakdown = list(collection.aggregate(priority_pipeline))
         
-        priority_distribution = []
+        # Create priority map
+        priority_map = {item["_id"]: item["count"] for item in priority_breakdown}
+        priority_list = []
         for item in priority_breakdown:
             percentage = (item["count"] / total_complaints * 100) if total_complaints > 0 else 0
-            priority_distribution.append({
+            priority_list.append({
                 "priority": item["_id"],
                 "count": item["count"],
                 "percentage": round(percentage, 2)
@@ -170,14 +175,13 @@ def get_public_stats():
                 # Priority KPIs
                 "emergency_complaints": emergency_complaints,
                 "high_priority_complaints": high_priority_complaints,
-                "priority_distribution": priority_distribution,
-                
-                # Performance KPIs
+                # Breakdown data
+                "status_distribution": status_map,
+                "status_list": status_list,
+                "priority_distribution": priority_map,
+                "priority_list": priority_list,
                 "sla_compliance_rate": round(sla_compliance_rate, 2),
                 "resolution_time_stats": resolution_time_stats[0] if resolution_time_stats else None,
-                
-                # Breakdown data
-                "status_distribution": status_distribution,
                 "category_distribution": category_distribution,
                 "top_regions": [
                     {"region": item["_id"], "count": item["count"]}

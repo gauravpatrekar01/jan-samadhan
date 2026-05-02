@@ -1,5 +1,11 @@
 // Enhanced API wrapper with robust token refresh mechanism
-const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') ? 'http://localhost:8000' : '';
+const API_BASE_URL = (() => {
+    const { hostname, protocol } = window.location;
+    if (protocol === 'file:' || hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://localhost:8000';
+    }
+    return ''; // Relative path for production
+})();
 
 class JanSamadhanAPI {
     constructor() {
@@ -337,6 +343,256 @@ class JanSamadhanAPI {
     async getPublicTrends(params = {}) {
         const queryString = new URLSearchParams(params).toString();
         return this._fetch(`/api/public/trends${queryString ? '?' + queryString : ''}`);
+    }
+
+
+    // Aliases for frontend compatibility
+    async getAnalytics() {
+        return this.getPublicStats();
+    }
+    
+    async getNotices() {
+        return [
+            { date: new Date().toISOString(), text: "System maintenance scheduled for this weekend.", pinned: true },
+            { date: new Date().toISOString(), text: "New guidelines for emergency grievances published.", pinned: false }
+        ];
+    }
+    
+    async getGrievanceByID(id) {
+        return this.getComplaint(id);
+    }
+
+
+    async getNGOUploadUrl(fileName, fileType) {
+        return this._fetch(`/api/auth/ngo-upload-url?file_name=${encodeURIComponent(fileName)}&file_type=${encodeURIComponent(fileType)}`);
+    }
+
+    async uploadFileDirectly(file) {
+        const data = await this.getNGOUploadUrl(file.name, file.type);
+        
+        // Handle Local Fallback
+        if (data.use_local) {
+            const formData = new FormData();
+            formData.append('file', file);
+            // Use the endpoint provided by the server, prefix with base URL
+            const res = await this._fetch(data.endpoint, {
+                method: 'POST',
+                body: formData
+            });
+            // If backend returns absolute URL, use it, else prefix with server host
+            return res.file_url.startsWith('http') ? res.file_url : `${API_BASE_URL}${res.file_url}`;
+        }
+
+        // Standard S3 Upload
+        const { url, fields, file_url } = data;
+        const formData = new FormData();
+        Object.entries(fields).forEach(([k, v]) => formData.append(k, v));
+        formData.append('file', file);
+
+        const response = await fetch(url, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) throw new Error("Cloud storage upload failed.");
+        return file_url;
+    }
+
+    async createGrievance(grievanceData) {
+        return this._fetch('/api/complaints/', { method: 'POST', body: JSON.stringify(grievanceData) });
+    }
+
+    async getMyGrievances(status = null, priority = null, skip = 0, limit = 50) {
+        const params = new URLSearchParams();
+        if (status) params.append('status', status);
+        if (priority) params.append('priority', priority);
+        params.append('skip', skip);
+        params.append('limit', limit);
+        return this._fetch(`/api/complaints/my?${params}`);
+    }
+
+    async getAllGrievances(status = null, priority = null, category = null, region = null, search = null, skip = 0, limit = 50) {
+        const params = new URLSearchParams();
+        if (status) params.append('status', status);
+        if (priority) params.append('priority', priority);
+        if (category) params.append('category', category);
+        if (region) params.append('region', region);
+        if (search) params.append('search', search);
+        params.append('skip', skip);
+        params.append('limit', limit);
+        return this._fetch(`/api/complaints/?${params}`);
+    }
+
+    async getGeoComplaintData(region = null, category = null, priority = null, limit = 1000) {
+        const params = new URLSearchParams();
+        if (region) params.append('region', region);
+        if (category) params.append('category', category);
+        if (priority) params.append('priority', priority);
+        params.append('limit', String(limit));
+        return this._fetch(`/api/complaints/geo-data?${params}`);
+    }
+
+    async getAssignedGrievances(status = null, priority = null, skip = 0, limit = 50) {
+        const params = new URLSearchParams();
+        if (status) params.append('status', status);
+        if (priority) params.append('priority', priority);
+        params.append('skip', skip);
+        params.append('limit', limit);
+        return this._fetch(`/api/complaints/assigned?${params}`);
+    }
+
+    async regenerateGrievanceSummary(id) {
+        return this._fetch(`/api/complaints/${id}/generate-summary`, { method: 'POST' });
+    }
+
+    async assignComplaint(id, officerEmail) {
+        return this._fetch(`/api/complaints/${id}/assign?officer_email=${officerEmail}`, { method: 'PATCH' });
+    }
+
+    async updateGrievanceStatus(id, status, remarks = '') {
+        const params = new URLSearchParams({ status, remarks });
+        return this._fetch(`/api/complaints/${id}/status?${params}`, { method: 'PATCH' });
+    }
+
+    async submitFeedback(id, rating, comment = '') {
+        const params = new URLSearchParams({ rating, comment });
+        return this._fetch(`/api/complaints/${id}/feedback?${params}`, { method: 'PATCH' });
+    }
+
+    async addNotice(notice) {
+        return this._fetch('/api/admin/notices', { method: 'POST', body: JSON.stringify(notice) });
+    }
+
+    async deleteNotice(id) {
+        return this._fetch(`/api/admin/notices/${id}`, { method: 'DELETE' });
+    }
+
+    async createUser(userData) {
+        return this._fetch('/api/admin/users', { method: 'POST', body: JSON.stringify(userData) });
+    }
+
+    async getAdminAnalytics() {
+        return this._fetch('/api/admin/analytics');
+    }
+
+    async toggleUserVerification(email) {
+        return this._fetch(`/api/admin/users/${email}/verify`, { method: 'PATCH' });
+    }
+
+    async getAllUsers() {
+        return this._fetch('/api/admin/users');
+    }
+
+    async governmentVerifyUser(email) {
+        return this._fetch(`/api/admin/users/${email}/verify-government`, { method: 'POST' });
+    }
+
+    async getAuditLog(actorEmail = null, action = null, limit = 100) {
+        const params = new URLSearchParams();
+        if (actorEmail) params.append('actor_email', actorEmail);
+        if (action) params.append('action', action);
+        params.append('limit', limit);
+        return this._fetch(`/api/admin/audit-log?${params}`);
+    }
+
+    async requestComplaint(id) {
+        return this._fetch('/api/ngo/requests', {
+            method: 'POST',
+            body: JSON.stringify({ complaint_id: id })
+        });
+    }
+
+    async getMyNGORequests() {
+        return this._fetch('/api/ngo/my-requests');
+    }
+
+    async getNGOAssignedComplaints() {
+        return this._fetch('/api/ngo/assigned-complaints');
+    }
+
+    async getNGOAvailableComplaints() {
+        return this._fetch('/api/ngo/available-complaints');
+    }
+
+    async getNGOStats() {
+        return this._fetch('/api/ngo/stats');
+    }
+
+    async getNGOProfile() {
+        return this._fetch('/api/ngo/profile');
+    }
+
+    async updateNGOProfile(data) {
+        return this._fetch('/api/ngo/profile', { method: 'PATCH', body: JSON.stringify(data) });
+    }
+
+    async getAdminNGORequests(status = 'pending') {
+        return this._fetch(`/api/admin/ngo-requests?status=${status}`);
+    }
+
+    async approveNGORequest(requestId) {
+        return this._fetch(`/api/admin/ngo-requests/${requestId}/approve`, { method: 'PATCH' });
+    }
+
+    async rejectNGORequest(requestId, remarks = '') {
+        return this._fetch(`/api/admin/ngo-requests/${requestId}/reject?remarks=${remarks}`, { method: 'PATCH' });
+    }
+
+    async getPendingNGOs() {
+        return this._fetch('/api/admin/ngo/pending');
+    }
+
+    async approveNGO(email) {
+        return this._fetch(`/api/admin/ngo/${email}/approve`, { method: 'PATCH' });
+    }
+
+    async rejectNGO(email, reason) {
+        return this._fetch(`/api/admin/ngo/${email}/reject?reason=${encodeURIComponent(reason)}`, { method: 'PATCH' });
+    }
+
+    async uploadEvidence(complaintId, file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return this._fetch(`/api/complaints/${complaintId}/upload-media`, {
+            method: 'POST',
+            body: formData
+        });
+    }
+
+    async getTranslations(lang = 'en') {
+        return this._fetch(`/api/translations/${encodeURIComponent(lang)}`);
+    }
+
+    async chatbotQuery(query) {
+        return this._fetch('/api/chatbot/query', {
+            method: 'POST',
+            body: JSON.stringify({ query })
+        });
+    }
+
+    async getNextComplaints(limit = 10) {
+        return this._fetch(`/api/complaints/next?limit=${limit}`);
+    }
+
+    async escalateComplaint(id, remarks = '') {
+        const params = new URLSearchParams();
+        if (remarks) params.append('remarks', remarks);
+        return this._fetch(`/api/complaints/${id}/escalate?${params.toString()}`, { method: 'POST' });
+    }
+
+    async getAnalyticsOverview(days = 30) {
+        return this._fetch(`/api/analytics/overview?days=${days}`);
+    }
+
+    async getAnalyticsTrends(days = 30) {
+        return this._fetch(`/api/analytics/trends?days=${days}`);
+    }
+
+    async generateReport(payload = {}) {
+        return this._fetch('/api/reports/generate', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
     }
 }
 

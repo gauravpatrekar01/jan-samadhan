@@ -98,6 +98,28 @@ async def api_error_handler(request: Request, exc: APIError):
     return JSONResponse(status_code=exc.status_code, content=exc.detail)
 
 
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    logger.error({
+        "type": "unhandled_exception",
+        "path": request.url.path,
+        "method": request.method,
+        "error": str(exc),
+        "error_type": type(exc).__name__
+    })
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "error": {
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": "An unexpected error occurred on the server.",
+                "detail": str(exc) if os.getenv("DEBUG") else None
+            }
+        }
+    )
+
+
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     logger.warning({"type": "rate_limit_exceeded", "ip": get_remote_address(request), "path": request.url.path})
