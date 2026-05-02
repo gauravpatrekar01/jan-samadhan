@@ -75,6 +75,7 @@ async def upload_media(file: UploadFile, folder: str = "jansamadhan/complaints")
         resource_type = "auto"
         upload_params = {
             "resource_type": "auto",
+            "type": "upload",
             "folder": folder,
             "use_filename": True,
             "unique_filename": True,
