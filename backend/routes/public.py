@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends
+from dependencies import get_current_user_optional
 from db import db
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
@@ -126,6 +127,20 @@ def get_public_stats():
         ]
         region_breakdown = list(collection.aggregate(region_pipeline))
         
+        # Satisfaction Rating KPI
+        satisfaction_pipeline = [
+            {"$match": {"feedback": {"$exists": True, "$ne": []}}},
+            {"$unwind": "$feedback"},
+            {"$group": {
+                "_id": None,
+                "avg_rating": {"$avg": "$feedback.rating"},
+                "total_ratings": {"$sum": 1}
+            }}
+        ]
+        satisfaction_stats = list(collection.aggregate(satisfaction_pipeline))
+        average_satisfaction = round(satisfaction_stats[0]["avg_rating"], 2) if satisfaction_stats else 0
+        total_ratings = satisfaction_stats[0]["total_ratings"] if satisfaction_stats else 0
+
         # Daily trends for last 30 days
         daily_trends_pipeline = [
             {"$match": {"createdAt": {"$gte": thirty_days_ago}}},
@@ -164,6 +179,8 @@ def get_public_stats():
                 "pending_complaints": pending_complaints,
                 "in_progress_complaints": in_progress_complaints,
                 "resolution_rate": round(resolution_rate, 2),
+                "average_satisfaction": average_satisfaction,
+                "rated_complaints": total_ratings,
                 
                 # Activity KPIs
                 "complaints_last_24h": complaints_last_24h,
@@ -364,3 +381,35 @@ def get_priority_weight(priority: str) -> float:
         "low": 1.0
     }
     return weights.get(priority.lower(), 2.0)
+
+@router.get("/notices")
+def get_notices(role: Optional[str] = Query(None)):
+    """
+    Get announcements/notices filtered by role visibility.
+    If no role is provided, only shows notices visible to citizens.
+    """
+    try:
+        target_role = role or "citizen"
+        collection = db.get_collection("announcements")
+        
+        # Find notices where target_role is in visibleTo array
+        # or visibleTo field doesn't exist (legacy compatibility)
+        query = {
+            "$or": [
+                {"visibleTo": {"$in": [target_role]}},
+                {"visibleTo": {"$exists": False}}
+            ]
+        }
+        
+        notices = list(collection.find(query, {"_id": 0}).sort("timestamp", -1).limit(50))
+        
+        return {
+            "success": True,
+            "data": notices
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+

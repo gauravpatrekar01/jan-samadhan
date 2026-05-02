@@ -343,6 +343,7 @@ body {
   transition: background var(--transition), color var(--transition);
   min-height: 100vh;
   overflow-x: hidden;
+  overscroll-behavior-y: none; /* Prevents mobile pull-to-refresh strip artifacts */
 }
 
 a {

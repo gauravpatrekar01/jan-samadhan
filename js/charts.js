@@ -262,19 +262,35 @@ function renderTimelineChart(id, grievances) {
 async function initCharts() {
     let stats = { priority_distribution:{}, status_distribution:{}, byCategory:{} };
     let allG = [];
+    
+    // Show loading state if possible
+    console.log('📊 Initializing Charts...');
+    
     try {
-        stats = await window.JanSamadhanAPI.getAdminAnalytics();
+        // Fetch data in parallel for better performance
+        const [adminStats, grievances] = await Promise.all([
+            window.JanSamadhanAPI.getAdminAnalytics().catch(e => {
+                console.warn("Admin analytics failed", e);
+                return window.JanSamadhanAPI.getAnalytics(); // fallback
+            }),
+            window.JanSamadhanAPI.getAllGrievances().catch(e => {
+                console.warn("All grievances fetch failed", e);
+                return [];
+            })
+        ]);
         
+        stats = adminStats;
+        allG = grievances;
+
         // Count categories because admin analytics doesn't return categories directly yet
-        allG = await window.JanSamadhanAPI.getAllGrievances();
         const cats = {};
         for(let g of allG) {
-           cats[g.category] = (cats[g.category] || 0) + 1;
+           const cat = g.category || 'Other';
+           cats[cat] = (cats[cat] || 0) + 1;
         }
         stats.byCategory = cats;
     } catch(e) {
-        console.warn("Failed admin analytics, fallback to public", e);
-        try { stats = await window.JanSamadhanAPI.getAnalytics(); } catch(err) {}
+        console.error("Critical error in chart initialization", e);
     }
     
     if (window._adminCharts && window._adminCharts.cat) window._adminCharts.cat.destroy();

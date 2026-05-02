@@ -7,7 +7,9 @@ from datetime import datetime, timezone, timedelta
 from government_registry import verify_citizen_record
 from audit import log_audit, get_audit_log
 from errors import ValidationError, NotFoundError, ConflictError, AuthorizationError
-import uuid
+from services.media_service import upload_media
+from fastapi import APIRouter, Depends, UploadFile, File, Form
+import uuid, json
 
 router = APIRouter()
 
@@ -180,19 +182,45 @@ def get_analytics(admin: dict = Depends(require_admin)):
 
 
 @router.post("/notices", status_code=201)
-def add_notice(notice: dict, user: dict = Depends(require_officer_or_admin)):
-    """Officers and admins can add notices"""
-    if not notice.get("text", "").strip():
+async def add_notice(
+    text: str = Form(...),
+    pinned: bool = Form(False),
+    visible_to: str = Form('["citizen", "officer", "admin", "ngo"]'),
+    files: list[UploadFile] = File(None),
+    user: dict = Depends(require_officer_or_admin)
+):
+    """Officers and admins can add notices with optional attachments"""
+    if not text.strip():
         raise ValidationError("Notice text is required")
+
+    try:
+        visible_to_list = json.loads(visible_to)
+    except:
+        visible_to_list = ["citizen", "officer", "admin", "ngo"]
+
+    attachments = []
+    if files:
+        for file in files:
+            if file.filename:
+                upload_res = await upload_media(file, folder="jansamadhan/notices")
+                attachments.append({
+                    "url": upload_res["url"],
+                    "public_id": upload_res["public_id"],
+                    "type": upload_res["type"],
+                    "filename": file.filename
+                })
 
     collection = db.get_collection("announcements")
     notice_doc = {
         "id": str(uuid.uuid4()),
-        "text": notice.get("text"),
+        "text": text,
         "date": datetime.now(timezone.utc).isoformat().split("T")[0],
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "createdBy": user["sub"],
         "createdByRole": user["role"],
-        "pinned": notice.get("pinned", False),
+        "pinned": pinned,
+        "attachments": attachments,
+        "visibleTo": visible_to_list
     }
     collection.insert_one(notice_doc)
 
@@ -202,10 +230,12 @@ def add_notice(notice: dict, user: dict = Depends(require_officer_or_admin)):
         actor_role=user["role"],
         resource_type="notice",
         resource_id=notice_doc["id"],
-        details={"text": notice.get("text")[:100]},
+        details={"text_snippet": text[:50], "has_attachments": len(attachments) > 0}
     )
 
     notice_doc.pop("_id", None)
+    return {"success": True, "data": notice_doc}
+
     return {"success": True, "message": "Notice added", "data": notice_doc}
 
 

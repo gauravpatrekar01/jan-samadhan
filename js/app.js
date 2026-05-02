@@ -67,16 +67,59 @@ window.JanSamadhan = {
         return await window.JanSamadhanAPI.submitFeedback(id, rating, comment);
     },
 
-    async applyTranslations(lang = null) {
-        const target = lang || (localStorage.getItem('js_lang') || navigator.language?.split('-')[0] || 'en');
+    async upvoteGrievance(id) {
         try {
-            const tr = await window.JanSamadhanAPI.getTranslations(target);
-            if (!tr) return;
-            document.querySelectorAll('[data-i18n="summary_label"]').forEach(el => { el.textContent = tr.summary_label || el.textContent; });
-            document.querySelectorAll('[data-i18n="view_summary"]').forEach(el => { el.textContent = tr.view_summary || el.textContent; });
-            document.querySelectorAll('[data-i18n="view_full"]').forEach(el => { el.textContent = tr.view_full || el.textContent; });
+            const result = await window.JanSamadhanAPI._fetch(`/api/complaints/${id}/vote?vote_type=up`, { method: 'POST' });
+            return result;
         } catch (e) {
-            console.warn('Translation fetch failed:', e);
+            console.error('Upvote failed:', e);
+            throw e;
+        }
+    },
+
+    async requestNGOHndling(complaintId) {
+        try {
+            return await window.JanSamadhanAPI._fetch('/api/ngo/requests', {
+                method: 'POST',
+                body: JSON.stringify({ complaint_id: complaintId })
+            });
+        } catch (e) {
+            console.error('NGO Request failed:', e);
+            throw e;
+        }
+    },
+
+    // UI HELPER METHODS
+    utils: {
+        priorityBadge(p) {
+            const s = (p || 'medium').toLowerCase();
+            const colors = { emergency: '#991b1b', high: '#dc2626', medium: '#d97706', low: '#16a34a' };
+            return `<span class="badge" style="background:${colors[s]}20;color:${colors[s]};border:1px solid ${colors[s]}40;font-weight:700;text-transform:uppercase;font-size:0.65rem;padding:2px 8px;border-radius:4px">${s}</span>`;
+        },
+        statusBadge(s) {
+            const st = (s || 'submitted').toLowerCase();
+            const colors = { submitted: '#64748b', under_review: '#3b82f6', in_progress: '#8b5cf6', resolved: '#16a34a', closed: '#1e293b' };
+            const label = st.replace('_', ' ').toUpperCase();
+            return `<span class="badge" style="background:${colors[st]}15;color:${colors[st]};border:1px solid ${colors[st]}30;font-weight:700;font-size:0.65rem;padding:2px 8px;border-radius:4px">${label}</span>`;
+        },
+        categoryIcon(c) {
+            const icons = { Infrastructure: '🏗️', 'Water Supply': '💧', Electricity: '⚡', Sanitation: '🧹', Transport: '🚌', 'Law & Order': '🛡️', Healthcare: '🏥', Other: '📋' };
+            return icons[c] || '📋';
+        },
+        categoryColor(c) {
+            const colors = { Infrastructure: '#3b82f6', 'Water Supply': '#0ea5e9', Electricity: '#eab308', Sanitation: '#8b5cf6', Transport: '#f97316', 'Law & Order': '#dc2626', Healthcare: '#10b981', Other: '#64748b' };
+            return colors[c] || '#64748b';
+        },
+        timeAgo(date) {
+            if (!date) return 'N/A';
+            const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+            if (seconds < 60) return 'Just now';
+            const intervals = { yr: 31536000, mo: 2592000, wk: 604800, day: 86400, hr: 3600, min: 60 };
+            for (let i in intervals) {
+                const count = Math.floor(seconds / intervals[i]);
+                if (count > 0) return `${count}${i} ago`;
+            }
+            return 'N/A';
         }
     }
 };

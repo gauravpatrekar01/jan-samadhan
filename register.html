@@ -480,18 +480,17 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Upload Evidence Image (Optional)</label>
+                        <label class="form-label">Upload Evidence & Proofs (Optional)</label>
                         <div class="img-upload-area" id="uploadArea"
                             onclick="document.getElementById('imgInput').click()">
-                            <div style="font-size:2rem;margin-bottom:8px">📷</div>
-                            <div style="font-weight:600;color:var(--text-muted)">Click to upload or drag &amp; drop
+                            <div style="font-size:2rem;margin-bottom:8px">📂</div>
+                            <div style="font-weight:600;color:var(--text-muted)">Click to upload or drag &amp; drop files
                             </div>
-                            <div style="font-size:.8rem;color:var(--text-light);margin-top:4px">PNG, JPG, GIF up to 5MB.
-                                Preview only, not stored.</div>
+                            <div style="font-size:.8rem;color:var(--text-light);margin-top:4px">Images (PNG, JPG), PDFs, and Docs allowed. Max 10MB per file.</div>
                         </div>
-                        <input type="file" id="imgInput" accept="image/*" style="display:none"
-                            onchange="previewImage(this)">
-                        <img id="imgPreview" class="img-preview" style="display:none">
+                        <input type="file" id="imgInput" accept="image/*,.pdf,.doc,.docx" multiple style="display:none"
+                            onchange="handleFileSelect(this)">
+                        <div id="filePreviewContainer" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(100px, 1fr));gap:10px;margin-top:15px"></div>
                     </div>
 
                     <!-- Consent -->
@@ -832,6 +831,52 @@
         });
 
         // FORM VALIDATION & SUBMIT
+        function handleFileSelect(input) {
+            const container = document.getElementById('filePreviewContainer');
+            if (!container) return;
+            container.innerHTML = '';
+            
+            if (input.files && input.files.length > 0) {
+                Array.from(input.files).forEach((file, index) => {
+                    const reader = new FileReader();
+                    const preview = document.createElement('div');
+                    preview.className = 'attachment-preview animate-fade-up';
+                    preview.style = 'border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--bg-card); position:relative;';
+                    
+                    if (file.type.startsWith('image/')) {
+                        reader.onload = function(e) {
+                            preview.innerHTML = `
+                                <img src="${e.target.result}" style="width:100%;height:70px;object-fit:cover">
+                                <div style="padding:4px;font-size:.6rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${file.name}</div>
+                                <button type="button" onclick="removeFile(${index})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.5);color:white;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer">✕</button>
+                            `;
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        preview.innerHTML = `
+                            <div style="width:100%;height:70px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:rgba(0,0,0,0.05)">📄</div>
+                            <div style="padding:4px;font-size:.6rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${file.name}</div>
+                            <button type="button" onclick="removeFile(${index})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.5);color:white;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer">✕</button>
+                        `;
+                    }
+                    container.appendChild(preview);
+                });
+            }
+        }
+
+        function removeFile(index) {
+            const input = document.getElementById('imgInput');
+            const dt = new DataTransfer();
+            const { files } = input;
+            
+            for (let i = 0; i < files.length; i++) {
+                if (index !== i) dt.items.add(files[i]);
+            }
+            
+            input.files = dt.files;
+            handleFileSelect(input);
+        }
+
         async function submitGrievance(e) {
             e.preventDefault();
             let valid = true;
@@ -916,28 +961,33 @@
                     titleText = `${selectedCategory} - Issue Report`;
                 }
 
-                const grievanceData = {
-                    title: titleText,
-                    description: desc,
-                    category: selectedCategory,
-                    subcategory: document.getElementById('fSubcategory').value || '',
-                    priority: priority,
-                    location: locationObj.address,
-                    region: region,
-                    latitude: locationObj.lat,
-                    longitude: locationObj.lng
-                };
+                // Use FormData for multi-part upload (supports files)
+                const formData = new FormData();
+                formData.append('title', titleText);
+                formData.append('description', desc);
+                formData.append('category', selectedCategory);
+                formData.append('subcategory', document.getElementById('fSubcategory').value || '');
+                formData.append('priority', priority);
+                formData.append('location', locationObj.address);
+                formData.append('region', region);
+                formData.append('latitude', locationObj.lat);
+                formData.append('longitude', locationObj.lng);
+                
+                // Add contact info
+                formData.append('contact_name', name);
+                formData.append('contact_phone', contact);
+                formData.append('contact_email', email);
 
-                // Debug logging
-                console.log('📝 Complaint Data Being Sent:', {
-                    ...grievanceData,
-                    titleLength: titleText.length,
-                    descLength: desc.length,
-                    categoryValid: ['Infrastructure', 'Water Supply', 'Electricity', 'Sanitation', 'Transport', 'Law & Order', 'Healthcare', 'Other'].includes(selectedCategory),
-                    userEmail: getSessionUser()?.email
-                });
+                // Add files from input
+                const fileInput = document.getElementById('imgInput');
+                if (fileInput && fileInput.files.length > 0) {
+                    for (let i = 0; i < fileInput.files.length; i++) {
+                        formData.append('files', fileInput.files[i]);
+                    }
+                }
 
-                const response = await window.JanSamadhanAPI.createGrievance(grievanceData);
+                console.log('📝 Submitting via FormData:', { title: titleText, files: fileInput?.files?.length || 0 });
+                const response = await window.JanSamadhanAPI.createGrievance(formData);
 
                 // Store in session
                 sessionStorage.setItem('lastGrievanceID', response.id);

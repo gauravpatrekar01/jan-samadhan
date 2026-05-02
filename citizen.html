@@ -426,18 +426,22 @@
             const displayID = g.id ? `GS-${g.id.substring(0, 8).toUpperCase()}` : 'N/A';
             const ratingCount = g.feedbackCount || (g.feedback ? g.feedback.length : 0);
             const avgRating = g.feedbackAverage ?? (ratingCount ? (g.feedback ? (g.feedback.reduce((sum, item) => sum + (item.rating || 0), 0) / ratingCount).toFixed(1) : g.feedbackRating || 0) : 0);
+            
+            const utils = window.JanSamadhan.utils;
+            const upvotes = g.votes || 0;
+
             return `
     <div class="grievance-card priority-${g.priority ? g.priority.toLowerCase() : 'medium'}" id="gc-${g.id}">
       ${rank ? `<div class="queue-rank">${rank}</div>` : ''}
       <div class="gc-header">
-        <div class="gc-icon" style="background:${categoryColor(g.category)}">${categoryIcon(g.category)}</div>
+        <div class="gc-icon" style="background:${utils.categoryColor(g.category)}">${utils.categoryIcon(g.category)}</div>
         <div style="flex:1">
           <div class="gc-id">${displayID}</div>
           <div class="gc-title">${g.title || g.category}</div>
           <div class="gc-meta">
-            ${priorityBadge(g.priority)}
-            ${statusBadge(g.status)}
-            <span style="font-size:.78rem;color:var(--text-muted)">📅 Filed: ${timeAgo(g.created_at || g.timestamp)}</span>
+            ${utils.priorityBadge(g.priority)}
+            ${utils.statusBadge(g.status)}
+            <span style="font-size:.78rem;color:var(--text-muted)">📅 Filed: ${utils.timeAgo(g.created_at || g.timestamp)}</span>
             <span style="font-size:.78rem;color:var(--text-muted)">🕒 Deadline: ${formatDeadline(g.sla_deadline)}</span>
           </div>
         </div>
@@ -448,11 +452,28 @@
       ${showProgress ? renderProgressBar(getProgressFromStatus(g.status)) : ''}
       <div class="gc-actions">
         <button class="btn btn-ghost btn-sm" onclick="viewDetail('${g.id}')">👁️ View Details</button>
+        <button class="btn btn-ghost btn-sm" onclick="upvote('${g.id}', this)" style="gap:4px">
+            👍 <span class="vote-count">${upvotes}</span>
+        </button>
         ${(g.status === 'resolved' || g.status === 'closed') ? `<button class="btn btn-sm" style="background:rgba(249,115,22,.1);color:var(--accent)" onclick="openFeedback('${g.id}')">⭐ Rate Resolution</button>` : ''}
         ${ratingCount ? `<span class="badge badge-success">⭐ ${avgRating}/5 · ${ratingCount} ratings</span>` : ''}
       </div>
     </div>
   `;
+        }
+
+        async function upvote(id, btn) {
+            try {
+                const res = await window.JanSamadhan.upvoteGrievance(id);
+                if (res.success) {
+                    const countEl = btn.querySelector('.vote-count');
+                    if (countEl) countEl.textContent = res.new_vote_count;
+                    showToast('Vote registered!', 'success');
+                    btn.classList.add('voted');
+                }
+            } catch (e) {
+                showToast('Already voted or failed to vote', 'warning');
+            }
         }
 
         function renderMarathiSummaryBlock(g, withToggle = false) {
@@ -529,6 +550,26 @@
     </div>
     ${renderMarathiSummaryBlock(g, true)}
     <div id="full-description-${g.id}" style="background:var(--bg);padding:14px;border-radius:8px;margin-bottom:16px;font-size:.9rem;line-height:1.6;display:${g.marathi_summary ? 'none' : 'block'}">${g.description}</div>
+    
+    ${g.media && g.media.length > 0 ? `
+      <div style="margin-bottom:20px">
+        <div style="font-weight:700;font-size:.88rem;margin-bottom:8px">📎 Attachments & Evidence:</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(120px, 1fr));gap:10px">
+          ${g.media.map(m => `
+            <div class="attachment-preview" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg-card)">
+              ${m.media_type === 'image' ? `
+                <img src="${m.url}" style="width:100%;height:80px;object-fit:cover;cursor:pointer" onclick="window.open('${m.url}', '_blank')">
+              ` : `
+                <div style="width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:rgba(0,0,0,0.05)">📄</div>
+              `}
+              <div style="padding:6px;font-size:.65rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center">
+                <a href="${m.url}" target="_blank" style="color:var(--primary-light)">${m.file_name || 'View File'}</a>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
     <div style="font-weight:700;font-size:.88rem;margin-bottom:8px">Resolution Progress:</div>
     ${renderProgressBar(getProgressFromStatus(g.status))}
     <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">

@@ -53,7 +53,7 @@
       try {
         const response = await window.JanSamadhanAPI.adminLogin({ email, password });
         showToast('Admin authenticated successfully.', 'success');
-        if (response && response.role === 'admin') {
+        if (response && response.data && response.data.role === 'admin') {
           window.location.href = 'admin.html';
         }
       } catch (err) {

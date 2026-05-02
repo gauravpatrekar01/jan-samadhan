@@ -1038,13 +1038,34 @@
       // Populate Announcements list
       const list = document.getElementById('announcementsList');
       if (list) {
-        const fetchedNotices = await window.JanSamadhanAPI.getNotices();
-        list.innerHTML = fetchedNotices.map(n => `
-              <div class="notice-card" style="padding: 16px; border-bottom: 1px solid var(--border); ${n.pinned ? 'background: rgba(249, 115, 22, 0.05);' : ''}">
-                  <div style="font-size: .8rem; color: var(--text-muted); margin-bottom: 4px;">📅 ${new Date(n.date).toLocaleString('en-IN')} ${n.pinned ? '📌 Pinned' : ''}</div>
-                  <div style="font-weight: 600; font-size: .95rem;">${n.text}</div>
-              </div>
-          `).join('');
+        try {
+          const fetchedNotices = await window.JanSamadhanAPI.getNotices('citizen');
+          if (fetchedNotices && fetchedNotices.length > 0) {
+            list.innerHTML = fetchedNotices.map(n => `
+                <div class="notice-card animate-fade-up" style="padding: 20px; border-bottom: 1px solid var(--border); ${n.pinned ? 'background: rgba(37, 99, 235, 0.03); border-left: 4px solid var(--primary-light);' : ''}">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                      <div style="font-size: .75rem; color: var(--text-muted); font-weight: 600;">📅 ${new Date(n.timestamp || n.date).toLocaleDateString('en-IN', {day: 'numeric', month: 'short', year: 'numeric'})}</div>
+                      ${n.pinned ? '<span style="font-size: .7rem; background: var(--primary-light); color: white; padding: 2px 8px; border-radius: 10px; font-weight: 700;">📌 PINNED</span>' : ''}
+                    </div>
+                    <div style="font-weight: 500; font-size: .95rem; line-height: 1.5; color: var(--text);">${n.text}</div>
+                    ${n.attachments && n.attachments.length > 0 ? `
+                      <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+                        ${n.attachments.map(att => `
+                          <a href="${att.url}" target="_blank" class="btn btn-sm btn-ghost" style="font-size: 0.7rem; padding: 4px 10px;">
+                            ${att.type === 'image' ? '🖼️' : '📄'} ${att.filename || 'View attachment'}
+                          </a>
+                        `).join('')}
+                      </div>
+                    ` : ''}
+                </div>
+            `).join('');
+          } else {
+            list.innerHTML = '<div style="text-align:center; padding: 40px; color: var(--text-muted);">No active announcements at this time.</div>';
+          }
+        } catch (e) {
+          console.error("Failed to load notices:", e);
+          list.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--danger);">Failed to load announcements.</div>';
+        }
       }
 
       // Sample IDs for track

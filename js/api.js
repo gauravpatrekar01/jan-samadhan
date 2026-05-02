@@ -358,11 +358,13 @@ class JanSamadhanAPI {
         return this.getPublicStats();
     }
     
-    async getNotices() {
-        return [
-            { date: new Date().toISOString(), text: "System maintenance scheduled for this weekend.", pinned: true },
-            { date: new Date().toISOString(), text: "New guidelines for emergency grievances published.", pinned: false }
-        ];
+    async getNotices(role = null) {
+        // If no role provided, try to detect from session
+        if (!role) {
+            const user = JSON.parse(localStorage.getItem('js_user') || '{}');
+            role = user.role || 'citizen';
+        }
+        return this._fetch(`/api/public/notices?role=${role}`);
     }
     
     async getGrievanceByID(id) {
@@ -466,8 +468,16 @@ class JanSamadhanAPI {
         return this._fetch(`/api/complaints/${id}/feedback?${params}`, { method: 'PATCH' });
     }
 
-    async addNotice(notice) {
-        return this._fetch('/api/admin/notices', { method: 'POST', body: JSON.stringify(notice) });
+    async addNotice(noticeData) {
+        // noticeData can be an object or FormData
+        if (noticeData instanceof FormData) {
+            return this._fetch('/api/admin/notices', { 
+                method: 'POST', 
+                body: noticeData,
+                headers: {} // Browser will set correct multipart boundary
+            });
+        }
+        return this._fetch('/api/admin/notices', { method: 'POST', body: JSON.stringify(noticeData) });
     }
 
     async deleteNotice(id) {

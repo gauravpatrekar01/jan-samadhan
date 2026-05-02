@@ -500,7 +500,24 @@
                 <textarea class="form-control" id="newAnnText" rows="4"
                     placeholder="Enter official announcement..."></textarea>
             </div>
-            <button class="btn btn-primary" onclick="addAnnouncement()">📢 Publish Announcement</button>
+            <div class="form-group">
+                <label class="form-label">Visible To</label>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 5px;">
+                    <label><input type="checkbox" name="noticeRole" value="citizen" checked> Citizens</label>
+                    <label><input type="checkbox" name="noticeRole" value="officer" checked> Officers</label>
+                    <label><input type="checkbox" name="noticeRole" value="admin" checked> Admins</label>
+                    <label><input type="checkbox" name="noticeRole" value="ngo" checked> NGOs</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Attachments (Optional)</label>
+                <input type="file" id="noticeFiles" class="form-control" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                <div style="font-size: .75rem; color: var(--text-muted); margin-top: 4px;">Max 10MB per file. Images, PDFs, Docs allowed.</div>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="noticePinned"> 📌 Pin to top</label>
+            </div>
+            <button class="btn btn-primary" id="publishNoticeBtn" onclick="addAnnouncement()">📢 Publish Announcement</button>
         </div>
     </div>
 
@@ -1002,20 +1019,43 @@
 
         async function addAnnouncement() {
             const text = document.getElementById('newAnnText')?.value.trim();
+            const btn = document.getElementById('publishNoticeBtn');
+            const fileInput = document.getElementById('noticeFiles');
+            const pinned = document.getElementById('noticePinned')?.checked || false;
+            
+            const roles = Array.from(document.querySelectorAll('input[name="noticeRole"]:checked')).map(cb => cb.value);
+
             if (!text) { showToast('Please enter announcement text', 'warning'); return; }
-            const notice = {
-                text: text,
-                date: new Date().toISOString().split('T')[0],
-                pinned: true
-            };
+            if (roles.length === 0) { showToast('Please select at least one role for visibility', 'warning'); return; }
+
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Publishing...';
+            btn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('text', text);
+            formData.append('pinned', pinned);
+            formData.append('visible_to', JSON.stringify(roles));
+            
+            if (fileInput && fileInput.files.length > 0) {
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    formData.append('files', fileInput.files[i]);
+                }
+            }
+
             try {
-                await window.JanSamadhanAPI.addNotice(notice);
+                await window.JanSamadhanAPI.addNotice(formData);
                 showToast('📢 Announcement published successfully', 'success');
                 document.getElementById('newAnnText').value = '';
+                if (fileInput) fileInput.value = '';
                 closeModal('addAnnModal');
                 loadAdminAnnouncements();
             } catch (e) {
+                console.error('Notice publish error:', e);
                 showToast('Failed to publish announcement: ' + e.message, 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
         }
 
