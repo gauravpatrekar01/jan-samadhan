@@ -72,23 +72,29 @@ async def upload_media(file: UploadFile, folder: str = "jansamadhan/complaints")
             )
         
         # Determine resource type
+        resource_type = "auto"
+        upload_params = {
+            "resource_type": "auto",
+            "folder": folder,
+            "use_filename": True,
+            "unique_filename": True,
+            "overwrite": True
+        }
+
         if content_type in ALLOWED_IMAGE_TYPES:
             resource_type = "image"
+            upload_params["resource_type"] = "image"
+            upload_params["format"] = "auto"
         elif content_type in ALLOWED_VIDEO_TYPES:
             resource_type = "video"
-        else:
-            resource_type = "auto"
+            upload_params["resource_type"] = "video"
+        elif content_type in ALLOWED_DOCUMENT_TYPES:
+            # Use raw for documents to ensure they are served as-is (fix for PDF issues)
+            resource_type = "raw"
+            upload_params["resource_type"] = "raw"
         
         # Upload to Cloudinary
-        upload_result = cloudinary.uploader.upload(
-            file.file,
-            resource_type=resource_type,
-            folder=folder,
-            use_filename=True,
-            unique_filename=True,
-            overwrite=True,
-            format="auto" if resource_type == "image" else None
-        )
+        upload_result = cloudinary.uploader.upload(file.file, **upload_params)
         
         return {
             "url": upload_result.get("secure_url"),

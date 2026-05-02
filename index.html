@@ -1516,8 +1516,8 @@
     result.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
       <h3 style="color:var(--primary-light)">${g.grievanceID || g.id}</h3>
-      ${priorityBadge(g.priority)}
-      ${statusBadge(g.status)}
+      ${JanSamadhan.utils.priorityBadge(g.priority)}
+      ${JanSamadhan.utils.statusBadge(g.status)}
       ${g.escalated ? '<span class="escalation-tag">🚨 ESCALATED</span>' : ''}
       <div style="margin-left: auto; display: flex; align-items: center; gap: 8px; background: rgba(37, 99, 235, 0.05); padding: 4px 12px; border-radius: 20px;">
         <button class="vote-btn" onclick="voteComplaint('${g.id}', 'up')">🔼</button>
@@ -1527,11 +1527,25 @@
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div><span style="font-size:.75rem;color:var(--text-muted)">FILED BY</span><br><strong>${g.name || 'Citizen'}</strong></div>
-      <div><span style="font-size:.75rem;color:var(--text-muted)">CATEGORY</span><br><strong>${categoryIcon(g.category)} ${g.category}</strong></div>
+      <div><span style="font-size:.75rem;color:var(--text-muted)">CATEGORY</span><br><strong>${JanSamadhan.utils.categoryIcon(g.category)} ${g.category}</strong></div>
       <div><span style="font-size:.75rem;color:var(--text-muted)">LOCATION</span><br><strong>📍 ${g.region || 'N/A'}</strong></div>
       <div><span style="font-size:.75rem;color:var(--text-muted)">FILED ON</span><br><strong>${new Date(g.createdAt).toLocaleString('en-IN')}</strong></div>
     </div>
     <div style="margin-bottom:16px"><span style="font-size:.75rem;color:var(--text-muted)">DESCRIPTION</span><br>${g.description || 'No description'}</div>
+    
+    ${g.media && g.media.length > 0 ? `
+      <div style="margin-bottom:16px">
+        <span style="font-size:.75rem;color:var(--text-muted)">ATTACHMENTS</span>
+        <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+          ${g.media.map(m => `
+            <div style="width:60px;height:60px;border:1px solid var(--border);border-radius:4px;overflow:hidden;position:relative;cursor:pointer" onclick="window.open('${m.url}', '_blank')">
+              ${m.media_type === 'image' ? `<img src="${m.url}" style="width:100%;height:100%;object-fit:cover">` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:1.2rem;background:#f5f5f5">📄</div>'}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+
     ${g.assigned_officer && g.assigned_officer !== 'null' ? `<div style="background:rgba(37,99,235,.06);border-left:3px solid var(--primary-light);padding:10px 14px;border-radius:6px;margin-bottom:16px"><span style="font-size:.75rem;font-weight:700;color:var(--primary-light)">ASSIGNED TO</span><br>${g.assigned_officer}</div>` : '<div style="background:rgba(217,119,6,.06);border-left:3px solid var(--warning);padding:10px 14px;border-radius:6px;margin-bottom:16px"><span style="font-size:.75rem;font-weight:700;color:var(--warning)">STATUS</span><br>Pending Assignment</div>'}
     <div style="text-align:center;margin-top:16px">
       <a href="citizen.html" class="btn btn-primary btn-sm">View Full Details →</a>
@@ -1591,7 +1605,7 @@
         const cards = data.map(g => `
           <div class="feed-card animate-fade-up">
             <div class="feed-badge-row">
-              ${priorityBadge(g.priority)}
+              ${JanSamadhan.utils.priorityBadge(g.priority)}
               <div class="vote-box">
                 <button class="vote-btn" onclick="voteComplaint('${g.id}', 'up')">🔼</button>
                 <span class="vote-count" id="vote-count-${g.id}">${g.votes || 0}</span>
@@ -1600,9 +1614,19 @@
             </div>
             <div class="feed-title">${g.title}</div>
             <div class="feed-desc">${g.description}</div>
+            ${g.media && g.media.length > 0 ? `
+              <div style="margin-top:8px;display:flex;gap:4px">
+                ${g.media.slice(0, 3).map(m => `
+                  <div style="width:24px;height:24px;border-radius:4px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:10px">
+                    ${m.media_type === 'image' ? '🖼️' : '📄'}
+                  </div>
+                `).join('')}
+                ${g.media.length > 3 ? `<span style="font-size:10px;color:var(--text-muted)">+${g.media.length - 3}</span>` : ''}
+              </div>
+            ` : ''}
             <div class="feed-meta">
               <span>📍 ${g.region || 'Unknown'}</span>
-              <span>📅 ${new Date(g.createdAt).toLocaleDateString()}</span>
+              <span>🕒 ${JanSamadhan.utils.timeAgo(g.createdAt || g.created_at || g.timestamp)}</span>
             </div>
           </div>
         `).join('');
