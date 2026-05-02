@@ -1,11 +1,17 @@
 // Enhanced API wrapper with robust token refresh mechanism
 const API_BASE_URL = (() => {
-    const { hostname, protocol } = window.location;
-    if (protocol === 'file:' || hostname === 'localhost' || hostname === '127.0.0.1') {
+    const { hostname, protocol, port } = window.location;
+    // If we're on a local dev server (Live Server, Vite, etc.) or file system
+    if (protocol === 'file:' || 
+        hostname === 'localhost' || 
+        hostname === '127.0.0.1' || 
+        hostname.startsWith('192.168.') || 
+        (port && port !== '8000')) {
         return 'http://localhost:8000';
     }
     return ''; // Relative path for production
 })();
+window.API_BASE_URL = API_BASE_URL; // For compatibility with other scripts
 
 class JanSamadhanAPI {
     constructor() {
@@ -229,8 +235,9 @@ class JanSamadhanAPI {
     }
 
     async adminLogin(credentials) {
-        // Admin login uses the same endpoint but with admin role validation
-        const result = await this._fetch('/api/auth/login', { method: 'POST', body: JSON.stringify(credentials) });
+        console.log("🔐 Attempting Admin Login via:", `${this.baseURL}/api/auth/admin-login`);
+        // Admin login uses the dedicated admin-login endpoint
+        const result = await this._fetch('/api/auth/admin-login', { method: 'POST', body: JSON.stringify(credentials) });
         
         // Store tokens in both storages for reliability
         if (result && result.token) {
@@ -657,4 +664,5 @@ function scheduleTokenRefresh() {
 }
 
 // Schedule refresh on page load
+window.JanSamadhanAPI = new JanSamadhanAPI();
 scheduleTokenRefresh();
