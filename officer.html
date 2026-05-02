@@ -436,7 +436,7 @@
                 analyticsManager = new AdvancedAnalyticsManager({
                     apiBase: window.API_BASE_URL || '/api',
                     userRole: 'officer',
-                    userId: user?.id || user?.email,
+                    userId: user?.email || user?.sub,
                     refreshInterval: 30000
                 });
                 
@@ -459,9 +459,7 @@
             document.getElementById(`page-${id}`)?.classList.add('active');
             if (navEl) navEl.classList.add('active');
             document.getElementById('topbarTitle').textContent = navEl?.textContent?.trim() || id;
-            if (id === 'overview') initAdvancedAnalytics();
-            closeSidebar();
-            if (id === 'analytics') initAdvancedAnalytics();  // Show advanced analytics
+            if (id === 'analytics') initAdvancedAnalytics();
             if (id === 'mapView') initOfficerMap();
             if (id === 'allComplaints') loadAllComplaints();
             if (id === 'escalations') loadEscalations();
@@ -478,15 +476,15 @@
             document.getElementById('sbName').textContent = user.name || 'Officer';
             document.getElementById('sbDept').textContent = user.department || 'Field Officer';
             document.getElementById('topbarName').textContent = (user.name || 'Officer').split(' ')[0];
-            loadOfficerStats();
             loadQueue();
             loadEscalations();
+            initAdvancedAnalytics();
         });
 
         async function loadOfficerStats() {
             let stats;
             try {
-                stats = await window.JanSamadhanAPI.getAnalytics();
+                stats = await window.JanSamadhanAPI.getAnalyticsOverview();
             } catch (e) {
                 console.warn("Analytics API failed, using dummy", e);
                 stats = window.JanSamadhan.getStats();
@@ -678,6 +676,10 @@
                     // Initialize and load data
                     await window.officerHeatmapManager.initialize();
                     await window.officerHeatmapManager.loadData();
+                } else {
+                    // Refresh map if already exists
+                    window.officerHeatmapManager.invalidateSize();
+                    await window.officerHeatmapManager.loadData();
                 }
                 
             } catch (err) {
@@ -793,7 +795,7 @@
         async function initAnalytics() {
             let stats = { priority_distribution:{}, status_distribution:{}, byCategory:{} };
             try {
-                stats = await window.JanSamadhanAPI.getAnalytics();
+                stats = await window.JanSamadhanAPI.getAnalyticsOverview();
                 const allG = await window.JanSamadhanAPI.getAllGrievances();
                 const cats = {};
                 for(let g of allG) { cats[g.category] = (cats[g.category] || 0) + 1; }

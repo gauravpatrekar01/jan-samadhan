@@ -27,12 +27,7 @@ class AdvancedAnalyticsManager {
         try {
             console.log('📊 Initializing Advanced Analytics...');
             
-            // Load Chart.js if not already loaded
-            if (typeof Chart === 'undefined') {
-                await this.loadScript('https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js');
-            }
-
-            // Load initial data
+            // Initial data load
             await this.loadDashboard();
             
             // Setup event listeners
@@ -301,8 +296,8 @@ class AdvancedAnalyticsManager {
         }
 
         const [performance, queue] = await Promise.all([
-            this.fetchOfficerPerformance(this.userId),
-            this.fetchOfficerQueue(this.userId)
+            window.JanSamadhanAPI.getOfficerPerformance(this.userId),
+            window.JanSamadhanAPI.getOfficerQueue(this.userId)
         ]);
 
         // Render performance KPIs
@@ -591,56 +586,35 @@ class AdvancedAnalyticsManager {
      * API methods
      */
     async fetchAdminOverview() {
-        if (window.JanSamadhanAPI?.getAnalyticsOverview) {
-            return await window.JanSamadhanAPI.getAnalyticsOverview(30);
-        }
-        return await fetch(`${this.apiBase}/analytics/admin/overview`)
-            .then(r => r.json())
-            .then(r => r.data || {});
+        return await window.JanSamadhanAPI.getAnalyticsOverview(30);
     }
 
     async fetchOfficerPerformance(officerId = null) {
-        const url = officerId
-            ? `${this.apiBase}/analytics/officer/${officerId}/performance`
-            : `${this.apiBase}/analytics/admin/officer-performance`;
-        
-        return await fetch(url)
-            .then(r => r.json())
-            .then(r => Array.isArray(r.data) ? r.data : [r.data]);
+        if (officerId) {
+            return await window.JanSamadhanAPI.getOfficerPerformance(officerId);
+        }
+        return await window.JanSamadhanAPI.getAdminOfficerPerformance();
     }
 
     async fetchTrends() {
-        if (window.JanSamadhanAPI?.getAnalyticsTrends) {
-            const data = await window.JanSamadhanAPI.getAnalyticsTrends(30);
-            return data.timeline || [];
-        }
-        return await fetch(`${this.apiBase}/analytics/admin/trends?period=daily&days=30`)
-            .then(r => r.json())
-            .then(r => r.data || []);
+        const data = await window.JanSamadhanAPI.getAnalyticsTrends(30);
+        return data.timeline || [];
     }
 
     async fetchOfficerQueue(officerId) {
-        return await fetch(`${this.apiBase}/analytics/officer/${officerId}/queue`)
-            .then(r => r.json())
-            .then(r => r.data || []);
+        return await window.JanSamadhanAPI.getOfficerQueue(officerId);
     }
 
     async fetchPeakTimes() {
-        return await fetch(`${this.apiBase}/analytics/admin/peak-times`)
-            .then(r => r.json())
-            .then(r => r.data || {});
+        return await window.JanSamadhanAPI.getAdminPeakTimes();
     }
 
     async fetchNGOContribution() {
-        return await fetch(`${this.apiBase}/analytics/admin/ngo-contribution`)
-            .then(r => r.json())
-            .then(r => r.data || []);
+        return await window.JanSamadhanAPI.getAdminNGOContribution();
     }
 
     async fetchEscalationsAdvanced() {
-        return await fetch(`${this.apiBase}/analytics/admin/escalation-advanced`)
-            .then(r => r.json())
-            .then(r => r.data || {});
+        return await window.JanSamadhanAPI.getAdminEscalationAdvanced();
     }
 
     /**
@@ -678,14 +652,8 @@ class AdvancedAnalyticsManager {
                 delete bodyPayload.dateRange;
             }
 
-            const response = await fetch(`${this.apiBase}/analytics/filtered`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(bodyPayload)
-            });
-            
-            const result = await response.json();
-            if (result.success && result.data) {
+            const data = await window.JanSamadhanAPI.getFilteredAnalytics(bodyPayload);
+            if (data) {
                 // Update basic stats temporarily
                 const data = result.data;
                 const container = document.getElementById(this.userRole === 'admin' ? 'adminAnalyticsKPIs' : 'officerAnalyticsKPIs') || document.getElementById('adminStats');
@@ -723,16 +691,7 @@ class AdvancedAnalyticsManager {
                 delete bodyPayload.dateRange;
             }
 
-            const response = await fetch(`${this.apiBase}/analytics/export`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    filters: bodyPayload,
-                    format: format
-                })
-            });
-
-            const result = await response.json();
+            const result = await window.JanSamadhanAPI.exportAnalytics(bodyPayload, format);
             
             if (format === 'csv' && result.content) {
                 const blob = new Blob([result.content], { type: 'text/csv;charset=utf-8;' });

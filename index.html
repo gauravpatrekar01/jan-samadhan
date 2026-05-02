@@ -1351,9 +1351,9 @@
       const cards = [
         { label: 'Total Complaints', value: stats.total, icon: '📋', color: 'var(--primary-light)', bg: 'rgba(37,99,235,.1)', trend: 'Live from Backend', up: true },
         { label: 'Resolution Rate', value: stats.resolutionRate + '%', icon: '✅', color: 'var(--success)', bg: 'rgba(22,163,74,.1)', trend: 'Overall System Performance', up: true },
+        { label: 'System Satisfaction', value: (apiStats.average_satisfaction || 0) + ' / 5', icon: '⭐', color: '#f59e0b', bg: 'rgba(245,158,11,.1)', trend: 'Based on User Feedback', up: true },
         { label: 'Pending Cases', value: stats.pending, icon: '⏳', color: 'var(--warning)', bg: 'rgba(217,119,6,.1)', trend: 'Awaiting Action', up: false },
         { label: 'Emergency Cases', value: stats.emergency, icon: '🚨', color: 'var(--danger)', bg: 'rgba(220,38,38,.1)', trend: 'Requires Immediate attention', up: false },
-        { label: 'High Priority', value: stats.high, icon: '🔴', color: '#c2410c', bg: 'rgba(194,65,12,.1)', trend: 'Critical Issues', up: false },
         { label: 'Resolved Complaints', value: stats.resolved, icon: '🎯', color: '#0891b2', bg: 'rgba(8,145,178,.1)', trend: 'Total Success', up: true }
       ];
 

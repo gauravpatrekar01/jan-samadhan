@@ -605,6 +605,44 @@ class JanSamadhanAPI {
         return this._fetch(`/api/analytics/trends?days=${days}`);
     }
 
+    async getOfficerPerformance(officerId) {
+        return this._fetch(`/api/analytics/officer/${officerId}/performance`);
+    }
+
+    async getAdminOfficerPerformance(limit = 20) {
+        return this._fetch(`/api/analytics/admin/officer-performance?limit=${limit}`);
+    }
+
+    async getOfficerQueue(officerId) {
+        return this._fetch(`/api/analytics/officer/${officerId}/queue`);
+    }
+
+    async getAdminPeakTimes() {
+        return this._fetch('/api/analytics/admin/peak-times');
+    }
+
+    async getAdminNGOContribution() {
+        return this._fetch('/api/analytics/admin/ngo-contribution');
+    }
+
+    async getAdminEscalationAdvanced() {
+        return this._fetch('/api/analytics/admin/escalation-advanced');
+    }
+
+    async getFilteredAnalytics(filters) {
+        return this._fetch('/api/analytics/filtered', {
+            method: 'POST',
+            body: JSON.stringify(filters)
+        });
+    }
+
+    async exportAnalytics(filters, format = 'csv') {
+        return this._fetch('/api/analytics/export', {
+            method: 'POST',
+            body: JSON.stringify({ filters, format })
+        });
+    }
+
     async generateReport(payload = {}) {
         return this._fetch('/api/reports/generate', {
             method: 'POST',

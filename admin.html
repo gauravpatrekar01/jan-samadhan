@@ -733,7 +733,7 @@
                 return;
             }
             document.getElementById('adminTime').textContent = `📅 ${new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
-            loadOverview();
+            initAdvancedAnalytics();
         });
 
         async function initHeatmap() {
@@ -759,6 +759,10 @@
                     
                     // Initialize and load data
                     await window.adminHeatmapManager.initialize();
+                    await window.adminHeatmapManager.loadData();
+                } else {
+                    // Refresh map if already exists
+                    window.adminHeatmapManager.invalidateSize();
                     await window.adminHeatmapManager.loadData();
                 }
                 

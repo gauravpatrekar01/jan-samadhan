@@ -123,6 +123,12 @@ class AdvancedHeatmapManager {
         }
     }
 
+    invalidateSize() {
+        if (this.map) {
+            this.map.invalidateSize();
+        }
+    }
+
     async loadData() {
         try {
             const geoResponse = await window.JanSamadhanAPI.getGeoComplaintData();
