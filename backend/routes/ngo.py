@@ -125,14 +125,10 @@ def get_available_complaints(user=Depends(require_role(["ngo"]))):
     ngo_categories = user_doc.get("categories", [])
     ngo_area = user_doc.get("service_area", "")
 
-    # Base Query: Unassigned and in a state where assistance is needed
+    # Base Query: In a state where assistance might be needed, matching NGO expertise
     query = {
-        "$or": [
-            {"assigned_to_ngo": {"$exists": False}},
-            {"assigned_to_ngo": None}
-        ],
-        "status": {"$in": ["submitted", "under_review", "assigned"]},
-        "category": {"$in": ngo_categories} # Match NGOexpertise
+        "status": {"$in": ["submitted", "under_review", "assigned", "in_progress"]},
+        "category": {"$in": ngo_categories} # Match NGO expertise
     }
     
     # Location Matching (Optional but prioritized)

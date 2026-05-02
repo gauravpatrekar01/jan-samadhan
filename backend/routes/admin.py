@@ -289,14 +289,14 @@ def fetch_audit_log(
 
 # ── NGO Request Management ──
 @router.get("/ngo-requests")
-def get_all_ngo_requests(status: str = "pending", admin: dict = Depends(require_admin)):
-    """Admin views all pending NGO requests."""
+def get_all_ngo_requests(status: str = "pending", user: dict = Depends(require_officer_or_admin)):
+    """Admin and Officers view all pending NGO requests."""
     collection = db.get_collection("ngo_requests")
     requests = list(collection.find({"status": status}, {"_id": 0}).sort("requested_at", -1))
     return {"success": True, "data": requests}
 
 @router.patch("/ngo-requests/{request_id}/approve")
-def approve_ngo_request(request_id: str, admin: dict = Depends(require_admin)):
+def approve_ngo_request(request_id: str, user: dict = Depends(require_officer_or_admin)):
     """Approve an NGO request and assign the grievance."""
     req_coll = db.get_collection("ngo_requests")
     complaint_coll = db.get_collection("complaints")
@@ -323,7 +323,7 @@ def approve_ngo_request(request_id: str, admin: dict = Depends(require_admin)):
         "status": "In Progress",
         "remarks": f"Grievance assigned to NGO: {req['ngo_name']}. Handled by social partner.",
         "timestamp": now,
-        "updated_by": "admin"
+        "updated_by": user["role"]
     }
 
     complaint_coll.update_one(
@@ -351,11 +351,11 @@ def approve_ngo_request(request_id: str, admin: dict = Depends(require_admin)):
         }}
     )
 
-    log_audit("ngo_request_approved", admin["sub"], admin["role"], "ngo_request", request_id)
+    log_audit("ngo_request_approved", user["sub"], user["role"], "ngo_request", request_id)
     return {"success": True, "message": "NGO assigned successfully"}
 
 @router.patch("/ngo-requests/{request_id}/reject")
-def reject_ngo_request(request_id: str, remarks: str = "Request declined.", admin: dict = Depends(require_admin)):
+def reject_ngo_request(request_id: str, remarks: str = "Request declined.", user: dict = Depends(require_officer_or_admin)):
     """Reject an NGO's request to handle a grievance."""
     req_coll = db.get_collection("ngo_requests")
     req = req_coll.find_one({"id": request_id})

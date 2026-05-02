@@ -21,9 +21,10 @@ class JanSamadhanAPI {
     // Enhanced token refresh with retry mechanism
     async _fetch(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
-        const defaultHeaders = {
-            "Content-Type": "application/json",
-        };
+        const defaultHeaders = {};
+        if (!(options.body instanceof FormData)) {
+            defaultHeaders["Content-Type"] = "application/json";
+        }
 
         // Get user from storage with safety checks
         let user = null;
@@ -408,6 +409,9 @@ class JanSamadhanAPI {
     }
 
     async createGrievance(grievanceData) {
+        if (grievanceData instanceof FormData) {
+            return this._fetch('/api/complaints/with-media', { method: 'POST', body: grievanceData });
+        }
         return this._fetch('/api/complaints/', { method: 'POST', body: JSON.stringify(grievanceData) });
     }
 
@@ -430,6 +434,10 @@ class JanSamadhanAPI {
         params.append('skip', skip);
         params.append('limit', limit);
         return this._fetch(`/api/complaints/?${params}`);
+    }
+
+    async voteGrievance(id, type = 'up') {
+        return this._fetch(`/api/complaints/${id}/vote?vote_type=${type}`, { method: 'POST' });
     }
 
     async getGeoComplaintData(region = null, category = null, priority = null, limit = 1000) {

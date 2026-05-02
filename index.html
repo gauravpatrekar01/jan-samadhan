@@ -510,6 +510,95 @@
       background: #fff;
       border-radius: 2px;
     }
+    .grievance-feed-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 24px;
+    }
+
+    .feed-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feed-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+      border-color: var(--primary-light);
+    }
+
+    .feed-badge-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .vote-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 12px;
+      background: rgba(var(--primary-rgb), 0.05);
+      border-radius: 12px;
+      min-width: 50px;
+    }
+
+    .vote-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.2rem;
+      transition: transform 0.2s;
+      padding: 2px;
+    }
+
+    .vote-btn:hover {
+      transform: scale(1.2);
+    }
+
+    .vote-count {
+      font-weight: 800;
+      font-size: 1rem;
+      color: var(--primary-light);
+    }
+
+    .feed-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text);
+      line-height: 1.4;
+    }
+
+    .feed-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      line-height: 1.6;
+    }
+
+    .feed-meta {
+      display: flex;
+      gap: 12px;
+      font-size: 0.75rem;
+      color: var(--text-light);
+      margin-top: auto;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
   </style>
 </head>
 
@@ -795,6 +884,26 @@
         <div class="section-divider"></div>
       </div>
       <div id="announcementsList" class="announce-list"><!-- Populated by JS --></div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════
+     COMMUNITY FEED (NEW)
+════════════════════════════════════════════ -->
+  <section class="section section-alt" id="community-feed">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-eyebrow">Community Pulse</div>
+        <h2 class="section-title">Recent Grievances</h2>
+        <p class="section-desc">See what's happening in your community. Upvote issues to help them get resolved faster.</p>
+        <div class="section-divider"></div>
+      </div>
+      <div id="publicGrievanceFeed" class="grievance-feed-grid">
+        <!-- Populated by JS -->
+      </div>
+      <div style="text-align:center; margin-top:40px">
+        <button class="btn btn-outline" onclick="loadPublicFeed(true)">Load More Community Issues</button>
+      </div>
     </div>
   </section>
 
@@ -1404,12 +1513,17 @@
       }
 
       result.className = 'visible';
-      result.innerHTML = `
+    result.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
       <h3 style="color:var(--primary-light)">${g.grievanceID || g.id}</h3>
       ${priorityBadge(g.priority)}
       ${statusBadge(g.status)}
       ${g.escalated ? '<span class="escalation-tag">🚨 ESCALATED</span>' : ''}
+      <div style="margin-left: auto; display: flex; align-items: center; gap: 8px; background: rgba(37, 99, 235, 0.05); padding: 4px 12px; border-radius: 20px;">
+        <button class="vote-btn" onclick="voteComplaint('${g.id}', 'up')">🔼</button>
+        <span class="vote-count" id="vote-count-${g.id}">${g.votes || 0}</span>
+        <button class="vote-btn" onclick="voteComplaint('${g.id}', 'down')">🔽</button>
+      </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div><span style="font-size:.75rem;color:var(--text-muted)">FILED BY</span><br><strong>${g.name || 'Citizen'}</strong></div>
@@ -1456,6 +1570,66 @@
       const btn = document.getElementById('backToTop');
       if (window.scrollY > 400) btn.classList.add('show');
       else btn.classList.remove('show');
+    });
+
+    // ── Community Feed ──
+    let feedSkip = 0;
+    async function loadPublicFeed(append = false) {
+      try {
+        const data = await window.JanSamadhanAPI.getAllGrievances(null, null, null, null, null, feedSkip, 6);
+        const container = document.getElementById('publicGrievanceFeed');
+        if (!container) return;
+
+        if (!append) container.innerHTML = '';
+        
+        if (data.length === 0 && !append) {
+          container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)">No public grievances reported yet.</div>';
+          return;
+        }
+
+        const cards = data.map(g => `
+          <div class="feed-card animate-fade-up">
+            <div class="feed-badge-row">
+              ${priorityBadge(g.priority)}
+              <div class="vote-box">
+                <button class="vote-btn" onclick="voteComplaint('${g.id}', 'up')">🔼</button>
+                <span class="vote-count" id="vote-count-${g.id}">${g.votes || 0}</span>
+                <button class="vote-btn" onclick="voteComplaint('${g.id}', 'down')">🔽</button>
+              </div>
+            </div>
+            <div class="feed-title">${g.title}</div>
+            <div class="feed-desc">${g.description}</div>
+            <div class="feed-meta">
+              <span>📍 ${g.region || 'Unknown'}</span>
+              <span>📅 ${new Date(g.createdAt).toLocaleDateString()}</span>
+            </div>
+          </div>
+        `).join('');
+
+        container.insertAdjacentHTML('beforeend', cards);
+        feedSkip += 6;
+      } catch (e) { console.error(e); }
+    }
+
+    async function voteComplaint(id, type) {
+      try {
+        const res = await window.JanSamadhanAPI.voteGrievance(id, type);
+        // Update all instances of this grievance's vote count in the UI
+        const countEls = document.querySelectorAll(`[id="vote-count-${id}"]`);
+        countEls.forEach(countEl => {
+          countEl.textContent = res.new_vote_count;
+          countEl.style.color = type === 'up' ? 'var(--success)' : 'var(--danger)';
+          setTimeout(() => countEl.style.color = '', 1000);
+        });
+        showToast(`Vote recorded: ${type === 'up' ? 'Upvoted' : 'Downvoted'}`, 'success');
+      } catch (e) {
+        showToast(e.message || "Failed to record vote", "error");
+      }
+    }
+
+    // Initialize Feed
+    document.addEventListener('DOMContentLoaded', () => {
+      loadPublicFeed();
     });
 
   </script>

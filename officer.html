@@ -72,6 +72,9 @@
             <div class="nav-item" onclick="showPage('notices',this)">
                 <span class="nav-icon">📢</span> Public Notices
             </div>
+            <div class="nav-item" onclick="showPage('ngoRequests',this)">
+                <span class="nav-icon">🤝</span> NGO Requests
+            </div>
         </nav>
         <div class="sidebar-footer">
             <button class="sidebar-footer-btn" onclick="logoutUser()">🚪 Logout</button>
@@ -310,8 +313,7 @@
                 </div>
                 <div class="grievance-list" id="allComplaintsList"></div>
             </div>
-
-            <!-- ─── ESCALATIONS ─── -->
+                <!-- ─── ESCALATIONS ─── -->
             <div class="dash-page" id="page-escalations">
                 <div class="page-header">
                     <div>
@@ -322,23 +324,35 @@
                 <div class="escalation-list" id="escalationList"></div>
             </div>
 
+            <!-- ─── NGO REQUESTS ─── -->
+            <div class="dash-page" id="page-ngoRequests">
+                <div class="page-header">
+                    <div class="page-title">🤝 NGO Task Requests</div>
+                    <div class="page-subtitle">Review applications from social partners to handle field actions</div>
+                </div>
+                <div class="card" style="padding:0; overflow:hidden">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>NGO & Grievance</th>
+                                <th>Requested</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ngoRequestsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- ─── PUBLIC NOTICES ─── -->
             <div class="dash-page" id="page-notices">
-                <div class="welcome-banner" style="background:linear-gradient(135deg,#10b981,#34d399)">
-                    <div>
-                        <div class="wb-title">📢 Public Notices</div>
-                        <div class="wb-sub">Post announcements and updates for public viewing</div>
-                    </div>
-                    <div style="font-size:2.5rem;opacity:.8">📣</div>
+                <div class="page-header">
+                    <div class="page-title">📢 Public Notices & Announcements</div>
+                    <div class="page-subtitle">Post updates and alerts for citizens and partners</div>
+                    <button class="btn btn-primary" style="margin-top:16px" onclick="openModal('addNoticeModal')">+ Create Notice</button>
                 </div>
-                
-                <div style="margin-bottom: 24px;">
-                    <button class="btn btn-primary" onclick="openModal('addNoticeModal')">+ Publish Notice</button>
-                </div>
-
-                <div id="officerNoticeList" style="display:grid;gap:12px;margin-bottom:20px">
-                    <!-- Notices will be populated here -->
-                </div>
+                <div id="officerNoticesList" class="announcement-list"></div>
             </div>
 
         </div>
@@ -346,19 +360,25 @@
 
     <!-- ADD NOTICE MODAL (Officer) -->
     <div class="modal-overlay" id="addNoticeModal">
-        <div class="modal-box" style="max-width:500px">
+        <div class="modal-box">
             <div class="modal-header">
-                <h3>📢 Publish Public Notice</h3>
+                <h3>📢 Create Public Notice</h3>
                 <button class="modal-close" onclick="closeModal('addNoticeModal')">✕</button>
             </div>
-            <div class="modal-body">
-                <label class="form-label">Notice Text</label>
-                <textarea class="form-control" id="officerNoticeText" rows="4" 
-                    placeholder="Share important public information or updates..."></textarea>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-primary" onclick="addOfficerNotice()">📢 Publish Notice</button>
-                <button class="btn btn-ghost" onclick="closeModal('addNoticeModal')">Cancel</button>
+            <div style="padding:20px">
+                <div class="form-group">
+                    <label class="form-label">Announcement Text</label>
+                    <textarea class="form-control" id="officerNoticeText" rows="4" placeholder="Important update for citizens..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Attachments (Optional)</label>
+                    <input type="file" id="officerNoticeFiles" class="form-control" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                </div>
+                <div class="form-group" style="display:flex; gap:10px; align-items:center">
+                    <input type="checkbox" id="officerNoticePinned" style="width:18px; height:18px">
+                    <label for="officerNoticePinned" style="font-weight:600; cursor:pointer">Pin to top of feed</label>
+                </div>
+                <button class="btn btn-primary w-full" id="publishNoticeBtn" onclick="addOfficerNotice()">🚀 Publish Notice</button>
             </div>
         </div>
     </div>
@@ -464,6 +484,7 @@
             if (id === 'allComplaints') loadAllComplaints();
             if (id === 'escalations') loadEscalations();
             if (id === 'notices') loadOfficerNotices();
+            if (id === 'ngoRequests') loadNGORequests();
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -846,7 +867,7 @@
 
         // ── NOTICE MANAGEMENT FOR OFFICERS ──
         async function loadOfficerNotices() {
-            const container = document.getElementById('officerNoticeList');
+            const container = document.getElementById('officerNoticesList');
             if (!container) return;
             const user = getSessionUser();
             let notices = [];
@@ -876,20 +897,85 @@
 
         async function addOfficerNotice() {
             const text = document.getElementById('officerNoticeText')?.value.trim();
-            if (!text) {
-                showToast('Please enter notice text', 'warning');
-                return;
-            }
+            const btn = document.getElementById('publishNoticeBtn');
+            const fileInput = document.getElementById('officerNoticeFiles');
+            const pinned = document.getElementById('officerNoticePinned')?.checked || false;
             
+            if (!text) { showToast('Please enter notice text', 'warning'); return; }
+
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Publishing...';
+            btn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('text', text);
+            formData.append('pinned', pinned);
+            formData.append('visible_to', JSON.stringify(["citizen", "officer", "admin", "ngo"]));
+            
+            if (fileInput && fileInput.files.length > 0) {
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    formData.append('files', fileInput.files[i]);
+                }
+            }
+
             try {
-                await window.JanSamadhanAPI.addNotice({ text, pinned: false });
-                showToast('✅ Notice published successfully', 'success');
+                await window.JanSamadhanAPI.addNotice(formData);
+                showToast('📢 Announcement published successfully', 'success');
                 document.getElementById('officerNoticeText').value = '';
+                if (fileInput) fileInput.value = '';
                 closeModal('addNoticeModal');
                 loadOfficerNotices();
-            } catch (err) {
-                showToast('Failed to publish notice: ' + err.message, 'error');
+            } catch (e) {
+                console.error('Notice publish error:', e);
+                showToast('Failed to publish announcement: ' + e.message, 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
+        }
+
+        async function loadNGORequests() {
+            try {
+                const data = await window.JanSamadhanAPI.getAdminNGORequests('pending');
+                const container = document.getElementById('ngoRequestsTableBody');
+                if (!container) return;
+                
+                if (!data || !data.length) {
+                    container.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:40px">No pending NGO requests.</td></tr>`;
+                    return;
+                }
+                container.innerHTML = data.map(r => `
+                    <tr>
+                        <td>
+                            <div style="font-weight:600">${r.ngo_name}</div>
+                            <div style="font-size:.75rem;color:var(--text-muted)">Grievance: ${r.complaint_id}</div>
+                        </td>
+                        <td style="font-size:.85rem">${new Date(r.requested_at).toLocaleString()}</td>
+                        <td><span class="status-pill status-pending" style="background:rgba(217,119,6,0.1); color:#b45309; padding:4px 8px; border-radius:12px; font-size:0.7rem; font-weight:700">PENDING</span></td>
+                        <td>
+                            <div style="display:flex;gap:6px">
+                                <button class="btn btn-primary btn-sm" onclick="processNGORequest('${r.id}', 'approve')">✔ Approve</button>
+                                <button class="btn btn-outline btn-sm" onclick="processNGORequest('${r.id}', 'reject')">✖ Reject</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function processNGORequest(requestId, action) {
+            try {
+                if (action === 'approve') {
+                    await window.JanSamadhanAPI.approveNGORequest(requestId);
+                    showToast("NGO Assigned and Grievance Activated!", "success");
+                } else {
+                    const reason = prompt("Enter rejection reason:");
+                    if (reason === null) return;
+                    await window.JanSamadhanAPI.rejectNGORequest(requestId, reason);
+                    showToast("NGO Request Rejected", "info");
+                }
+                loadNGORequests();
+            } catch (e) { showToast(e.message, "error"); }
         }
 
         async function deleteOfficerNotice(noticeId) {
