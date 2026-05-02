@@ -1,5 +1,5 @@
 // Enhanced API wrapper with robust token refresh mechanism
-const API_BASE_URL = window.location.protocol === 'file:' ? 'http://localhost:8000' : '';
+const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') ? 'http://localhost:8000' : '';
 
 class JanSamadhanAPI {
     constructor() {
@@ -165,14 +165,14 @@ class JanSamadhanAPI {
             
             throw err;
         }
-    },
+    }
 
     // Helper method for login redirect
     redirectToLogin() {
         console.log('🔄 Redirecting to login due to authentication failure');
         sessionStorage.setItem('redirect_after_login', window.location.pathname);
         window.location.href = 'index.html';
-    },
+    }
 
     // Enhanced refresh token method
     async refreshAccessToken(refreshToken) {
@@ -198,16 +198,16 @@ class JanSamadhanAPI {
             console.error('❌ Token refresh error:', err);
             return null;
         }
-    },
+    }
 
     // API Methods
     async register(userData) {
         return this._fetch('/api/auth/register', { method: 'POST', body: JSON.stringify(userData) });
-    },
+    }
 
     async registerNGO(ngoData) {
         return this._fetch('/api/auth/register-ngo', { method: 'POST', body: JSON.stringify(ngoData) });
-    },
+    }
 
     async login(credentials) {
         const result = await this._fetch('/api/auth/login', { method: 'POST', body: JSON.stringify(credentials) });
@@ -220,7 +220,7 @@ class JanSamadhanAPI {
         }
         
         return result;
-    },
+    }
 
     async adminLogin(credentials) {
         // Admin login uses the same endpoint but with admin role validation
@@ -234,7 +234,7 @@ class JanSamadhanAPI {
         }
         
         return result;
-    },
+    }
 
     async logout() {
         try {
@@ -246,43 +246,43 @@ class JanSamadhanAPI {
             localStorage.removeItem('js_user');
             sessionStorage.removeItem('js_user');
         }
-    },
+    }
 
     async getUser() {
         return this._fetch('/api/auth/user');
-    },
+    }
 
     async getComplaints(params = {}) {
         const queryString = new URLSearchParams(params).toString();
         return this._fetch(`/api/complaints${queryString ? '?' + queryString : ''}`);
-    },
+    }
 
     async getComplaint(id) {
         return this._fetch(`/api/complaints/${id}`);
-    },
+    }
 
     async createComplaint(complaintData) {
         return this._fetch('/api/complaints/', { 
             method: 'POST', 
             body: JSON.stringify(complaintData) 
         });
-    },
+    }
 
     async updateComplaint(id, updateData) {
         return this._fetch(`/api/complaints/${id}`, { 
             method: 'PUT', 
             body: JSON.stringify(updateData) 
         });
-    },
+    }
 
     async deleteComplaint(id) {
         return this._fetch(`/api/complaints/${id}`, { method: 'DELETE' });
-    },
+    }
 
     // Enhanced features
     async voteComplaint(id, voteType) {
         return this._fetch(`/api/complaints/${id}/vote?vote_type=${voteType}`, { method: 'POST' });
-    },
+    }
 
     async commentComplaint(id, comment) {
         const formData = new FormData();
@@ -292,11 +292,11 @@ class JanSamadhanAPI {
             body: formData,
             headers: {} // Let browser set Content-Type for FormData
         });
-    },
+    }
 
     async getComplaintComments(id, skip = 0, limit = 50) {
         return this._fetch(`/api/complaints/${id}/comments?skip=${skip}&limit=${limit}`);
-    },
+    }
 
     async uploadMedia(files) {
         const formData = new FormData();
@@ -307,32 +307,32 @@ class JanSamadhanAPI {
             body: formData,
             headers: {} // Let browser set Content-Type for FormData
         });
-    },
+    }
 
     async deleteMedia(publicId) {
         return this._fetch(`/api/complaints/media/${publicId}`, { method: 'DELETE' });
-    },
+    }
 
     // Analytics endpoints
     async getPredictions(params = {}) {
         const queryString = new URLSearchParams(params).toString();
         return this._fetch(`/api/analytics/predictions${queryString ? '?' + queryString : ''}`);
-    },
+    }
 
     async getResolutionPredictions(params = {}) {
         const queryString = new URLSearchParams(params).toString();
         return this._fetch(`/api/analytics/resolution-time-predictions${queryString ? '?' + queryString : ''}`);
-    },
+    }
 
     // Public endpoints
     async getPublicStats() {
         return this._fetch('/api/public/stats');
-    },
+    }
 
     async getPublicHeatmap(params = {}) {
         const queryString = new URLSearchParams(params).toString();
         return this._fetch(`/api/public/heatmap${queryString ? '?' + queryString : ''}`);
-    },
+    }
 
     async getPublicTrends(params = {}) {
         const queryString = new URLSearchParams(params).toString();

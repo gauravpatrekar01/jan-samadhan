@@ -126,13 +126,17 @@ def get_analytics(admin: dict = Depends(require_admin)):
     total_rating_sum = 0
     rated_complaints = 0
     for c in complaints:
-        count = c.get("feedbackCount") if c.get("feedbackCount") is not None else len(c.get("feedback", []) or [])
+        feedback = c.get("feedback", [])
+        if isinstance(feedback, dict):
+            feedback = [feedback]
+            
+        count = c.get("feedbackCount") if c.get("feedbackCount") is not None else len(feedback)
         if count > 0:
             rated_complaints += 1
             if c.get("feedbackAverage") is not None:
                 total_rating_sum += c.get("feedbackAverage", 0) * count
             else:
-                total_rating_sum += sum(item.get("rating", 0) for item in (c.get("feedback") or []))
+                total_rating_sum += sum(item.get("rating", 0) for item in feedback if isinstance(item, dict))
             total_ratings += count
 
     average_satisfaction = round((total_rating_sum / total_ratings), 2) if total_ratings > 0 else 0

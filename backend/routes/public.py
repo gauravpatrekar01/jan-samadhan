@@ -7,7 +7,7 @@ from typing import Optional
 router = APIRouter(prefix="/api/public", tags=["public"])
 
 @router.get("/stats")
-async def get_public_stats():
+def get_public_stats():
     """
     Get comprehensive public statistics and KPIs about complaints
     No authentication required, excludes personal data
@@ -198,7 +198,7 @@ async def get_public_stats():
         }
 
 @router.get("/heatmap")
-async def get_public_heatmap(
+def get_public_heatmap(
     days: int = Query(30, ge=1, le=365, description="Number of days to include"),
     category: Optional[str] = Query(None, description="Filter by category")
 ):
@@ -296,7 +296,7 @@ async def get_public_heatmap(
         }
 
 @router.get("/trends")
-async def get_public_trends(
+def get_public_trends(
     days: int = Query(90, ge=7, le=365, description="Number of days to analyze"),
     group_by: str = Query("day", regex="^(day|week|month)$", description="Group by period")
 ):
@@ -319,7 +319,7 @@ async def get_public_trends(
         pipeline = [
             {"$match": {"createdAt": {"$gte": start_date}}},
             {"$group": {
-                "_id": {"$dateToString": {"format": date_format, "date": "$createdAt"}},
+                "_id": {"$dateToString": {"format": date_format, "date": {"$toDate": "$createdAt"}}},
                 "count": {"$sum": 1},
                 "categories": {"$push": "$category"}
             }},

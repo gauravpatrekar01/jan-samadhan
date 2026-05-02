@@ -126,12 +126,12 @@ def get_ngo_upload_url(file_name: str, file_type: str):
 
 
 @router.post("/upload-local-doc")
-async def upload_local_doc(file: UploadFile = File(...)):
+def upload_local_doc(file: UploadFile = File(...)):
     """Local fallback for document uploads when S3 is not available."""
     os.makedirs("static/uploads", exist_ok=True)
-    ext = file.filename.split(".")[-1]
-    unique_name = f"{uuid.uuid4()}.{ext}"
-    path = f"static/uploads/{unique_name}"
+    safe_filename = os.path.basename(file.filename)
+    fname = f"{uuid.uuid4()}-{safe_filename}"
+    path = f"static/uploads/{fname}"
     
     with open(path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)

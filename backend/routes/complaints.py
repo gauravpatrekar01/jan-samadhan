@@ -389,7 +389,7 @@ def create_complaint(
                 "summary_attempts": 0,
                 "summary_last_error": None,
                 "summary_last_generated_at": None,
-                "priority_score": 0,  # Temporarily bypass compute_priority_score to isolate issue
+                "priority_score": 0,
                 "source_language": request.headers.get("x-user-language") or user.get("lang") or "en",
             }
         )
@@ -398,6 +398,9 @@ def create_complaint(
                 "type": "Point",
                 "coordinates": [complaint.longitude, complaint.latitude],
             }
+
+        # Calculate priority score now that c_dict has createdAt
+        c_dict["priority_score"] = compute_priority_score(c_dict)
 
         # Auto-assign officer if region is provided
         assigned_officer = find_officer_for_region(c_dict.get("region"))
@@ -616,6 +619,9 @@ async def create_complaint_with_media(
                 "feedbackCount": 0,
             }
         )
+        
+        # Calculate priority score
+        complaint_data["priority_score"] = compute_priority_score(complaint_data)
 
         # Auto-assign officer if region is provided
         assigned_officer = find_officer_for_region(complaint_data.get("region"))
@@ -748,7 +754,7 @@ def get_next_complaints(
         ]
     docs = list(db.get_collection("complaints").find(query, {"_id": 0}).limit(500))
     for d in docs:
-        d["priority_score"] = d.get("priority_score") or 0  # Temporarily bypass compute_priority_score
+        d["priority_score"] = d.get("priority_score") or compute_priority_score(d)
     docs.sort(key=lambda x: x.get("priority_score", 0), reverse=True)
     return {"success": True, "data": docs[:limit], "total": len(docs)}
 
@@ -1009,13 +1015,13 @@ def submit_feedback(
         {
             "$set": {
                 "status": "closed",
-                "feedback": feedback_doc,
                 "feedbackRating": rating, # For aggregation
                 "feedbackAverage": rating, # Initial
                 "feedbackCount": 1,        # First feedback
                 "updatedAt": now,
             },
             "$push": {
+                "feedback": feedback_doc,
                 "timeline": {
                     "stage": "Closed",
                     "remarks": f"Citizen Feedback ({rating}/5): {comment}",
@@ -1257,7 +1263,7 @@ async def delete_media_endpoint(
 
 
 @router.post("/{id}/vote")
-async def vote_complaint(
+def vote_complaint(
     id: str,
     vote_type: str = Query(..., regex="^(up|down)$"),
     user: dict = Depends(get_current_user_optional)
@@ -1353,7 +1359,7 @@ async def vote_complaint(
 
 
 @router.post("/{id}/comment")
-async def comment_complaint(
+def comment_complaint(
     id: str,
     comment: str = Form(..., min_length=1, max_length=500),
     user: dict = Depends(get_current_user_optional)
@@ -1443,7 +1449,7 @@ async def comment_complaint(
 
 
 @router.get("/{id}/comments")
-async def get_complaint_comments(
+def get_complaint_comments(
     id: str,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100)

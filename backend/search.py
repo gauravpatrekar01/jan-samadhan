@@ -93,7 +93,7 @@ def search_complaints(
     collection = db.get_collection("complaints")
     complaints = list(
         collection.find(query, {"_id": 0})
-        .sort("timestamp", -1)
+        .sort("createdAt", -1)
         .skip(skip)
         .limit(limit)
     )

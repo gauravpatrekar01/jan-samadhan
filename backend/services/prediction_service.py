@@ -4,7 +4,7 @@ from db import db
 import statistics
 from collections import defaultdict
 
-async def get_complaint_predictions(
+def get_complaint_predictions(
     days_ahead: int = 30,
     region: Optional[str] = None,
     category: Optional[str] = None
@@ -276,7 +276,7 @@ def calculate_confidence_score(data_points: int) -> float:
     else:
         return 0.95
 
-async def get_resolution_time_predictions(
+def get_resolution_time_predictions(
     region: Optional[str] = None,
     category: Optional[str] = None
 ) -> Dict[str, Any]:

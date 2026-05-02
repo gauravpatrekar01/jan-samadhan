@@ -7,7 +7,7 @@ from typing import Optional
 router = APIRouter(prefix="/api/kpis", tags=["kpis"])
 
 @router.get("/dashboard")
-async def get_dashboard_kpis(
+def get_dashboard_kpis(
     user: dict = Depends(require_officer_or_admin),
     days: int = Query(30, ge=1, le=365, description="Number of days for KPI calculation")
 ):
@@ -258,7 +258,7 @@ async def get_dashboard_kpis(
         }
 
 @router.get("/department")
-async def get_department_kpis(
+def get_department_kpis(
     user: dict = Depends(require_officer_or_admin),
     department: Optional[str] = Query(None, description="Filter by department"),
     days: int = Query(30, ge=1, le=365, description="Number of days for KPI calculation")

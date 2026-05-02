@@ -4,7 +4,7 @@ Provides comprehensive data-driven insights for Officers and Admins
 """
 
 from fastapi import APIRouter, Query, Depends
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 from pydantic import BaseModel
 from typing import Optional, List
@@ -15,13 +15,13 @@ router = APIRouter()
 
 
 @router.get("/overview")
-async def analytics_overview(
+def analytics_overview(
     days: int = Query(30),
     user: dict = Depends(require_role(["admin", "officer"])),
 ):
     from db import db
     collection = db.get_collection("complaints")
-    since = datetime.now() - timedelta(days=days)
+    since = datetime.now(timezone.utc) - timedelta(days=days)
     docs = list(collection.find({"createdAt": {"$gte": since.isoformat()}}, {"_id": 0, "status": 1, "priority": 1, "category": 1, "region": 1}))
     total = len(docs)
     resolved = len([d for d in docs if (d.get("status") or "").lower() in {"resolved", "closed"}])
@@ -51,7 +51,7 @@ async def analytics_overview(
 
 
 @router.get("/trends")
-async def analytics_trends(
+def analytics_trends(
     days: int = Query(30),
     user: dict = Depends(require_role(["admin", "officer"])),
 ):
@@ -111,7 +111,7 @@ def calculate_sla_status(created_date, status, priority='low'):
 # ════════════════════════════════════════════════════════════════
 
 @router.get('/admin/overview')
-async def admin_overview(days: int = Query(30), user: dict = Depends(require_role(["admin"]))):
+def admin_overview(days: int = Query(30), user: dict = Depends(require_role(["admin"]))):
     """
     Comprehensive system overview for admins
     Returns: Total complaints, resolution rate, trends, department performance
@@ -170,7 +170,7 @@ async def admin_overview(days: int = Query(30), user: dict = Depends(require_rol
         # SLA breaches
         sla_breaches = complaints_collection.count_documents({
             'status': {'$nin': ['resolved', 'closed']},
-            'createdAt': {'$lt': datetime.now() - timedelta(hours=72)}
+            'createdAt': {'$lt': (datetime.now(timezone.utc) - timedelta(hours=72)).isoformat()}
         })
         
         # Average resolution time - using simple Python calculation
@@ -210,7 +210,7 @@ async def admin_overview(days: int = Query(30), user: dict = Depends(require_rol
 
 
 @router.get('/admin/officer-performance')
-async def admin_officer_performance(limit: int = Query(20), user: dict = Depends(require_role(["admin"]))):
+def admin_officer_performance(limit: int = Query(20), user: dict = Depends(require_role(["admin"]))):
     """Officer ranking leaderboard with performance metrics"""
     try:
         from db import db
@@ -270,7 +270,7 @@ async def admin_officer_performance(limit: int = Query(20), user: dict = Depends
 
 
 @router.get('/admin/trends')
-async def admin_trends(period: str = Query('daily'), days: int = Query(30), user: dict = Depends(require_role(["admin"]))):
+def admin_trends(period: str = Query('daily'), days: int = Query(30), user: dict = Depends(require_role(["admin"]))):
     """Daily/Weekly/Monthly trend analysis"""
     try:
         from db import db
@@ -286,12 +286,12 @@ async def admin_trends(period: str = Query('daily'), days: int = Query(30), user
         trends = list(complaints_collection.aggregate([
             {
                 '$match': {
-                    'createdAt': {'$gte': datetime.now() - timedelta(days=days)}
+                    'createdAt': {'$gte': (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()}
                 }
             },
             {
                 '$group': {
-                    '_id': {'$dateToString': {'format': group_format, 'date': '$createdAt'}},
+                    '_id': {'$dateToString': {'format': group_format, 'date': {'$toDate': '$createdAt'}}},
                     'total': {'$sum': 1},
                     'resolved': {
                         '$sum': {'$cond': [{'$in': ['$status', ['resolved', 'closed']]}, 1, 0]}
@@ -320,7 +320,7 @@ async def admin_trends(period: str = Query('daily'), days: int = Query(30), user
 # ════════════════════════════════════════════════════════════════
 
 @router.get('/officer/{officer_id}/performance')
-async def officer_performance(officer_id: str, user: dict = Depends(require_role(["officer", "admin"]))):
+def officer_performance(officer_id: str, user: dict = Depends(require_role(["officer", "admin"]))):
     """Personal performance metrics for officers"""
     try:
         if user.get("role") == "officer" and user.get("sub") != officer_id:
@@ -393,7 +393,7 @@ async def officer_performance(officer_id: str, user: dict = Depends(require_role
 
 
 @router.get('/officer/{officer_id}/queue')
-async def officer_queue(officer_id: str, user: dict = Depends(require_role(["officer", "admin"]))):
+def officer_queue(officer_id: str, user: dict = Depends(require_role(["officer", "admin"]))):
     """Priority queue and SLA status for officer"""
     try:
         if user.get("role") == "officer" and user.get("sub") != officer_id:
@@ -429,7 +429,7 @@ async def officer_queue(officer_id: str, user: dict = Depends(require_role(["off
 # ════════════════════════════════════════════════════════════════
 
 @router.post('/filtered')
-async def filtered_analytics(filter_req: FilterRequest):
+def filtered_analytics(filter_req: FilterRequest):
     """
     Get analytics based on custom filters
     """
@@ -443,8 +443,8 @@ async def filtered_analytics(filter_req: FilterRequest):
         # Date range
         if 'date_range' in filters and filters['date_range']:
             mongo_filter['createdAt'] = {
-                '$gte': datetime.fromisoformat(filters['date_range'].get('start')),
-                '$lte': datetime.fromisoformat(filters['date_range'].get('end'))
+                '$gte': datetime.fromisoformat(filters['date_range'].get('start')).isoformat() if isinstance(filters['date_range'].get('start'), str) else filters['date_range'].get('start'),
+                '$lte': datetime.fromisoformat(filters['date_range'].get('end')).isoformat() if isinstance(filters['date_range'].get('end'), str) else filters['date_range'].get('end')
             }
         
         # Category
@@ -493,7 +493,7 @@ async def filtered_analytics(filter_req: FilterRequest):
 
 
 @router.post('/export')
-async def export_analytics(export_req: ExportRequest):
+def export_analytics(export_req: ExportRequest):
     """Export analytics data as CSV/JSON"""
     try:
         from db import db
@@ -533,7 +533,7 @@ async def export_analytics(export_req: ExportRequest):
 
 
 @router.get('/admin/ngo-contribution')
-async def admin_ngo_contribution():
+def admin_ngo_contribution():
     try:
         from db import db
         complaints_collection = db.get_collection('complaints')
@@ -571,7 +571,7 @@ async def admin_ngo_contribution():
         return {'success': False, 'error': str(e)}
 
 @router.get('/admin/escalation-advanced')
-async def admin_escalation_advanced():
+def admin_escalation_advanced():
     try:
         from db import db
         complaints_collection = db.get_collection('complaints')
@@ -601,7 +601,7 @@ async def admin_escalation_advanced():
         return {'success': False, 'error': str(e)}
 
 @router.get('/admin/peak-times')
-async def admin_peak_times():
+def admin_peak_times():
     try:
         from db import db
         complaints_collection = db.get_collection('complaints')
@@ -610,7 +610,7 @@ async def admin_peak_times():
         pipeline = [
             {
                 '$project': {
-                    'hour': { '$hour': { 'date': '$createdAt', 'timezone': 'UTC' } } # MongoDB 5.0+ feature
+                    'hour': { '$hour': { 'date': {'$toDate': '$createdAt'}, 'timezone': 'UTC' } } # MongoDB 5.0+ feature
                 }
             },
             {
@@ -626,9 +626,16 @@ async def admin_peak_times():
         data = list(complaints_collection.find({}, {'createdAt': 1}))
         hour_counts = {}
         for d in data:
-            if isinstance(d.get('createdAt'), datetime):
-                h = d['createdAt'].hour
-                hour_counts[h] = hour_counts.get(h, 0) + 1
+            created_at = d.get('createdAt')
+            if created_at:
+                try:
+                    if isinstance(created_at, str):
+                        h = datetime.fromisoformat(created_at.replace('Z', '+00:00')).hour
+                    else:
+                        h = created_at.hour
+                    hour_counts[h] = hour_counts.get(h, 0) + 1
+                except Exception:
+                    pass
                 
         sorted_hours = sorted(hour_counts.items(), key=lambda x: x[1], reverse=True)
         peak_hours = [{'hour': f"{h:02d}:00", 'count': c} for h, c in sorted_hours[:5]]
@@ -649,7 +656,7 @@ async def admin_peak_times():
 # ════════════════════════════════════════════════════════════════
 
 @router.get('/admin/high-risk-zones')
-async def admin_high_risk_zones():
+def admin_high_risk_zones():
     """Detect high-risk zones with frequent complaints"""
     try:
         from db import db
@@ -697,7 +704,7 @@ async def admin_high_risk_zones():
 
 
 @router.get('/admin/underperforming-officers')
-async def admin_underperforming_officers(threshold: float = Query(50.0)):
+def admin_underperforming_officers(threshold: float = Query(50.0)):
     """Identify underperforming officers based on resolution rate"""
     try:
         from db import db
@@ -718,7 +725,7 @@ async def admin_underperforming_officers(threshold: float = Query(50.0)):
                         '$sum': {'$cond': [
                             {'$and': [
                                 {'$nin': ['$status', ['resolved', 'closed']]},
-                                {'$lt': [{'$subtract': [datetime.now(), '$createdAt']}, 72 * 3600000]}
+                                {'$lt': [{'$subtract': [datetime.now(timezone.utc), {'$toDate': '$createdAt'}]}, 72 * 3600000]}
                             ]}, 1, 0
                         ]}
                     }
@@ -745,7 +752,7 @@ async def admin_underperforming_officers(threshold: float = Query(50.0)):
 
 
 @router.get('/admin/resource-recommendations')
-async def admin_resource_recommendations():
+def admin_resource_recommendations():
     """Recommend resource allocation based on demand"""
     try:
         from db import db
@@ -805,7 +812,7 @@ async def admin_resource_recommendations():
 
 
 @router.get('/admin/satisfaction-analysis')
-async def admin_satisfaction_analysis():
+def admin_satisfaction_analysis():
     """Analyze citizen satisfaction feedback"""
     try:
         from db import db
@@ -847,7 +854,7 @@ async def admin_satisfaction_analysis():
 
 
 @router.get('/admin/department-performance')
-async def admin_department_performance():
+def admin_department_performance():
     """Compare performance across departments"""
     try:
         from db import db
