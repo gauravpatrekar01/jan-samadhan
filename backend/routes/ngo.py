@@ -203,3 +203,78 @@ def update_ngo_profile(profile_update: dict, user=Depends(require_role(["ngo"]))
     users.update_one({"email": user["sub"]}, {"$set": profile_update})
     return {"success": True, "message": "Profile updated for re-verification."}
 
+
+# ──────────────────────────────────────────────────────────────────────
+# NEW: All Grievances (read-only view for NGOs)
+# Provides system-wide visibility + per-grievance request status.
+# Does NOT modify any existing endpoint above.
+# ──────────────────────────────────────────────────────────────────────
+
+from fastapi import Query as Q
+
+
+@router.get("/all-grievances")
+def get_all_grievances_for_ngo(
+    skip: int = Q(0, ge=0),
+    limit: int = Q(50, ge=1, le=200),
+    status: str = Q(None),
+    category: str = Q(None),
+    priority: str = Q(None),
+    user=Depends(require_role(["ngo"])),
+):
+    """
+    Read-only view of ALL grievances in the system for NGOs.
+    Citizen PII is masked. Each grievance is enriched with the
+    NGO's own request status (pending/approved/rejected/none).
+    """
+    query = {}
+    if status:
+        query["status"] = status.lower()
+    if category:
+        query["category"] = category
+    if priority:
+        query["priority"] = priority.lower()
+
+    complaint_coll = db.get_collection("complaints")
+    complaints = list(
+        complaint_coll.find(query, {"_id": 0, "aadhar": 0, "citizen_email": 0, "votes_history": 0})
+        .sort("createdAt", -1)
+        .skip(skip)
+        .limit(limit)
+    )
+    total = complaint_coll.count_documents(query)
+
+    # Mask citizen names
+    for c in complaints:
+        c["name"] = mask_name(c.get("name", "Citizen"))
+
+    # Batch-fetch this NGO's requests to enrich grievances with status
+    ngo_email = user["sub"]
+    req_coll = db.get_collection("ngo_requests")
+    ngo_requests = list(req_coll.find(
+        {"ngo_email": ngo_email},
+        {"_id": 0, "complaint_id": 1, "status": 1, "id": 1}
+    ))
+    request_map = {}
+    for r in ngo_requests:
+        cid = r["complaint_id"]
+        # Keep the most relevant status (pending > approved > rejected)
+        existing = request_map.get(cid)
+        if not existing or r["status"] == "pending":
+            request_map[cid] = {"status": r["status"], "request_id": r.get("id")}
+
+    # Enrich each grievance with NGO request status
+    for c in complaints:
+        cid = c.get("id")
+        req_info = request_map.get(cid)
+        if req_info:
+            c["ngo_request_status"] = req_info["status"]
+            c["ngo_request_id"] = req_info["request_id"]
+        else:
+            c["ngo_request_status"] = None
+            c["ngo_request_id"] = None
+
+        # Flag if already assigned to any NGO
+        c["assigned_to_any_ngo"] = bool(c.get("assigned_to_ngo"))
+
+    return {"success": True, "data": complaints, "total": total}

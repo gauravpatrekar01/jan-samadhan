@@ -539,6 +539,11 @@ class JanSamadhanAPI {
         return this._fetch('/api/ngo/available-complaints');
     }
 
+    async getNGOAllGrievances(params = {}) {
+        const qs = new URLSearchParams(params).toString();
+        return this._fetch(`/api/ngo/all-grievances${qs ? '?' + qs : ''}`);
+    }
+
     async getNGOStats() {
         return this._fetch('/api/ngo/stats');
     }
