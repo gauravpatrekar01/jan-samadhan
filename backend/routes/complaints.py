@@ -151,6 +151,14 @@ def get_complaints(
         radius=radius,
     )
 
+    # Inject user vote status and clean up history
+    user_id = user["sub"] if user else None
+    for c in complaints:
+        if user_id:
+            c["user_vote"] = c.get("votes_history", {}).get(user_id)
+        if "votes_history" in c:
+            del c["votes_history"]
+
     return {"success": True, "data": complaints, "total": total}
 
 
@@ -730,6 +738,13 @@ def get_complaint(id: str, user: dict = Depends(get_current_user_optional)):
     complaint.setdefault("summary_attempts", 0)
     complaint.setdefault("summary_last_error", None)
     complaint.setdefault("summary_last_generated_at", None)
+    # Inject user vote status
+    user_id = user["sub"] if user else None
+    if user_id:
+        complaint["user_vote"] = complaint.get("votes_history", {}).get(user_id)
+    if "votes_history" in complaint:
+        del complaint["votes_history"]
+
     return {"success": True, "data": complaint}
 
 
@@ -1282,11 +1297,11 @@ async def delete_media_endpoint(
 def vote_complaint(
     id: str,
     vote_type: str = Query(..., regex="^(up|down)$"),
-    user: dict = Depends(get_current_user_optional)
+    user: dict = Depends(get_current_user)
 ):
     """
     Vote on a complaint (upvote or downvote)
-    Allows both authenticated and anonymous users
+    Requires authentication to ensure 'one user, one vote' policy
     """
     try:
         collection = db.get_collection("complaints")
@@ -1295,16 +1310,20 @@ def vote_complaint(
         if not complaint:
             raise HTTPException(status_code=404, detail="Complaint not found")
         
-        # Get user identifier (session ID for anonymous, email for authenticated)
-        user_id = user["sub"] if user else f"anonymous_{id}"
+        # Get user identifier (email for authenticated)
+        user_id = user["sub"]
         
         # Check if user already voted
         existing_vote = complaint.get("votes_history", {}).get(user_id)
         
         if existing_vote:
-            # Update existing vote
+            # Update or Remove existing vote
             vote_change = 0
-            if existing_vote == "up" and vote_type == "down":
+            if existing_vote == vote_type:
+                # Toggle off: remove the vote
+                vote_change = -1 if vote_type == "up" else 1
+                vote_type = None  # Signal removal
+            elif existing_vote == "up" and vote_type == "down":
                 vote_change = -2  # Remove upvote, add downvote
             elif existing_vote == "down" and vote_type == "up":
                 vote_change = 2   # Remove downvote, add upvote
@@ -1312,20 +1331,23 @@ def vote_complaint(
             new_votes = complaint.get("votes", 0) + vote_change
             
             # Update complaint
-            collection.update_one(
-                {"id": id},
-                {
-                    "$set": {
-                        "votes": new_votes,
-                        f"votes_history.{user_id}": vote_type,
-                        "updatedAt": datetime.now(timezone.utc).isoformat()
-                    }
+            update_query = {
+                "$set": {
+                    "votes": new_votes,
+                    "updatedAt": datetime.now(timezone.utc).isoformat()
                 }
-            )
+            }
+            
+            if vote_type:
+                update_query["$set"][f"votes_history.{user_id}"] = vote_type
+            else:
+                update_query["$unset"] = {f"votes_history.{user_id}": ""}
+
+            collection.update_one({"id": id}, update_query)
             
             return {
                 "success": True,
-                "message": f"Vote changed from {existing_vote} to {vote_type}",
+                "message": "Vote removed" if not vote_type else f"Vote changed from {existing_vote} to {vote_type}",
                 "new_vote_count": new_votes,
                 "vote_type": vote_type
             }

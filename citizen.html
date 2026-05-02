@@ -452,7 +452,7 @@
       ${showProgress ? renderProgressBar(getProgressFromStatus(g.status)) : ''}
       <div class="gc-actions">
         <button class="btn btn-ghost btn-sm" onclick="viewDetail('${g.id}')">👁️ View Details</button>
-        <button class="btn btn-ghost btn-sm" onclick="upvote('${g.id}', this)" style="gap:4px">
+        <button class="btn btn-ghost btn-sm ${g.user_vote === 'up' ? 'voted' : ''}" onclick="upvote('${g.id}', this)" style="gap:4px">
             👍 <span class="vote-count">${upvotes}</span>
         </button>
         ${(g.status === 'resolved' || g.status === 'closed') ? `<button class="btn btn-sm" style="background:rgba(249,115,22,.1);color:var(--accent)" onclick="openFeedback('${g.id}')">⭐ Rate Resolution</button>` : ''}
@@ -468,11 +468,18 @@
                 if (res.success) {
                     const countEl = btn.querySelector('.vote-count');
                     if (countEl) countEl.textContent = res.new_vote_count;
-                    showToast('Vote registered!', 'success');
-                    btn.classList.add('voted');
+                    
+                    if (res.vote_type === 'up') {
+                        btn.classList.add('voted');
+                    } else {
+                        btn.classList.remove('voted');
+                    }
+                    
+                    showToast(res.message || 'Vote updated!', 'success');
                 }
             } catch (e) {
-                showToast('Already voted or failed to vote', 'warning');
+                console.error(e);
+                showToast(e.message || 'Failed to vote', 'error');
             }
         }
 

@@ -90,18 +90,62 @@ function toggleMobileNav() {
 }
 
 /**
- * Handle map search
+ * Handle map search — uses Nominatim geocoding via MapManager
  */
 async function searchLocation() {
-    const searchInput = document.getElementById('mapSearchInput');
-    if (!searchInput || !searchInput.value || !mapManager) return;
+    const searchInput = document.getElementById('locationSearchInput');
+    if (!searchInput || !searchInput.value.trim() || !mapManager) return;
 
-    const result = await mapManager.searchLocation(searchInput.value);
-    if (result) {
-        console.log(`✓ Location found: ${result.name}`);
-    } else {
+    const query = searchInput.value.trim();
+    const btn = document.querySelector('.location-search-btn');
+    const originalText = btn ? btn.textContent : '';
+
+    // Show loading state
+    if (btn) {
+        btn.textContent = '⏳ Searching...';
+        btn.disabled = true;
+    }
+
+    try {
+        const result = await mapManager.searchLocation(query);
+        if (result) {
+            console.log(`Location found: ${result.name}`);
+            if (typeof showToast === 'function') {
+                showToast(`Location found: ${result.name.substring(0, 60)}...`, 'success');
+            }
+            // Auto-fill the address field with the resolved location name
+            const addressField = document.getElementById('fAddress');
+            if (addressField && !addressField.value) {
+                addressField.value = result.name;
+            }
+        } else {
+            if (typeof showToast === 'function') {
+                showToast('Location not found. Try a more specific search (e.g., "MG Road, Nashik").', 'warning');
+            }
+        }
+    } catch (err) {
+        console.error('Search error:', err);
         if (typeof showToast === 'function') {
-            showToast('Location not found. Please try another search.', 'error');
+            showToast('Search failed. Please try again.', 'error');
+        }
+    } finally {
+        // Restore button
+        if (btn) {
+            btn.textContent = originalText;
+            btn.disabled = false;
         }
     }
 }
+
+// Add Enter key support for location search
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('locationSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchLocation();
+            }
+        });
+    }
+});
