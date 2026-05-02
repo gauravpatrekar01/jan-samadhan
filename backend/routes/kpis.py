@@ -116,9 +116,18 @@ async def get_dashboard_kpis(
         # Weekly Trends
         weekly_pipeline = [
             {"$match": {"createdAt": {"$gte": start_date}, **user_filter}},
+            {"$addFields": {
+                "createdAtDate": {
+                    "$cond": {
+                        "if": {"$eq": [{"$type": "$createdAt"}, "string"]},
+                        "then": {"$dateFromString": {"dateString": "$createdAt"}},
+                        "else": "$createdAt"
+                    }
+                }
+            }},
             {"$group": {
-                "_id": {"$dateToString": {"format": "%Y-%W", "date": "$createdAt"}},
-                "week_start": {"$min": "$createdAt"},
+                "_id": {"$dateToString": {"format": "%Y-%W", "date": "$createdAtDate"}},
+                "week_start": {"$min": "$createdAtDate"},
                 "complaints_received": {"$sum": 1},
                 "complaints_resolved": {"$sum": {"$cond": [{"$in": ["$status", ["resolved", "closed"]]}, 1, 0]}}
             }},

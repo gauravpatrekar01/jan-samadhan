@@ -124,8 +124,17 @@ async def get_public_stats():
         # Daily trends for last 30 days
         daily_trends_pipeline = [
             {"$match": {"createdAt": {"$gte": thirty_days_ago}}},
+            {"$addFields": {
+                "createdAtDate": {
+                    "$cond": {
+                        "if": {"$eq": [{"$type": "$createdAt"}, "string"]},
+                        "then": {"$dateFromString": {"dateString": "$createdAt"}},
+                        "else": "$createdAt"
+                    }
+                }
+            }},
             {"$group": {
-                "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$createdAt"}},
+                "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$createdAtDate"}},
                 "count": {"$sum": 1},
                 "resolved": {"$sum": {"$cond": [{"$in": ["$status", ["resolved", "closed"]]}, 1, 0]}}
             }},
