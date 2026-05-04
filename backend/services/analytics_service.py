@@ -38,5 +38,5 @@ def build_daily_trend(docs: list[dict], days: int = 30) -> list[dict]:
         buckets[key]["total"] += 1
         if (d.get("status") or "").lower() in {"resolved", "closed"}:
             buckets[key]["resolved"] += 1
-    return [{"date": k, **v} for k, v in buckets.items()]
+    return [{"_id": k, "date": k, **v} for k, v in buckets.items()]
 

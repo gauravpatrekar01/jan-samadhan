@@ -853,7 +853,7 @@
                 allGrievances = await window.JanSamadhanAPI.getAllGrievances(null, null, null, null, null, 0, 100);
             } catch (e) { console.error("Failed to fetch grievances for overview", e); }
 
-            const urgentResults = allGrievances.filter(g => g.priority?.toLowerCase() === 'emergency' && g.status !== 'resolved' && g.status !== 'closed').slice(0, 5);
+            const urgentResults = allGrievances.filter(g => (g.escalated || ['emergency', 'high'].includes(g.priority?.toLowerCase())) && g.status !== 'resolved' && g.status !== 'closed').sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 5);
             document.getElementById('urgentList').innerHTML = urgentResults.length
                 ? urgentResults.map(g => `
                     <div style="padding:16px; border-radius:12px; border:1px solid rgba(153, 27, 27, 0.1); background:white; display:flex; gap:12px; align-items:center; box-shadow: var(--shadow-sm); transition: var(--transition); border-left: 5px solid #991b1b">

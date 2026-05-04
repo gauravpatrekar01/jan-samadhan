@@ -168,10 +168,25 @@ def admin_overview(days: int = Query(30), user: dict = Depends(require_role(["ad
         region_perf = [{'_id': doc['_id'], 'total': doc['total'], 'resolved': doc['resolved']} for doc in region_perf]
         
         # SLA breaches
-        sla_breaches = complaints_collection.count_documents({
-            'status': {'$nin': ['resolved', 'closed']},
-            'createdAt': {'$lt': (datetime.now(timezone.utc) - timedelta(hours=72)).isoformat()}
-        })
+        pending_docs = list(complaints_collection.find({'status': {'$nin': ['resolved', 'closed']}}, {'createdAt': 1, 'priority': 1, 'status': 1}))
+        sla_breaches = 0
+        for doc in pending_docs:
+            created_at = doc.get('createdAt')
+            if created_at:
+                if isinstance(created_at, str):
+                    try:
+                        created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                    except:
+                        continue
+                if isinstance(created_at, datetime):
+                    sla_hours = {'emergency': 4, 'high': 24, 'medium': 48, 'low': 72}
+                    max_hours = sla_hours.get((doc.get('priority') or 'low').lower(), 72)
+                    if created_at.tzinfo:
+                        now = datetime.now(timezone.utc)
+                    else:
+                        now = datetime.now()
+                    if (now - created_at).total_seconds() / 3600 > max_hours:
+                        sla_breaches += 1
         
         # Average resolution time - using simple Python calculation
         avg_resolution_time = 0
@@ -184,8 +199,14 @@ def admin_overview(days: int = Query(30), user: dict = Depends(require_role(["ad
             total_hours = 0
             for doc in resolved_docs:
                 try:
-                    if isinstance(doc.get('updatedAt'), datetime) and isinstance(doc.get('createdAt'), datetime):
-                        delta = doc['updatedAt'] - doc['createdAt']
+                    created_at = doc.get('createdAt')
+                    updated_at = doc.get('updatedAt')
+                    if isinstance(created_at, str):
+                        created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                    if isinstance(updated_at, str):
+                        updated_at = datetime.fromisoformat(updated_at.replace('Z', '+00:00'))
+                    if isinstance(created_at, datetime) and isinstance(updated_at, datetime):
+                        delta = updated_at - created_at
                         total_hours += delta.total_seconds() / 3600
                 except:
                     pass
@@ -360,9 +381,16 @@ def officer_performance(officer_id: str, user: dict = Depends(require_role(["off
             for doc in officer_docs:
                 if doc.get('status') in ['resolved', 'closed'] and doc.get('updatedAt') and doc.get('createdAt'):
                     try:
-                        delta = doc['updatedAt'] - doc['createdAt']
-                        total_hours += delta.total_seconds() / 3600
-                        resolved_count += 1
+                        created_at = doc.get('createdAt')
+                        updated_at = doc.get('updatedAt')
+                        if isinstance(created_at, str):
+                            created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                        if isinstance(updated_at, str):
+                            updated_at = datetime.fromisoformat(updated_at.replace('Z', '+00:00'))
+                        if isinstance(created_at, datetime) and isinstance(updated_at, datetime):
+                            delta = updated_at - created_at
+                            total_hours += delta.total_seconds() / 3600
+                            resolved_count += 1
                     except:
                         pass
                 

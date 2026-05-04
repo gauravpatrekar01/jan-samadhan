@@ -611,7 +611,7 @@ class JanSamadhanAPI {
     }
 
     async getAnalyticsOverview(days = 30) {
-        return this._fetch(`/api/analytics/overview?days=${days}`);
+        return this._fetch(`/api/analytics/admin/overview?days=${days}`);
     }
 
     async getAnalyticsTrends(days = 30) {

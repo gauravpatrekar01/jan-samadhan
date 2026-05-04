@@ -568,6 +568,12 @@ class AdvancedAnalyticsManager {
                 datasets: [{
                     label: 'Total Cases',
                     data: data.map(d => d.total),
+                    backgroundColor: '#e2e8f0',
+                    borderRadius: 6
+                },
+                {
+                    label: 'Resolved Cases',
+                    data: data.map(d => d.resolved),
                     backgroundColor: color,
                     borderRadius: 6
                 }]
