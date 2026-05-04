@@ -774,6 +774,27 @@
                     await window.adminHeatmapManager.loadData();
                 }
                 
+                // Update heatmapGrid stats
+                try {
+                    const all = await window.JanSamadhanAPI.getAllGrievances();
+                    const cats = {};
+                    for (let g of all) {
+                        cats[g.region || 'Mumbai City'] = (cats[g.region || 'Mumbai City'] || 0) + 1;
+                    }
+                    const container = document.getElementById('heatmapGrid');
+                    if (container) {
+                        container.innerHTML = Object.entries(cats).map(([r, c]) => `
+                          <div class="stat-card" style="--stat-color:var(--primary-light);--stat-bg:rgba(37,99,235,.08); display:inline-block; margin: 10px; width: 220px;">
+                            <div class="stat-icon">📍</div>
+                            <div class="stat-value">${c}</div>
+                            <div class="stat-label">${r}</div>
+                          </div>
+                        `).join('');
+                    }
+                } catch (e) {
+                    console.warn("Could not load heatmapGrid stats", e);
+                }
+                
             } catch (err) {
                 console.error('❌ Heatmap initialization error:', err);
                 const errorMsg = err.message || 'Unknown error occurred';
@@ -1196,27 +1217,7 @@
             }
         }
 
-        async function initHeatmap() {
-            const all = await window.JanSamadhanAPI.getAllGrievances();
-            renderDummyMap('adminHeatMap', all);
-            const stats = await window.JanSamadhanAPI.getAnalytics();
 
-            const cats = {};
-            for (let g of all) {
-                cats[g.region || 'Mumbai City'] = (cats[g.region || 'Mumbai City'] || 0) + 1;
-            }
-
-            const container = document.getElementById('heatmapGrid');
-            if (container) {
-                container.innerHTML = Object.entries(cats).map(([r, c]) => `
-      <div class="stat-card" style="--stat-color:var(--primary-light);--stat-bg:rgba(37,99,235,.08); display:inline-block; margin: 10px; width: 220px;">
-        <div class="stat-icon">📍</div>
-        <div class="stat-value">${c}</div>
-        <div class="stat-label">${r}</div>
-      </div>
-    `).join('');
-            }
-        }
         function logoutUser() {
             window.JanSamadhan.logout();
             sessionStorage.removeItem('js_user');
