@@ -12,6 +12,15 @@
   <link rel="icon"
     href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
   <link rel="stylesheet" href="css/main.css">
+  
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
   <style>
     /* ── Landing-specific styles ── */
     .track-section {
@@ -683,54 +692,47 @@
           System Active – 24/7 Digital Grievance Portal
         </div>
         <h1>JanSamadhan<br><span>Smart Grievance</span> Resolution</h1>
-        <p class="hero-sub" style="margin-left:0; margin-right:0; max-width: 580px;">Empowering citizens with a
+        <p class="hero-sub" style="max-width: 580px;">Empowering citizens with a
           transparent, digital-first platform to file, track, and resolve
           public grievances. Your voice matters. Justice, delivered faster.</p>
-        <div class="hero-actions" style="justify-content: flex-start;">
+        <div class="hero-actions">
           <a href="register.html" class="btn btn-accent btn-xl">📝 Register Grievance</a>
-          <button class="btn btn-xl"
-            style="background:rgba(255,255,255,.12);color:#fff;border:2px solid rgba(255,255,255,.25);backdrop-filter:blur(8px);"
+          <button class="btn btn-xl btn-hero-track"
             onclick="document.getElementById('track').scrollIntoView({behavior:'smooth'})">🔍 Track Complaint</button>
         </div>
-
+ 
         <!-- INLINE STATS -->
-        <div class="hero-stats"
-          style="border-top: none; padding-top: 20px; margin-top: 30px; justify-content: flex-start; gap: 40px; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 30px;">
-          <div class="hero-stat-item" style="text-align: left;">
-            <div class="hero-stat-value" id="heroTotal" data-counter="12" data-suffix="" style="font-size: 2rem;">0
-            </div>
+        <div class="hero-stats">
+          <div class="hero-stat-item">
+            <div class="hero-stat-value" id="heroTotal" data-counter="12" data-suffix="">0</div>
             <div class="hero-stat-label">Total Cases</div>
           </div>
-          <div class="hero-stat-item" style="text-align: left;">
-            <div class="hero-stat-value" id="heroResolved" data-counter="42" data-suffix="%" style="font-size: 2rem;">0
-            </div>
+          <div class="hero-stat-item">
+            <div class="hero-stat-value" id="heroResolved" data-counter="42" data-suffix="%">0</div>
             <div class="hero-stat-label">Resolved</div>
           </div>
-          <div class="hero-stat-item" style="text-align: left;">
-            <div class="hero-stat-value" id="heroSatisfaction" data-counter="4.5" data-suffix=" ⭐"
-              style="font-size: 2rem;">0</div>
+          <div class="hero-stat-item">
+            <div class="hero-stat-value" id="heroSatisfaction" data-counter="4.5" data-suffix=" ⭐">0</div>
             <div class="hero-stat-label">Satisfaction</div>
           </div>
-          <div class="hero-stat-item" style="text-align: left;">
-            <div class="hero-stat-value" id="heroHigh" data-counter="3" data-suffix=""
-              style="font-size: 2rem; color: var(--accent);">0</div>
+          <div class="hero-stat-item">
+            <div class="hero-stat-value" id="heroHigh" data-counter="3" data-suffix="" style="color: var(--accent);">0</div>
             <div class="hero-stat-label">Emergency</div>
           </div>
         </div>
       </div>
 
       <div class="hero-visual" id="heroVisual">
-        <img src="hero_illustration.png" alt="JanSamadhan Governance Illustration" loading="eager">
-        <!-- Floating Elements for depth -->
-        <div class="floating-card" style="top: 10%; right: -5%; animation-delay: 1s;">
+        <div class="hero-scanner"></div>
+        <div id="hero-canvas"></div>
+        <!-- Refactored Floating Elements -->
+        <div class="floating-card card-1">
           <span>✅</span> Track Real-time
         </div>
-        <div class="floating-card"
-          style="bottom: 25%; left: -8%; animation-delay: 2s; background: rgba(249, 115, 22, 0.15);">
+        <div class="floating-card card-2">
           <span>🚨</span> High Priority
         </div>
-        <div class="floating-card"
-          style="top: 50%; right: -15%; animation-delay: 3s; font-size: 0.8rem; padding: 8px 15px;">
+        <div class="floating-card card-3">
           <span>🤖</span> AI Assistant
         </div>
       </div>
@@ -1694,6 +1696,8 @@
     });
 
   </script>
+  <!-- 3D Holographic Map Script -->
+  <script type="module" src="js/hero-three.js"></script>
 </body>
 
 </html>
