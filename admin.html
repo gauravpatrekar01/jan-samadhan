@@ -720,7 +720,10 @@
             document.getElementById(`page-${id}`)?.classList.add('active');
             if (navEl) { navEl.classList.add('active'); document.getElementById('topbarTitle').textContent = navEl.textContent.trim(); }
             closeSidebar();
-            if (id === 'overview') initAdvancedAnalytics();
+            if (id === 'overview') {
+                initAdvancedAnalytics();
+                loadOverview();
+            }
             if (id === 'charts') initCharts();
             if (id === 'heatmap') initHeatmap();
             if (id === 'grievances') loadAdminGrievances();
@@ -738,6 +741,7 @@
             }
             document.getElementById('adminTime').textContent = `📅 ${new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
             initAdvancedAnalytics();
+            loadOverview();
         });
 
         async function initHeatmap() {
@@ -848,12 +852,16 @@
               `).join('');
 
             // Urgent cases
-            let allGrievances = [];
+            let urgentResults = [];
             try {
-                allGrievances = await window.JanSamadhanAPI.getAllGrievances(null, null, null, null, null, 0, 100);
-            } catch (e) { console.error("Failed to fetch grievances for overview", e); }
+                const emergency = await window.JanSamadhanAPI.getAllGrievances(null, 'emergency', null, null, null, 0, 10);
+                const high = await window.JanSamadhanAPI.getAllGrievances(null, 'high', null, null, null, 0, 10);
+                urgentResults = [...emergency, ...high]
+                    .filter(g => g.status !== 'resolved' && g.status !== 'closed')
+                    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+                    .slice(0, 5);
+            } catch (e) { console.error("Failed to fetch urgent grievances", e); }
 
-            const urgentResults = allGrievances.filter(g => (g.escalated || ['emergency', 'high'].includes(g.priority?.toLowerCase())) && g.status !== 'resolved' && g.status !== 'closed').sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 5);
             document.getElementById('urgentList').innerHTML = urgentResults.length
                 ? urgentResults.map(g => `
                     <div style="padding:16px; border-radius:12px; border:1px solid rgba(153, 27, 27, 0.1); background:white; display:flex; gap:12px; align-items:center; box-shadow: var(--shadow-sm); transition: var(--transition); border-left: 5px solid #991b1b">
@@ -867,7 +875,15 @@
                   `).join('')
                 : '<div style="text-align:center;padding:16px;color:rgba(22,163,74,0.6)">✅ No emergency cases in queue</div>';
 
-            const resolvedResults = allGrievances.filter(g => g.status === 'resolved' || g.status === 'closed').sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)).slice(0, 5);
+            let resolvedResults = [];
+            try {
+                const resolved = await window.JanSamadhanAPI.getAllGrievances('resolved', null, null, null, null, 0, 10);
+                const closed = await window.JanSamadhanAPI.getAllGrievances('closed', null, null, null, null, 0, 10);
+                resolvedResults = [...resolved, ...closed]
+                    .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0))
+                    .slice(0, 5);
+            } catch (e) { console.error("Failed to fetch resolved grievances", e); }
+            
             document.getElementById('recentResolved').innerHTML = resolvedResults.length
                 ? resolvedResults.map(g => `
                     <div style="padding:16px; border-radius:12px; border:1px solid rgba(22, 163, 74, 0.1); background:white; display:flex; gap:12px; align-items:center; box-shadow: var(--shadow-sm); transition: var(--transition); border-left: 5px solid var(--success)">
