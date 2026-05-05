@@ -594,7 +594,7 @@ class JanSamadhanAPI {
     }
 
     async chatbotQuery(query) {
-        return this._fetch('/api/chatbot/query', {
+        return this._fetch('/api/chatbot/generate', {
             method: 'POST',
             body: JSON.stringify({ query })
         });
