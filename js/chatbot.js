@@ -1,4 +1,4 @@
-// Smart Grievance Chatbot – Informational Knowledge Base (Kind & Polite Mode)
+// Smart Grievance Chatbot – Modern UI Integration
 const ChatBotLogic = {
     // 1. Complaint Categories
     categories: {
@@ -7,15 +7,6 @@ const ChatBotLogic = {
         'Sanitation': ['garbage', 'drainage', 'cleanliness', 'waste', 'smell', 'sewer', 'blockage', 'dustbin'],
         'Roads': ['pothole', 'road', 'damage', 'repair', 'construction'],
         'Street Lights': ['street light', 'lamp', 'dark road', 'light not working']
-    },
-    
-    // Departments, Responsibilities & Timeline (For additional FAQs)
-    categoryInfo: {
-        'Electricity': { dept: 'Electricity Board', time: 'Few hours to 1–2 days' },
-        'Water Supply': { dept: 'Water Supply Department', time: '1–3 days' },
-        'Sanitation': { dept: 'Municipal Corporation', time: '1–2 days' },
-        'Roads': { dept: 'PWD', time: 'Longer duration' },
-        'Street Lights': { dept: 'Municipal Electrical Dept', time: 'Few days' }
     },
     
     // Intents mapping
@@ -30,7 +21,6 @@ const ChatBotLogic = {
 
     analyze(text) {
         text = text.toLowerCase();
-        
         let matchIntent = null;
         for (let [intKey, keywords] of Object.entries(this.intents)) {
             if (keywords.some(kw => text.includes(kw))) {
@@ -38,7 +28,6 @@ const ChatBotLogic = {
                 break;
             }
         }
-        
         let matchedCat = null;
         let maxHits = 0;
         for (let [cat, keywords] of Object.entries(this.categories)) {
@@ -48,7 +37,6 @@ const ChatBotLogic = {
                 matchedCat = cat;
             }
         }
-        
         return { category: matchedCat, intent: matchIntent };
     },
 
@@ -56,45 +44,17 @@ const ChatBotLogic = {
         if (!text || text.trim().length <= 3) {
             return "Could you please provide more details about your issue so I can guide you better?";
         }
-
         const analysis = this.analyze(text);
+        if (analysis.intent === 'Frustrated') return "I understand this can be frustrating. Let me guide you on how you can get this resolved. Please tell me what issue you are facing.";
+        if (analysis.intent === 'Action Request') return "I’m here to guide you, but I’m unable to register or update complaints directly. You can use the official platform to proceed.";
+        if (analysis.intent === 'FAQ_Steps') return "**Steps to file:**\n1. Identify the issue.\n2. Mention your location.\n3. Describe the problem clearly.\n4. Submit via the official portal.";
+        if (analysis.intent === 'FAQ_Status') return "To track your status, simply use the official portal's tracking tools with your Complaint ID!";
+        if (analysis.intent === 'FAQ_Escalate') return "If your issue remains unresolved, you can escalate it to a higher authority physically or via the official helpline.";
+        if (analysis.intent === 'FAQ_Feedback') return "You can peacefully provide feedback directly on the official platform once your issue is marked as resolved.";
         
-        if (analysis.intent === 'Frustrated') {
-            return "I understand this can be frustrating. Let me guide you on how you can get this resolved. Please tell me what issue you are facing.";
-        }
-
-        if (analysis.intent === 'Action Request') {
-            return "I’m here to guide you, but I’m unable to register or update complaints. You can use the official government platform to proceed.";
-        }
-
-        if (analysis.intent === 'FAQ_Steps') {
-            return `I would be happy to guide you! Please follow these steps to file:<br/><br/>
-            1. Identify the issue.<br/>
-            2. Mention your location.<br/>
-            3. Describe the problem clearly.<br/>
-            4. Submit via the official Government website, mobile app, helpline, or local office.`;
-        }
-
-        if (analysis.intent === 'FAQ_Status') {
-            return "To track your status, simply use the official portal or app's tracking tools with your Complaint ID!";
-        }
-
-        if (analysis.intent === 'FAQ_Escalate') {
-            return "If your issue remains unresolved, you can easily escalate it to a higher authority physically or via the official helpline.";
-        }
-
-        if (analysis.intent === 'FAQ_Feedback') {
-            return "You can peacefully provide feedback directly on the official platform once your issue is marked as resolved.";
-        }
-
         if (analysis.category) {
-            if (analysis.category === 'Water Supply') {
-                return "I understand your concern. This appears to be a water supply issue. You can report it through your municipal website or helpline by mentioning your area and describing the problem.";
-            } else {
-                return `I understand your concern. This seems to be a ${analysis.category.toLowerCase()} issue. You can report it through your local municipal portal or helpline by providing your location and issue details.`;
-            }
+            return `I understand your concern. This seems to be a **${analysis.category}** issue. You can report it through your local municipal portal or helpline by providing your location and issue details.`;
         }
-        
         return "I’m here to help with information regarding civic issues. Please describe your concern.";
     }
 };
@@ -108,50 +68,162 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatMessages = document.getElementById('chatMessages');
 
     if (chatToggle) {
-        chatToggle.onclick = () => chatWindow.classList.toggle('open');
-    }
-    if (chatClose) {
-        chatClose.onclick = () => {
-            chatWindow.classList.remove('open');
+        chatToggle.onclick = () => {
+            chatWindow.classList.toggle('open');
+            if (chatWindow.classList.contains('open') && chatInput) {
+                setTimeout(() => chatInput.focus(), 300);
+            }
         };
     }
+    if (chatClose) chatClose.onclick = () => chatWindow.classList.remove('open');
 
-    function addMessage(text, isBot = true) {
-        const msg = document.createElement('div');
-        msg.className = `message ${isBot ? 'bot' : 'user'}`;
-        msg.innerHTML = `<div class="msg-bubble">${text}</div>`;
-        chatMessages.appendChild(msg);
+    // Simple Markdown parser for headings, bold, and lists
+    function parseMarkdown(text) {
+        // Convert numbered lists
+        text = text.replace(/(?:\r\n|\r|\n|^)(\d+\.\s+)(.*?)(?=\n|$)/g, '<div class="list-item"><span class="list-number">$1</span>$2</div>');
+        // Convert headings (Summary, Steps, etc.)
+        text = text.replace(/(?:\r\n|\r|\n|^)(Summary|Steps to resolve|Required documents if any|Next action)(:?)(?=\n|$)/gi, '<div class="chat-heading">$1$2</div>');
+        // Convert bold text
+        text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Convert newlines to breaks
+        text = text.replace(/\n/g, '<br/>');
+        return text;
+    }
+
+    // Formats the current time
+    function getCurrentTime() {
+        const now = new Date();
+        let hours = now.getHours();
+        let minutes = now.getMinutes();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12 || 12;
+        minutes = minutes < 10 ? '0' + minutes : minutes;
+        return `${hours}:${minutes} ${ampm}`;
+    }
+
+    let typingIndicatorElement = null;
+
+    function showTypingIndicator() {
+        if (typingIndicatorElement) return;
+        
+        typingIndicatorElement = document.createElement('div');
+        typingIndicatorElement.className = 'message bot typing';
+        typingIndicatorElement.innerHTML = `
+            <div class="chat-avatar">🤖</div>
+            <div class="msg-bubble loader-bubble">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        `;
+        chatMessages.appendChild(typingIndicatorElement);
+        scrollToBottom();
+    }
+
+    function hideTypingIndicator() {
+        if (typingIndicatorElement) {
+            typingIndicatorElement.remove();
+            typingIndicatorElement = null;
+        }
+    }
+
+    function scrollToBottom() {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    if (chatSend) {
-        chatSend.onclick = async () => {
-            const val = chatInput.value.trim();
-            if (!val) return;
-            addMessage(val, false);
+    function addMessage(text, type = 'bot') { // type: 'user', 'bot', 'error'
+        const msg = document.createElement('div');
+        msg.className = `message ${type}`;
+        
+        const avatar = type === 'user' ? '👤' : (type === 'error' ? '⚠️' : '🤖');
+        const formattedText = type === 'user' ? text : parseMarkdown(text);
+        
+        let innerHTML = '';
+        
+        if (type !== 'user') {
+            innerHTML += `<div class="chat-avatar">${avatar}</div>`;
+        }
+
+        innerHTML += `
+            <div class="msg-content">
+                <div class="msg-bubble">${formattedText}</div>
+                <div class="msg-time">${getCurrentTime()}</div>
+            </div>
+        `;
+
+        if (type === 'user') {
+            innerHTML += `<div class="chat-avatar user-avatar">${avatar}</div>`;
+        }
+
+        msg.innerHTML = innerHTML;
+        chatMessages.appendChild(msg);
+        scrollToBottom();
+    }
+
+    async function handleSend(retryVal = null) {
+        const val = retryVal || chatInput.value.trim();
+        if (!val) return;
+        
+        if (!retryVal) {
+            addMessage(val, 'user');
             chatInput.value = '';
+        }
 
-            try {
-                if (window.JanSamadhanAPI?.chatbotQuery) {
-                    const result = await window.JanSamadhanAPI.chatbotQuery(val);
-                    const answer = result?.answer || result?.data?.answer;
-                    if (answer) {
-                        addMessage(answer, true);
-                        return;
-                    }
+        showTypingIndicator();
+
+        try {
+            if (window.JanSamadhanAPI?.chatbotQuery) {
+                const result = await window.JanSamadhanAPI.chatbotQuery(val);
+                const answer = result?.answer || result?.data?.answer || result?.response;
+                hideTypingIndicator();
+                
+                if (answer) {
+                    addMessage(answer, 'bot');
+                    return;
                 }
-            } catch (error) {
-                console.warn('Chatbot API unavailable, using local fallback:', error);
             }
+        } catch (error) {
+            console.warn('Chatbot API unavailable or failed:', error);
+            hideTypingIndicator();
+            
+            // Show error message with retry
+            const errorMsg = document.createElement('div');
+            errorMsg.className = `message error`;
+            errorMsg.innerHTML = `
+                <div class="chat-avatar">⚠️</div>
+                <div class="msg-content">
+                    <div class="msg-bubble">
+                        Sorry, I encountered an error connecting to the server.
+                        <button class="retry-btn">Retry</button>
+                    </div>
+                </div>
+            `;
+            const retryBtn = errorMsg.querySelector('.retry-btn');
+            retryBtn.onclick = () => {
+                errorMsg.remove();
+                handleSend(val);
+            };
+            chatMessages.appendChild(errorMsg);
+            scrollToBottom();
+            return;
+        }
 
-            setTimeout(() => {
-                const botResponse = ChatBotLogic.generateResponse(val);
-                addMessage(botResponse, true);
-            }, 300);
-        };
+        // Fallback local logic
+        hideTypingIndicator();
+        setTimeout(() => {
+            const botResponse = ChatBotLogic.generateResponse(val);
+            addMessage(botResponse, 'bot');
+        }, 400);
+    }
+
+    if (chatSend) {
+        chatSend.onclick = () => handleSend();
         if (chatInput) {
             chatInput.addEventListener("keypress", function(e) {
-                if (e.key === "Enter") chatSend.onclick();
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSend();
+                }
             });
         }
     }
@@ -167,9 +239,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (chatMessages && chatMessages.children.length === 0) {
-        addMessage("Welcome to the Smart Grievance Assistant. I’m here to guide you with information on civic issues and complaint processes.");
         setTimeout(() => {
-            addMessage(`<em>I provide guidance only and cannot perform complaint registration or updates.</em>`);
-        }, 100);
+            addMessage("**Welcome to JanBot!** 👋\n\nI am your AI assistant for the JanSamadhan platform.\n\nI can help you:\n1. Understand the grievance process\n2. Answer FAQs\n3. Provide tracking instructions\n\nHow can I help you today?", 'bot');
+        }, 500);
     }
 });
