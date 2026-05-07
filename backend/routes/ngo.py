@@ -41,8 +41,15 @@ def request_handling(request: Request, request_data: NGORequestSchema, user=Depe
         raise HTTPException(status_code=404, detail="Complaint not found")
 
     # Category-Based Matching Check
-    if complaint.get("category") not in user_doc.get("categories", []):
-         raise HTTPException(status_code=400, detail=f"Your NGO is not authorized to handle {complaint.get('category')} cases.")
+    # Category-Based Matching Check (FIXED)
+    complaint_category = (complaint.get("category") or "").strip().lower()
+    ngo_categories = [c.strip().lower() for c in user_doc.get("categories", [])]
+
+    if complaint_category not in ngo_categories:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Your NGO is not authorized to handle '{complaint.get('category')}' cases."
+         )
     
     if complaint.get("assigned_to_ngo"):
          raise HTTPException(status_code=400, detail="Grievance already assigned to another NGO.")
