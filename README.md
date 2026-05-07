@@ -1,5 +1,7 @@
 # 🏛️ JanSamadhan - Smart Public Grievance Resolution System
 
+<img width="1913" height="908" alt="image" src="https://github.com/user-attachments/assets/469f9238-93c2-400c-8e3f-32e08f7f750b" />
+
 <div align="center">
   <h3>Transparent Governance. Faster Resolutions.</h3>
   <p>A digital initiative to bring transparency and efficiency to public grievance redressal via a modern web platform securely backed by Python and MongoDB. Empowering citizens, officers, and administrators with real-time grievance tracking and resolution.</p>
