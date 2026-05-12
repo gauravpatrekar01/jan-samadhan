@@ -808,6 +808,26 @@
         }
 
         async function loadOverview() {
+            const statsGrid = document.getElementById('adminStats');
+            const kpiBars = document.getElementById('kpiBars');
+            
+            // Show Skeletons
+            statsGrid.classList.add('loading-state');
+            statsGrid.innerHTML = Array(5).fill(0).map(() => `
+                <div class="stat-card">
+                  <div class="skeleton skeleton-icon"></div>
+                  <div class="skeleton skeleton-value"></div>
+                  <div class="skeleton skeleton-text"></div>
+                </div>
+            `).join('');
+
+            kpiBars.innerHTML = Array(2).fill(0).map(() => `
+                <div class="card">
+                  <div class="skeleton skeleton-title"></div>
+                  <div class="skeleton skeleton-text" style="height:10px"></div>
+                </div>
+            `).join('');
+
             let stats;
             try {
                 stats = await window.JanSamadhanAPI.getAnalytics();
@@ -840,6 +860,9 @@
             // Main stats
             const satisfactionColor = stats.average_satisfaction >= 4 ? 'var(--success)' : stats.average_satisfaction >= 3 ? 'var(--warning)' : '#dc2626';
             const satisfactionBg = stats.average_satisfaction >= 4 ? 'rgba(22,163,74,.1)' : stats.average_satisfaction >= 3 ? 'rgba(217,119,6,.1)' : 'rgba(220,38,38,.1)';
+
+            // Remove loading state
+            statsGrid.classList.remove('loading-state');
 
             document.getElementById('adminStats').innerHTML = [
                 { label: 'Total Complaints', value: stats.total_complaints, icon: '📋', color: 'var(--primary-light)', bg: 'rgba(37,99,235,.1)', trend: 'System Data' },
@@ -920,6 +943,22 @@
         }
 
         async function loadAdminGrievances() {
+            const tableBody = document.getElementById('adminTableBody');
+            tableBody.innerHTML = Array(5).fill(0).map(() => `
+                <tr>
+                  <td><div class="skeleton" style="height:15px;width:80px"></div></td>
+                  <td><div class="skeleton" style="height:15px;width:100px"></div></td>
+                  <td><div class="skeleton" style="height:15px;width:100px"></div></td>
+                  <td><div class="skeleton" style="height:15px;width:80px"></div></td>
+                  <td><div class="skeleton" style="height:15px;width:80px"></div></td>
+                  <td><div class="skeleton" style="height:15px;width:120px"></div></td>
+                  <td><div class="skeleton" style="height:15px;width:80px"></div></td>
+                  <td><div class="skeleton" style="height:15px;width:120px"></div></td>
+                  <td><div class="skeleton" style="height:15px;width:60px"></div></td>
+                  <td><div class="skeleton" style="height:15px;width:60px"></div></td>
+                </tr>
+            `).join('');
+
             const search = (document.getElementById('adminSearch')?.value || '').toLowerCase();
             const category = document.getElementById('adminFilterCat')?.value || '';
             const priority = document.getElementById('adminFilterPri')?.value?.toLowerCase() || '';
@@ -928,7 +967,7 @@
             let data = [];
             try {
                 data = await window.JanSamadhanAPI.getAllGrievances();
-
+                
                 if (search) data = data.filter(g => g.id.toLowerCase().includes(search) || g.description.toLowerCase().includes(search) || (g.title && g.title.toLowerCase().includes(search)));
                 if (category) data = data.filter(g => g.category === category);
                 if (priority) data = data.filter(g => g.priority === priority);
@@ -1230,6 +1269,15 @@
         let _cachedOfficers = [];
 
         async function loadAssignmentQueue() {
+            const container = document.getElementById('assignmentQueue');
+            container.innerHTML = Array(3).fill(0).map(() => `
+                <div class="card" style="padding:14px;margin-bottom:12px">
+                  <div class="skeleton skeleton-title"></div>
+                  <div class="skeleton skeleton-text"></div>
+                  <div class="skeleton skeleton-text"></div>
+                </div>
+            `).join('');
+
             const priority = document.getElementById('assignFilter-priority')?.value || '';
             const status = document.getElementById('assignFilter-status')?.value || '';
 
@@ -1237,7 +1285,6 @@
                 const data = await window.JanSamadhanAPI.getAllGrievances(status, priority, null, null, null, 0, 100);
                 const unassigned = data.filter(g => !g.assigned_officer || g.assigned_officer === 'null');
 
-                const container = document.getElementById('assignmentQueue');
                 if (!unassigned.length) {
                     container.innerHTML = `<div style="text-align:center;padding:40px"><span style="font-size:2rem">✅</span><p>All complaints assigned!</p></div>`;
                     return;

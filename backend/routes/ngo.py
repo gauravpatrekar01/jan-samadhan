@@ -135,14 +135,15 @@ def get_available_complaints(user=Depends(require_role(["ngo"]))):
     # Base Query: In a state where assistance might be needed, matching NGO expertise
     query = {
         "status": {"$in": ["submitted", "under_review", "assigned", "in_progress"]},
-        "category": {"$in": ngo_categories} # Match NGO expertise
+        "category": {"$in": ngo_categories}, # Match NGO expertise
+        "assigned_to_ngo": None # Only show unassigned cases
     }
     
     # Location Matching (Optional but prioritized)
     if ngo_area:
         query["region"] = {"$regex": ngo_area, "$options": "i"}
 
-    complaints = list(db.get_collection("complaints").find(query, {"_id": 0, "aadhar": 0}).sort("createdAt", -1).limit(50))
+    complaints = list(db.get_collection("complaints").find(query, {"_id": 0, "aadhar": 0, "citizen_email": 0, "email": 0}).sort("createdAt", -1).limit(50))
     for c in complaints:
         c["name"] = mask_name(c.get("name", "Citizen"))
     return {"success": True, "data": complaints}
@@ -244,7 +245,7 @@ def get_all_grievances_for_ngo(
 
     complaint_coll = db.get_collection("complaints")
     complaints = list(
-        complaint_coll.find(query, {"_id": 0, "aadhar": 0, "citizen_email": 0, "votes_history": 0})
+        complaint_coll.find(query, {"_id": 0, "aadhar": 0, "citizen_email": 0, "email": 0, "votes_history": 0})
         .sort("createdAt", -1)
         .skip(skip)
         .limit(limit)

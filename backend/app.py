@@ -315,7 +315,7 @@ def check_escalations():
             }
 
             timeline_event = {
-                "stage": "Escalated",
+                "status": "Escalated",
                 "timestamp": now.isoformat(),
                 "updated_by_user_id": "system",
                 "remarks": f"System auto-escalated SLA breach to Level {new_level}"
@@ -332,7 +332,7 @@ def check_escalations():
                     },
                     "$push": {
                         "escalation_history": escalation_entry,
-                        "timeline": timeline_event
+                        "history": timeline_event
                     }
                 }
             )

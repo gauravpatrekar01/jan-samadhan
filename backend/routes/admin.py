@@ -318,7 +318,20 @@ def approve_ngo_request(request_id: str, user: dict = Depends(require_officer_or
     if complaint.get("assigned_to_ngo"):
          raise ValidationError("Grievance is already assigned to another NGO")
 
-    # Update Complaint: Assign NGO, change status, add timeline
+    # 1. Optimistically claim the request
+    result = req_coll.update_one(
+        {"id": request_id, "status": "pending"},
+        {"$set": {"status": "approved", "processed_at": now}}
+    )
+    
+    if result.modified_count == 0:
+        # Check if it was already approved
+        already_done = req_coll.find_one({"id": request_id})
+        if already_done and already_done.get("status") == "approved":
+            return {"success": True, "message": "Request already approved"}
+        raise ValidationError("Request cannot be processed (already rejected or not found)")
+
+    # 2. Update Complaint: Assign NGO, change status, add history
     timeline_event = {
         "status": "In Progress",
         "remarks": f"Grievance assigned to NGO: {req['ngo_name']}. Handled by social partner.",
@@ -326,8 +339,8 @@ def approve_ngo_request(request_id: str, user: dict = Depends(require_officer_or
         "updated_by": user["role"]
     }
 
-    complaint_coll.update_one(
-        {"id": complaint_id},
+    complaint_update = complaint_coll.update_one(
+        {"id": complaint_id, "assigned_to_ngo": None}, # Ensure not already assigned
         {
             "$set": {
                 "assigned_to_ngo": req["ngo_email"],
@@ -337,9 +350,11 @@ def approve_ngo_request(request_id: str, user: dict = Depends(require_officer_or
             "$push": {"history": timeline_event}
         }
     )
-
-    # Update request status
-    req_coll.update_one({"id": request_id}, {"$set": {"status": "approved", "processed_at": now}})
+    
+    if complaint_update.matched_count == 0:
+        # Rollback request status if complaint assignment failed (e.g. already assigned)
+        req_coll.update_one({"id": request_id}, {"$set": {"status": "pending", "processed_at": None}})
+        raise ValidationError("Grievance already assigned to another NGO or not found.")
 
     # Reject other pending requests for this same complaint
     req_coll.update_many(

@@ -137,7 +137,7 @@ def upload_local_doc(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
         
     # Standard URL for frontend
-    file_url = f"/static/uploads/{unique_name}"
+    file_url = f"/static/uploads/{fname}"
     return {"success": True, "data": {"file_url": file_url}}
 
 

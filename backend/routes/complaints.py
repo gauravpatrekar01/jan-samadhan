@@ -380,9 +380,9 @@ def create_complaint(
                 "createdAt": now,
                 "updatedAt": now,
                 "sla_deadline": deadline.isoformat(),
-                "timeline": [
+                "history": [
                     {
-                        "stage": "Submitted",
+                        "status": "Submitted",
                         "remarks": "Grievance filed by citizen",
                         "timestamp": now,
                         "updated_by_user_id": user["sub"],
@@ -415,9 +415,9 @@ def create_complaint(
         assigned_officer = find_officer_for_region(c_dict.get("region"))
         if assigned_officer:
             c_dict["assigned_officer"] = assigned_officer
-            c_dict["timeline"].append(
+            c_dict["history"].append(
                 {
-                    "stage": "Under Review",
+                    "status": "Under Review",
                     "remarks": f"Auto-assigned to officer: {assigned_officer}",
                     "timestamp": now,
                     "updated_by_user_id": "system",
@@ -786,6 +786,54 @@ def regenerate_marathi_summary(
     return {"success": True, "message": "Summary regeneration started", "id": id}
 
 
+@router.get("/")
+def list_complaints(
+    status: str = None,
+    priority: str = None,
+    category: str = None,
+    region: str = None,
+    district: str = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    user: dict = Depends(get_current_user_optional)
+):
+    query = {}
+    if status:
+        query["status"] = status
+    if priority:
+        query["priority"] = priority
+    if category:
+        query["category"] = category
+    if region:
+        query["region"] = region
+    if district:
+        query["district"] = district
+
+    # RBAC Projection
+    is_privileged = user and user.get("role") in ["admin", "officer"]
+    
+    if is_privileged:
+        projection = {"_id": 0}
+    else:
+        projection = {
+            "_id": 0, 
+            "citizen_email": 0, 
+            "email": 0, 
+            "history": 0,
+            "comments.user_id": 0
+        }
+    
+    docs = list(db.get_collection("complaints").find(query, projection).limit(500))
+    for d in docs:
+        d["priority_score"] = d.get("priority_score") or compute_priority_score(d)
+        if not is_privileged and "name" in d:
+             name = d.get("name", "Citizen")
+             d["name"] = name[0] + "***" + name[-1] if len(name) > 2 else "***"
+             
+    docs.sort(key=lambda x: x.get("priority_score", 0), reverse=True)
+    return {"success": True, "data": docs[:limit], "total": len(docs)}
+
+
 @router.get("/next")
 def get_next_complaints(
     limit: int = Query(10),
@@ -820,14 +868,14 @@ def escalate_complaint(
     updates = escalate_complaint_doc(complaint)
     now = datetime.now(timezone.utc).isoformat()
     timeline_event = {
-        "stage": "Under Review",
+        "status": "Under Review",
         "remarks": remarks or f"Escalated to level {updates['escalation_level']}",
         "timestamp": now,
         "updated_by_user_id": user.get("sub", "system"),
     }
     collection.update_one(
         {"id": id},
-        {"$set": {**updates, "updatedAt": now}, "$push": {"timeline": timeline_event}},
+        {"$set": {**updates, "updatedAt": now}, "$push": {"history": timeline_event}},
     )
     return {"success": True, "data": {"id": id, **updates}, "message": "Complaint escalated"}
 
@@ -854,8 +902,8 @@ def assign_complaint(
         {
             "$set": {"assigned_officer": officer_email, "updatedAt": now},
             "$push": {
-                "timeline": {
-                    "stage": "Under Review",
+                "history": {
+                    "status": "Under Review",
                     "remarks": f"Assigned to officer {officer_email}",
                     "timestamp": now,
                     "updated_by_user_id": user["sub"]
@@ -897,7 +945,7 @@ def assign_ngo(
             "$set": {"assigned_to_ngo": ngo_email, "updatedAt": now},
             "$push": {
                 "history": {
-                    "stage": "Under Review",
+                    "status": "Under Review",
                     "remarks": f"Assigned to NGO {ngo_user.get('name', ngo_email)} for field assistance",
                     "timestamp": now,
                     "updated_by": user["sub"]
@@ -1000,8 +1048,8 @@ def update_status(
         {
             "$set": update_fields,
             "$push": {
-                "timeline": {
-                    "stage": stage_map.get(status, "In Progress"),
+                "history": {
+                    "status": stage_map.get(status, "In Progress"),
                     "remarks": remarks,
                     "timestamp": now,
                     "updated_by_user_id": user["sub"],
@@ -1068,8 +1116,8 @@ def submit_feedback(
             },
             "$push": {
                 "feedback": feedback_doc,
-                "timeline": {
-                    "stage": "Closed",
+                "history": {
+                    "status": "Closed",
                     "remarks": f"Citizen Feedback ({rating}/5): {comment}",
                     "timestamp": now,
                     "updated_by_user_id": user["sub"]
@@ -1101,7 +1149,7 @@ def get_complaint_timeline(id: str, user: dict = Depends(get_current_user)):
         pass
         
     collection = db.get_collection("complaints")
-    complaint = collection.find_one({"id": id}, {"timeline": 1, "citizen_email": 1, "_id": 0})
+    complaint = collection.find_one({"id": id}, {"history": 1, "citizen_email": 1, "_id": 0})
     
     if not complaint:
         raise NotFoundError("Complaint")
@@ -1109,7 +1157,7 @@ def get_complaint_timeline(id: str, user: dict = Depends(get_current_user)):
     if user.get("role") == "citizen" and complaint.get("citizen_email") != user.get("sub"):
         raise AuthorizationError("Not authorized to view other citizens' detailed timeline.")
         
-    return {"success": True, "data": complaint.get("timeline", [])}
+    return {"success": True, "data": complaint.get("history", [])}
 
 
 @router.post("/{id}/upload-media")
@@ -1167,20 +1215,17 @@ def upload_complaint_media(
         # Proper use of $push to prevent array overwrites
         collection.update_one(
             {"id": id},
-            {"$push": {"media": media_doc}}
-        )
-        
-        # Push timeline event to record media upload
-        collection.update_one(
-            {"id": id},
-            {"$push": {
-                "timeline": {
-                    "stage": complaint.get("status", "in_progress").title().replace("_", " "),
-                    "remarks": f"Uploaded media attachment: {file.filename}",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "updated_by_user_id": user["sub"]
+            {
+                "$push": {
+                    "media": media_doc,
+                    "history": {
+                        "status": complaint.get("status", "in_progress").title().replace("_", " "),
+                        "remarks": f"Uploaded media attachment: {file.filename}",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "updated_by_user_id": user["sub"]
+                    }
                 }
-            }}
+            }
         )
         
         return {"success": True, "data": media_doc}
@@ -1464,7 +1509,7 @@ def comment_complaint(
         # Update timeline if official comment
         if user_role in ["admin", "officer"]:
             timeline_event = {
-                "stage": "Comment Added",
+                "status": "Comment Added",
                 "remarks": f"Comment by {user_name}: {comment[:100]}{'...' if len(comment) > 100 else ''}",
                 "timestamp": comment_obj["timestamp"],
                 "updated_by_user_id": user_id,
@@ -1473,7 +1518,7 @@ def comment_complaint(
             
             collection.update_one(
                 {"id": id},
-                {"$push": {"timeline": timeline_event}}
+                {"$push": {"history": timeline_event}}
             )
         
         return {

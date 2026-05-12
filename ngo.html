@@ -342,9 +342,18 @@
         }
 
         async function loadWork() {
+            const container = document.getElementById('activeWorkList');
+            container.innerHTML = Array(3).fill(0).map(() => `
+                <div class="grievance-card">
+                  <div class="skeleton-icon skeleton"></div>
+                  <div class="skeleton-title skeleton"></div>
+                  <div class="skeleton-text skeleton"></div>
+                  <div class="skeleton-text skeleton"></div>
+                </div>
+            `).join('');
+
             try {
                 const res = await window.JanSamadhanAPI.getNGOAssignedComplaints();
-                const container = document.getElementById('activeWorkList');
                 const data = res.data || [];
                 if(!data.length) {
                     container.innerHTML = `<div class="card" style="text-align:center;padding:60px"><h4>No active assignments.</h4><p>Browse unassigned grievances to start helping.</p></div>`;
@@ -370,9 +379,17 @@
         }
 
         async function loadAvailable() {
+            const container = document.getElementById('availableList');
+            container.innerHTML = Array(3).fill(0).map(() => `
+                <div class="grievance-card">
+                  <div class="skeleton-icon skeleton"></div>
+                  <div class="skeleton-title skeleton"></div>
+                  <div class="skeleton-text skeleton"></div>
+                </div>
+            `).join('');
+
             try {
                 const res = await window.JanSamadhanAPI.getNGOAvailableComplaints();
-                const container = document.getElementById('availableList');
                 const data = res.data || [];
                 
                 if(!data || data.length === 0) {
@@ -449,7 +466,14 @@
 
             if (!append) {
                 _allGrievSkip = 0;
-                container.innerHTML = '<div style="text-align:center;padding:40px">Loading grievances...</div>';
+                container.innerHTML = Array(5).fill(0).map(() => `
+                    <div class="grievance-card">
+                      <div class="skeleton-icon skeleton"></div>
+                      <div class="skeleton-title skeleton"></div>
+                      <div class="skeleton-text skeleton"></div>
+                      <div class="skeleton-text skeleton"></div>
+                    </div>
+                `).join('');
             }
 
             const status = document.getElementById('allGrievFilter-status')?.value || '';
@@ -482,7 +506,7 @@
                     } else if (g.ngo_request_status === 'approved') {
                         actionBtn = '<span class="status-pill status-approved">Approved</span>';
                     } else if (g.ngo_request_status === 'rejected') {
-                        actionBtn = '<span class="status-pill status-rejected">Rejected</span> <button class="btn btn-outline btn-sm" style="margin-left:8px" onclick="requestGrievance(\'${g.id}\', \'all\')">Re-request</button>';
+                        actionBtn = `<span class="status-pill status-rejected">Rejected</span> <button class="btn btn-outline btn-sm" style="margin-left:8px" onclick="requestGrievance('${g.id}', 'all')">Re-request</button>`;
                     } else if (g.assigned_to_any_ngo) {
                         actionBtn = '<span style="font-size:.8rem;color:var(--text-muted)">Assigned to another NGO</span>';
                     } else {

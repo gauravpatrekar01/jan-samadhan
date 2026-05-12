@@ -1151,4 +1151,34 @@ tr:hover td {
 
 [data-theme="dark"] tr:hover td {
     background: #21262d;
-}
+}
+
+/* ── Skeleton Loaders ── */
+.skeleton {
+    background: linear-gradient(90deg, var(--border) 25%, var(--bg-alt) 50%, var(--border) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: 4px;
+}
+
+.skeleton-text { height: 1em; margin-bottom: 0.5em; width: 100%; }
+.skeleton-title { height: 1.5em; margin-bottom: 1em; width: 60%; }
+.skeleton-value { height: 2.5em; margin-bottom: 0.5em; width: 40%; }
+.skeleton-icon { width: 48px; height: 48px; border-radius: 12px; margin-bottom: 16px; }
+
+@keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.loading-state {
+    pointer-events: none;
+    user-select: none;
+}
+
+.loading-state .stat-card,
+.loading-state .card {
+    opacity: 0.7;
+    filter: grayscale(0.5);
+}
+
