@@ -624,7 +624,11 @@
                       </div>
                     </div>
                   </div>
-                  <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:12px;line-height:1.5">${g.description.substring(0, 140)}...</p>
+                  ${renderMarathiSummaryBlock(g, 'card')}
+                  <p id="off-card-desc-${g.id}" style="font-size:.875rem;color:var(--text-muted);margin-bottom:12px;line-height:1.5;display:${g.marathi_summary ? 'none' : 'block'}">
+                    ${g.description.substring(0, 140)}...
+                    ${g.marathi_summary ? `<a href="javascript:void(0)" onclick="document.getElementById('off-card-desc-${g.id}').style.display='block';this.style.display='none'" style="color:var(--primary-light);font-size:0.75rem;margin-left:4px">Show Original</a>` : ''}
+                  </p>
                   <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:.82rem;color:var(--text-muted)">
                     <span>📍 ${g.location}</span>
                   </div>
@@ -635,6 +639,50 @@
                   </div>
                 </div>
               `).join('');
+        }
+
+        function renderMarathiSummaryBlock(g, context = 'card') {
+            const summaryText = (g.marathi_summary || '').trim();
+            const hasSummary = summaryText.length > 0;
+            const status = (g.summary_generation_status || '').toLowerCase();
+            const uniqueId = `${context}-summary-${g.id}`;
+            
+            let contentHtml = '';
+            if (hasSummary) {
+                contentHtml = `<div id="${uniqueId}" style="white-space:pre-line;line-height:1.5;color:var(--text);font-size:0.88rem">${summaryText}</div>`;
+            } else if (status === 'failed') {
+                contentHtml = `<div style="display:flex;align-items:center;gap:8px;color:var(--danger);font-size:0.8rem">
+                     <span>⚠️ Summary generation failed</span>
+                     <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="regenerateSummary('${g.id}')">Retry</button>
+                   </div>`;
+            } else {
+                contentHtml = `<div style="display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:0.8rem">
+                     <span class="spinner-border spinner-border-sm" style="width:12px;height:12px"></span>
+                     <span>AI Analyzing...</span>
+                     <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="regenerateSummary('${g.id}')">Refresh</button>
+                   </div>`;
+            }
+
+            return `
+              <div class="summary-box" style="background:rgba(37,99,235,0.04);border-left:3px solid var(--primary-light);padding:10px 14px;border-radius:6px;margin-bottom:12px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                  <div style="font-size:0.75rem;font-weight:800;color:var(--primary-light);text-transform:uppercase;letter-spacing:0.3px">
+                    🤖 AI Summary (Marathi)
+                  </div>
+                </div>
+                ${contentHtml}
+              </div>
+            `;
+        }
+
+        async function regenerateSummary(id) {
+            try {
+                await window.JanSamadhanAPI.regenerateGrievanceSummary(id);
+                showToast('AI analysis started', 'info');
+                setTimeout(() => loadQueue(), 2000);
+            } catch (e) {
+                showToast(`Analysis failed: ${e.message}`, 'error');
+            }
         }
 
         async function openUpdateModal(gid) {
@@ -793,7 +841,11 @@
           <button class="btn btn-ghost btn-sm" onclick="openUpdateModal('${g.id}')">✏️</button>
         </div>
       </div>
-      <p style="font-size:.84rem;color:var(--text-muted)">${g.description.substring(0, 100)}...</p>
+      ${renderMarathiSummaryBlock(g, 'all')}
+      <p id="all-card-desc-${g.id}" style="font-size:.84rem;color:var(--text-muted);margin-bottom:8px;display:${g.marathi_summary ? 'none' : 'block'}">
+        ${g.description.substring(0, 100)}...
+        ${g.marathi_summary ? `<a href="javascript:void(0)" onclick="document.getElementById('all-card-desc-${g.id}').style.display='block';this.style.display='none'" style="color:var(--primary-light);font-size:0.75rem;margin-left:4px">Show Original</a>` : ''}
+      </p>
     </div>
   `).join('');
         }

@@ -1509,6 +1509,29 @@
       }
 
       btn.innerText = oldText;
+
+      function renderMarathiSummaryBlock(g) {
+          const summaryText = (g.marathi_summary || '').trim();
+          const hasSummary = summaryText.length > 0;
+          const status = (g.summary_generation_status || '').toLowerCase();
+          
+          let contentHtml = '';
+          if (hasSummary) {
+              contentHtml = `<div style="white-space:pre-line;line-height:1.5;color:var(--text);font-size:0.9rem">${summaryText}</div>`;
+          } else if (status === 'failed') {
+              contentHtml = `<div style="color:var(--danger);font-size:0.85rem">⚠️ Summary generation failed.</div>`;
+          } else {
+              contentHtml = `<div style="color:var(--text-muted);font-size:0.85rem">⏳ AI is analyzing this grievance...</div>`;
+          }
+
+          return `
+            <div style="background:rgba(37,99,235,0.05);border-left:4px solid var(--primary-light);padding:12px 16px;border-radius:8px;margin-bottom:16px">
+              <div style="font-size:0.75rem;font-weight:800;color:var(--primary-light);text-transform:uppercase;margin-bottom:8px">🤖 AI SUMMARY (Marathi)</div>
+              ${contentHtml}
+            </div>
+          `;
+      }
+
       if (!g) {
         result.className = 'visible';
         result.innerHTML = `
@@ -1543,9 +1566,12 @@
       <div><span style="font-size:.75rem;color:var(--text-muted)">FILED BY</span><br><strong>${g.name || 'Citizen'}</strong></div>
       <div><span style="font-size:.75rem;color:var(--text-muted)">CATEGORY</span><br><strong>${JanSamadhan.utils.categoryIcon(g.category)} ${g.category}</strong></div>
       <div><span style="font-size:.75rem;color:var(--text-muted)">LOCATION</span><br><strong>📍 ${g.region || 'N/A'}</strong></div>
-      <div><span style="font-size:.75rem;color:var(--text-muted)">FILED ON</span><br><strong>${new Date(g.createdAt).toLocaleString('en-IN')}</strong></div>
+    <div><span style="font-size:.75rem;color:var(--text-muted)">FILED ON</span><br><strong>${new Date(g.createdAt).toLocaleString('en-IN')}</strong></div>
     </div>
-    <div style="margin-bottom:16px"><span style="font-size:.75rem;color:var(--text-muted)">DESCRIPTION</span><br>${g.description || 'No description'}</div>
+    
+    ${renderMarathiSummaryBlock(g)}
+    
+    <div style="margin-bottom:16px"><span style="font-size:.75rem;color:var(--text-muted)">ORIGINAL DESCRIPTION</span><br>${g.description || 'No description'}</div>
     
     ${g.media && g.media.length > 0 ? `
       <div style="margin-bottom:16px">

@@ -25,5 +25,6 @@ class Settings:
         
         # Gemini AI Configuration
         self.GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+        self.GEMINI_API_KEY2 = os.getenv("GEMINI_API_KEY2", "")
 
 settings = Settings()

@@ -446,8 +446,11 @@
           </div>
         </div>
       </div>
-      <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:12px;line-height:1.5">${(g.description || '').substring(0, 120)}...</p>
-      ${renderMarathiSummaryBlock(g, false)}
+      ${renderMarathiSummaryBlock(g, 'card')}
+      <p id="card-desc-${g.id}" style="font-size:.875rem;color:var(--text-muted);margin-bottom:12px;line-height:1.5;display:${g.marathi_summary ? 'none' : 'block'}">
+        ${(g.description || '').substring(0, 120)}${(g.description || '').length > 120 ? '...' : ''}
+        ${g.marathi_summary ? `<a href="javascript:void(0)" onclick="document.getElementById('card-desc-${g.id}').style.display='block';this.style.display='none'" style="color:var(--primary-light);font-size:0.75rem;margin-left:4px">Show Original</a>` : ''}
+      </p>
       <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:12px">📍 ${g.location || 'N/A'} &nbsp;|&nbsp; 🏙️ ${g.region || 'Delhi'}</div>
       ${showProgress ? renderProgressBar(getProgressFromStatus(g.status)) : ''}
       <div class="gc-actions">
@@ -491,46 +494,64 @@
             }
         }
 
-        function renderMarathiSummaryBlock(g, withToggle = false) {
+        function renderMarathiSummaryBlock(g, context = 'card') {
             const summaryText = (g.marathi_summary || '').trim();
             const hasSummary = summaryText.length > 0;
             const status = (g.summary_generation_status || '').toLowerCase();
-            const summaryHtml = hasSummary
-                ? `<div id="summary-${g.id}" style="white-space:pre-line;line-height:1.5">${summaryText}</div>`
-                : status === 'failed'
-                ? `<div style="display:flex;align-items:center;gap:8px;color:var(--danger)">
-                     <span>⚠️ Summary generation failed.</span>
-                     <button class="btn btn-ghost btn-sm" onclick="regenerateSummary('${g.id}')">Retry</button>
-                   </div>`
-                : `<div style="display:flex;align-items:center;gap:8px;color:var(--text-muted)">
-                     <span>⏳ Generating summary...</span>
-                     <button class="btn btn-ghost btn-sm" onclick="regenerateSummary('${g.id}')">Retry</button>
+            const uniqueId = `${context}-summary-${g.id}`;
+            
+            let contentHtml = '';
+            if (hasSummary) {
+                contentHtml = `<div id="${uniqueId}" style="white-space:pre-line;line-height:1.5;color:var(--text);font-size:0.9rem">${summaryText}</div>`;
+            } else if (status === 'failed') {
+                contentHtml = `<div style="display:flex;align-items:center;gap:8px;color:var(--danger);font-size:0.85rem">
+                     <i class="fas fa-exclamation-triangle"></i>
+                     <span>Summary generation failed</span>
+                     <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="regenerateSummary('${g.id}')">Retry</button>
                    </div>`;
+            } else {
+                contentHtml = `<div style="display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:0.85rem">
+                     <div class="spinner-border spinner-border-sm" role="status" style="width:12px;height:12px;border-width:2px"></div>
+                     <span>AI is analyzing grievance...</span>
+                     <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="regenerateSummary('${g.id}')">Refresh</button>
+                   </div>`;
+            }
 
-            const toggleHtml = withToggle
-                ? `<button class="btn btn-ghost btn-sm" id="toggle-summary-btn-${g.id}" onclick="toggleSummaryView('${g.id}')">View Summary</button>`
+            const toggleHtml = context === 'detail'
+                ? `<button class="btn btn-ghost btn-sm" id="toggle-btn-${g.id}" onclick="toggleSummaryView('${g.id}')" style="font-size:0.75rem;padding:2px 8px">
+                    ${hasSummary ? 'View Original' : 'Wait...'}
+                   </button>`
                 : '';
 
             return `
-              <div style="background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.2);padding:10px 12px;border-radius:8px;margin-bottom:12px">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-                  <div style="font-size:.82rem;font-weight:700;color:var(--primary-light)">संक्षिप्त माहिती</div>
+              <div class="summary-box" style="background:rgba(37,99,235,0.05);border-left:4px solid var(--primary-light);padding:12px 16px;border-radius:8px;margin-bottom:16px;box-shadow:inset 0 0 10px rgba(0,0,0,0.02)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                  <div style="display:flex;align-items:center;gap:6px;font-size:0.8rem;font-weight:800;color:var(--primary-light);text-transform:uppercase;letter-spacing:0.5px">
+                    <i class="fas fa-robot"></i> AI संक्षिप्त माहिती
+                  </div>
                   ${toggleHtml}
                 </div>
-                ${summaryHtml}
+                ${contentHtml}
               </div>
             `;
         }
 
         function toggleSummaryView(id) {
             const desc = document.getElementById(`full-description-${id}`);
-            const summary = document.getElementById(`summary-${id}`);
-            const btn = document.getElementById(`toggle-summary-btn-${id}`);
+            const summary = document.getElementById(`detail-summary-${id}`);
+            const btn = document.getElementById(`toggle-btn-${id}`);
             if (!desc || !summary || !btn) return;
+            
             const isSummaryVisible = summary.style.display !== 'none';
-            summary.style.display = isSummaryVisible ? 'none' : 'block';
-            desc.style.display = isSummaryVisible ? 'block' : 'none';
-            btn.textContent = isSummaryVisible ? 'View Summary' : 'View Full';
+            if (isSummaryVisible) {
+                summary.style.display = 'none';
+                desc.style.display = 'block';
+                btn.textContent = 'View AI Summary';
+            } else {
+                summary.style.display = 'block';
+                desc.style.display = 'none';
+                btn.textContent = 'View Original';
+            }
         }
 
         async function regenerateSummary(id) {
@@ -563,7 +584,7 @@
       <div><span style="color:var(--text-muted);font-size:.75rem">FILED ON</span><br><strong>${formatDate(g.created_at)}</strong></div>
       <div style="background:rgba(249,115,22,.05);padding:8px;border-radius:4px"><span style="color:var(--text-muted);font-size:.75rem">🕒 SLA DEADLINE</span><br><strong>${formatDeadline(g.sla_deadline)}</strong><br>${getDeadlineBadge(g.sla_deadline)}</div>
     </div>
-    ${renderMarathiSummaryBlock(g, true)}
+    ${renderMarathiSummaryBlock(g, 'detail')}
     <div id="full-description-${g.id}" style="background:var(--bg);padding:14px;border-radius:8px;margin-bottom:16px;font-size:.9rem;line-height:1.6;display:${g.marathi_summary ? 'none' : 'block'}">${g.description}</div>
     
     ${g.media && g.media.length > 0 ? `
@@ -599,7 +620,7 @@
 
         let _summaryPollTimer = null;
         let _summaryPollAttempts = 0;
-        const SUMMARY_POLL_MAX_ATTEMPTS = 8;
+        const SUMMARY_POLL_MAX_ATTEMPTS = 20;
         const SUMMARY_POLL_INTERVAL_MS = 2500;
 
         function stopSummaryPolling() {

@@ -59,8 +59,29 @@ def is_citizen_owner(complaint: dict, user: dict | None) -> bool:
     return user_email in owner_emails
 
 
-async def generate_and_store_summary(complaint_id: str):
-    """Background task to generate and persist Marathi summary."""
+def post_process_complaint(c: dict, user: dict | None) -> dict:
+    """Helper to inject defaults and user-specific data into a complaint doc."""
+    c.setdefault("marathi_summary", None)
+    c.setdefault("summary_generated", False)
+    c.setdefault("summary_generation_status", "pending" if not c.get("summary_generated") else "completed")
+    c.setdefault("summary_attempts", 0)
+    
+    # Inject user vote status
+    safe_user_id = user["sub"].replace(".", "_dot_") if user else None
+    if safe_user_id:
+        c["user_vote"] = c.get("votes_history", {}).get(safe_user_id)
+    
+    # Clean up internal fields
+    if "votes_history" in c:
+        del c["votes_history"]
+    if "_id" in c:
+        del c["_id"]
+        
+    return c
+
+
+async def generate_and_store_summary(complaint_id: str, target_language: str | None = None):
+    """Background task to generate and persist AI summary."""
     collection = db.get_collection("complaints")
     complaint = collection.find_one({"id": complaint_id})
     if not complaint:
@@ -76,10 +97,13 @@ async def generate_and_store_summary(complaint_id: str):
                 f"विभाग: {complaint.get('category', 'इतर')}. "
                 f"प्राधान्य: {complaint.get('priority', 'medium')}."
             )
-            # Detect target language: default to Marathi, use Hindi if source is Hindi
-            target_lang = "Marathi"
-            if str(complaint.get("source_language", "")).lower() == "hi":
-                target_lang = "Hindi"
+            
+            # Use provided language, or detect from complaint, or default to Marathi
+            target_lang = target_language
+            if not target_lang:
+                target_lang = "Marathi"
+                if str(complaint.get("source_language", "")).lower() == "hi":
+                    target_lang = "Hindi"
                 
             summary = await generate_summary(source_text, target_language=target_lang)
             now_iso = datetime.now(timezone.utc).isoformat()
@@ -111,60 +135,9 @@ async def generate_and_store_summary(complaint_id: str):
                 },
             )
             if attempt >= max_attempts:
-                print(f"⚠️ Marathi summary generation failed for {complaint_id}: {error_text}")
+                print(f"⚠️ AI summary generation failed for {complaint_id}: {error_text}")
 
 
-@router.get("/")
-def get_complaints(
-    status: str = Query(None),
-    priority: str = Query(None),
-    category: str = Query(None),
-    region: str = Query(None),
-    search: str = Query(None),
-    near: str = Query(None),
-    radius: int = Query(5000),
-    skip: int = Query(0),
-    limit: int = Query(50),
-    user: Optional[dict] = Depends(get_current_user_optional),
-):
-    """
-    Get complaints - public feed for all users
-    Citizens see all complaints (public feed)
-    Officers see their assigned complaints and others
-    Admins see all complaints
-    """
-    # Officers should be able to view all complaints in the all complaints tab.
-    complaints = search_complaints(
-        status=status,
-        priority=priority,
-        category=category,
-        region=region,
-        search=search,
-        near=near,
-        radius=radius,
-        skip=skip,
-        limit=limit,
-    )
-
-    # Count should match the same logic
-    total = get_complaint_count(
-        status=status,
-        priority=priority,
-        category=category,
-        region=region,
-        near=near,
-        radius=radius,
-    )
-
-    # Inject user vote status and clean up history
-    safe_user_id = user["sub"].replace(".", "_dot_") if user else None
-    for c in complaints:
-        if safe_user_id:
-            c["user_vote"] = c.get("votes_history", {}).get(safe_user_id)
-        if "votes_history" in c:
-            del c["votes_history"]
-
-    return {"success": True, "data": complaints, "total": total}
 
 
 @router.get("/my")
@@ -183,6 +156,7 @@ def get_my_complaints(
         skip=skip,
         limit=limit,
     )
+    complaints = [post_process_complaint(c, user) for c in complaints]
     total = get_complaint_count(citizen_email=user["sub"])
     return {"success": True, "data": complaints, "total": total}
 
@@ -204,6 +178,7 @@ def get_assigned_complaints(
         skip=skip,
         limit=limit,
     )
+    complaints = [post_process_complaint(c, user) for c in complaints]
     total = get_complaint_count(assigned_to=assigned_to)
     return {"success": True, "data": complaints, "total": total}
 
@@ -225,6 +200,7 @@ def get_ngo_assigned_complaints(
 
     collection = db.get_collection("complaints")
     complaints = list(collection.find(query, {"_id": 0}).sort("createdAt", -1).skip(skip).limit(limit))
+    complaints = [post_process_complaint(c, user) for c in complaints]
     total = collection.count_documents(query)
     return {"success": True, "data": complaints, "total": total}
 
@@ -737,10 +713,12 @@ async def create_complaint_with_media(
 @router.get("/{id}")
 def get_complaint(id: str, user: dict = Depends(get_current_user_optional)):
     collection = db.get_collection("complaints")
-    complaint = collection.find_one({"id": id}, {"_id": 0})
+    complaint = collection.find_one({"id": id})
     if not complaint:
         raise NotFoundError("Complaint")
 
+    # Inject defaults and user data
+    complaint = post_process_complaint(complaint, user)
     if not user or user.get("role") == "citizen":
         if not is_citizen_owner(complaint, user):
             # Public feed complaints should remain viewable, but hide private identifiers.
@@ -752,43 +730,35 @@ def get_complaint(id: str, user: dict = Depends(get_current_user_optional)):
             # NGO can see public data to decide whether to request, but not full citizen details
             complaint = {k: v for k, v in complaint.items() if k not in {"citizen_email", "email", "history"}}
 
-    complaint.setdefault("marathi_summary", None)
-    complaint.setdefault("summary_generated", False)
-    complaint.setdefault("summary_generation_status", "pending")
-    complaint.setdefault("summary_attempts", 0)
-    complaint.setdefault("summary_last_error", None)
-    complaint.setdefault("summary_last_generated_at", None)
-    # Inject user vote status
-    safe_user_id = user["sub"].replace(".", "_dot_") if user else None
-    if safe_user_id:
-        complaint["user_vote"] = complaint.get("votes_history", {}).get(safe_user_id)
-    if "votes_history" in complaint:
-        del complaint["votes_history"]
-
     return {"success": True, "data": complaint}
 
 
 @router.post("/{id}/generate-summary")
-def regenerate_marathi_summary(
+def regenerate_complaint_summary(
     id: str,
     background_tasks: BackgroundTasks,
+    target_language: str = Query(None),
     user: dict = Depends(get_current_user),
 ):
-    """Regenerate Marathi summary for a complaint."""
+    """Regenerate AI summary for a complaint."""
     collection = db.get_collection("complaints")
     complaint = collection.find_one({"id": id}, {"_id": 0})
     if not complaint:
         raise NotFoundError("Complaint")
 
-    if user.get("role") == "citizen" and not is_citizen_owner(complaint, user):
+    # Allow officers, admins, NGOs, and the original owner to regenerate
+    is_privileged = user.get("role") in ["admin", "officer", "ngo"]
+    is_owner = is_citizen_owner(complaint, user)
+    
+    if not is_privileged and not is_owner:
         raise AuthorizationError("Not authorized to regenerate summary for this complaint")
 
     collection.update_one(
         {"id": id},
         {"$set": {"summary_generated": False, "summary_generation_status": "pending", "summary_last_error": None}},
     )
-    background_tasks.add_task(generate_and_store_summary, id)
-    return {"success": True, "message": "Summary regeneration started", "id": id}
+    background_tasks.add_task(generate_and_store_summary, id, target_language)
+    return {"success": True, "message": "Summary regeneration started", "id": id, "target_language": target_language}
 
 
 @router.get("/")
@@ -836,6 +806,7 @@ def list_complaints(
              d["name"] = name[0] + "***" + name[-1] if len(name) > 2 else "***"
              
     docs.sort(key=lambda x: x.get("priority_score", 0), reverse=True)
+    docs = [post_process_complaint(d, user) for d in docs]
     return {"success": True, "data": docs[:limit], "total": len(docs)}
 
 
