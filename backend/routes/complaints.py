@@ -438,12 +438,18 @@ def create_complaint(
         
         # Log the audit
         try:
-            log_audit("complaint_created", user["sub"], {
-                "complaint_id": complaint_id,
-                "category": complaint.category,
-                "priority": complaint.priority,
-                "region": complaint.region
-            })
+            log_audit(
+                action="complaint_created",
+                actor_email=user["sub"],
+                actor_role=user.get("role", "citizen"),
+                resource_type="complaint",
+                resource_id=complaint_id,
+                details={
+                    "category": complaint.category,
+                    "priority": complaint.priority,
+                    "region": complaint.region
+                }
+            )
             print("✅ Audit log: OK")
         except Exception as audit_error:
             print(f"⚠️ Audit log failed: {audit_error}")
@@ -673,16 +679,25 @@ async def create_complaint_with_media(
         
         # Log to audit
         try:
-            log_audit("complaint_created_with_media", user["sub"], {
-                "complaint_id": complaint_id,
-                "category": category,
-                "priority": priority,
-                "region": region,
-                "media_count": len(media_attachments)
-            })
+            log_audit(
+                action="complaint_created_with_media",
+                actor_email=user["sub"],
+                actor_role=user.get("role", "citizen"),
+                resource_type="complaint",
+                resource_id=complaint_id,
+                details={
+                    "category": category,
+                    "priority": priority,
+                    "region": region,
+                    "media_count": len(media_attachments)
+                }
+            )
             print("✅ Audit log: OK")
         except Exception as audit_error:
             print(f"⚠️ Audit log failed: {audit_error}")
+        
+        # Start background task for summary generation
+        background_tasks.add_task(generate_and_store_summary, complaint_id)
         
         # Prepare response
         response_data = {

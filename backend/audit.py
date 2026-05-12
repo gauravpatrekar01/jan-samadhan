@@ -28,7 +28,7 @@ def log_audit(
         details: Additional context (optional)
         status: 'success' or 'failed'
     """
-    collection = db.get_collection("audit_log")
+    collection = db.get_collection("audit_logs")
     audit_entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "action": action,
@@ -55,7 +55,7 @@ def get_audit_log(
         action: Filter by action type
         limit: Maximum number of entries to return
     """
-    collection = db.get_collection("audit_log")
+    collection = db.get_collection("audit_logs")
     query = {}
     if actor_email:
         query["actor_email"] = actor_email
