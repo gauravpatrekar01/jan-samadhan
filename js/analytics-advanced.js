@@ -225,17 +225,18 @@ class AdvancedAnalyticsManager {
             </div>
         `;
 
-        // Insert after KPI cards
-        const insertPoint = document.querySelector('.analytics-kpi-card')?.parentElement;
-        if (insertPoint && !document.querySelector('.analytics-leaderboard')) {
-            insertPoint.insertAdjacentHTML('afterend', leaderboardHTML);
+        let leaderboardEl = document.querySelector('.analytics-leaderboard');
+        if (leaderboardEl) {
+            leaderboardEl.outerHTML = leaderboardHTML;
+        } else {
+            const insertPoint = document.querySelector('.analytics-kpi-card')?.parentElement;
+            if (insertPoint) {
+                insertPoint.insertAdjacentHTML('afterend', leaderboardHTML);
+            }
         }
     }
 
     renderAdvancedInsights(peakTimes, ngoStats, escalations) {
-        const insertPoint = document.querySelector('.analytics-leaderboard') || document.querySelector('.analytics-kpi-card')?.parentElement;
-        if (!insertPoint || document.querySelector('.advanced-insights-container')) return;
-
         let ngoHTML = '';
         if (ngoStats && ngoStats.length > 0) {
             ngoHTML = `
@@ -276,7 +277,16 @@ class AdvancedAnalyticsManager {
             ${ngoHTML}
         </div>
         `;
-        insertPoint.insertAdjacentHTML('afterend', html);
+
+        let insightsEl = document.querySelector('.advanced-insights-container');
+        if (insightsEl) {
+            insightsEl.outerHTML = html;
+        } else {
+            const insertPoint = document.querySelector('.analytics-leaderboard') || document.querySelector('.analytics-kpi-card')?.parentElement;
+            if (insertPoint) {
+                insertPoint.insertAdjacentHTML('afterend', html);
+            }
+        }
     }
 
     /**
@@ -423,14 +433,18 @@ class AdvancedAnalyticsManager {
             `;
         }).join('');
 
-        const wrapper = document.createElement('div');
-        wrapper.className = 'analytics-priority-queue';
-        wrapper.innerHTML = queueHTML;
+        let wrapper = document.querySelector('.analytics-priority-queue');
         
-        const insertPoint = document.querySelector('.analytics-kpi-card')?.parentElement;
-        if (insertPoint) {
-            insertPoint.insertAdjacentElement('afterend', wrapper);
+        if (!wrapper) {
+            wrapper = document.createElement('div');
+            wrapper.className = 'analytics-priority-queue';
+            const insertPoint = document.querySelector('.analytics-kpi-card')?.parentElement;
+            if (insertPoint) {
+                insertPoint.insertAdjacentElement('afterend', wrapper);
+            }
         }
+        
+        wrapper.innerHTML = queueHTML || '<div style="padding:20px;text-align:center;color:var(--text-muted)">✅ Priority queue is empty</div>';
     }
 
     /**
