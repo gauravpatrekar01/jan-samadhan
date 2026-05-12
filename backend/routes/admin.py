@@ -129,6 +129,8 @@ def get_analytics(admin: dict = Depends(require_admin)):
     rated_complaints = 0
     for c in complaints:
         feedback = c.get("feedback", [])
+        if not isinstance(feedback, (list, dict)):
+            feedback = []
         if isinstance(feedback, dict):
             feedback = [feedback]
             

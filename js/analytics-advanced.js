@@ -65,7 +65,7 @@ class AdvancedAnalyticsManager {
     async loadAdminDashboard() {
         console.log('📈 Loading Admin Dashboard...');
         
-        const [overview, performance, trends, peakTimes, ngoStats, escalations] = await Promise.all([
+        const results = await Promise.allSettled([
             this.fetchAdminOverview(),
             this.fetchOfficerPerformance(),
             this.fetchTrends(),
@@ -74,16 +74,11 @@ class AdvancedAnalyticsManager {
             this.fetchEscalationsAdvanced()
         ]);
 
-        // Render KPI cards
-        this.renderAdminKPIs(overview);
-        
-        // Render charts
-        this.renderAdminCharts(overview, trends);
-        
-        // Render officer leaderboard
-        this.renderOfficerLeaderboard(performance);
+        const [overview, performance, trends, peakTimes, ngoStats, escalations] = results.map(r => r.status === 'fulfilled' ? r.value : null);
 
-        // Render advanced ML/System insights
+        if (overview) this.renderAdminKPIs(overview);
+        this.renderAdminCharts(overview || {}, trends || []);
+        if (performance) this.renderOfficerLeaderboard(performance);
         this.renderAdvancedInsights(peakTimes, ngoStats, escalations);
     }
 
@@ -295,19 +290,21 @@ class AdvancedAnalyticsManager {
             return;
         }
 
-        const [performance, queue] = await Promise.all([
+        const results = await Promise.allSettled([
             window.JanSamadhanAPI.getOfficerPerformance(this.userId),
             window.JanSamadhanAPI.getOfficerQueue(this.userId)
         ]);
 
-        // Render performance KPIs
-        this.renderOfficerKPIs(performance);
+        const [performance, queue] = results.map(r => r.status === 'fulfilled' ? r.value : null);
+
+        if (performance) {
+            this.renderOfficerKPIs(performance);
+            this.renderOfficerPerformanceChart(performance);
+        }
         
-        // Render queue with SLA indicators
-        this.renderPriorityQueue(queue);
-        
-        // Render performance chart
-        this.renderOfficerPerformanceChart(performance);
+        if (queue) {
+            this.renderPriorityQueue(queue);
+        }
     }
 
     /**
@@ -440,17 +437,23 @@ class AdvancedAnalyticsManager {
      * Chart creation helpers
      */
     createLineChart(elementId, data, label, colors) {
-        const canvas = document.getElementById(elementId) || document.createElement('canvas');
+        const canvas = document.getElementById(elementId);
         if (!canvas) return;
 
         const ctx = canvas.getContext('2d');
+        
+        // Robust cleanup: destroy ANY chart on this canvas
+        const existingChart = Chart.getChart(canvas);
+        if (existingChart) {
+            existingChart.destroy();
+        }
         
         const chartData = {
             labels: data.map(d => d._id),
             datasets: [
                 {
                     label: 'Filed',
-                    data: data.map(d => d.total),
+                    data: data.map(d => d.total || d.count || 0),
                     borderColor: colors[0],
                     backgroundColor: colors[0] + '20',
                     tension: 0.4,
@@ -458,7 +461,7 @@ class AdvancedAnalyticsManager {
                 },
                 {
                     label: 'Resolved',
-                    data: data.map(d => d.resolved),
+                    data: data.map(d => d.resolved || 0),
                     borderColor: colors[1],
                     backgroundColor: colors[1] + '20',
                     tension: 0.4,
@@ -467,16 +470,12 @@ class AdvancedAnalyticsManager {
             ]
         };
 
-        if (this.charts[elementId]) {
-            this.charts[elementId].destroy();
-        }
-
         this.charts[elementId] = new Chart(ctx, {
             type: 'line',
             data: chartData,
             options: {
                 responsive: true,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: { display: true, position: 'top' },
                     title: { display: true, text: label }
@@ -489,13 +488,15 @@ class AdvancedAnalyticsManager {
     }
 
     createBarChart(elementId, data, label, color) {
-        const canvas = document.getElementById(elementId) || document.createElement('canvas');
+        const canvas = document.getElementById(elementId);
         if (!canvas) return;
 
         const ctx = canvas.getContext('2d');
 
-        if (this.charts[elementId]) {
-            this.charts[elementId].destroy();
+        // Robust cleanup
+        const existingChart = Chart.getChart(canvas);
+        if (existingChart) {
+            existingChart.destroy();
         }
 
         this.charts[elementId] = new Chart(ctx, {
@@ -504,16 +505,17 @@ class AdvancedAnalyticsManager {
                 labels: data.map(d => d._id),
                 datasets: [{
                     label: 'Complaints',
-                    data: data.map(d => d.count),
+                    data: data.map(d => d.count || d.total || 0),
                     backgroundColor: color,
                     borderRadius: 6
                 }]
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 indexAxis: 'y',
                 plugins: {
-                    legend: { display: true },
+                    legend: { display: false },
                     title: { display: true, text: label }
                 }
             }
@@ -521,14 +523,16 @@ class AdvancedAnalyticsManager {
     }
 
     createPieChart(elementId, data, labels, label) {
-        const canvas = document.getElementById(elementId) || document.createElement('canvas');
+        const canvas = document.getElementById(elementId);
         if (!canvas) return;
 
         const ctx = canvas.getContext('2d');
-        const colors = ['#ef4444', '#f97316', '#facc15', '#4ade80'];
+        const colors = ['#ef4444', '#f97316', '#facc15', '#4ade80', '#3b82f6', '#8b5cf6'];
 
-        if (this.charts[elementId]) {
-            this.charts[elementId].destroy();
+        // Robust cleanup
+        const existingChart = Chart.getChart(canvas);
+        if (existingChart) {
+            existingChart.destroy();
         }
 
         this.charts[elementId] = new Chart(ctx, {
@@ -543,6 +547,7 @@ class AdvancedAnalyticsManager {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: { position: 'bottom' },
                     title: { display: true, text: label }
@@ -552,13 +557,15 @@ class AdvancedAnalyticsManager {
     }
 
     createHorizontalBarChart(elementId, data, label, color) {
-        const canvas = document.getElementById(elementId) || document.createElement('canvas');
+        const canvas = document.getElementById(elementId);
         if (!canvas) return;
 
         const ctx = canvas.getContext('2d');
 
-        if (this.charts[elementId]) {
-            this.charts[elementId].destroy();
+        // Robust cleanup
+        const existingChart = Chart.getChart(canvas);
+        if (existingChart) {
+            existingChart.destroy();
         }
 
         this.charts[elementId] = new Chart(ctx, {
@@ -567,13 +574,13 @@ class AdvancedAnalyticsManager {
                 labels: data.map(d => d._id),
                 datasets: [{
                     label: 'Total Cases',
-                    data: data.map(d => d.total),
+                    data: data.map(d => d.total || 0),
                     backgroundColor: '#e2e8f0',
                     borderRadius: 6
                 },
                 {
                     label: 'Resolved Cases',
-                    data: data.map(d => d.resolved),
+                    data: data.map(d => d.resolved || 0),
                     backgroundColor: color,
                     borderRadius: 6
                 }]
@@ -581,6 +588,7 @@ class AdvancedAnalyticsManager {
             options: {
                 indexAxis: 'y',
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     title: { display: true, text: label }
                 }
@@ -592,6 +600,9 @@ class AdvancedAnalyticsManager {
      * API methods
      */
     async fetchAdminOverview() {
+        if (this.userRole === 'admin') {
+            return await window.JanSamadhanAPI.getAdminAnalyticsOverview(30);
+        }
         return await window.JanSamadhanAPI.getAnalyticsOverview(30);
     }
 

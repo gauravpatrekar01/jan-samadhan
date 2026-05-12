@@ -103,6 +103,8 @@ class AdvancedAnalytics {
    */
   async loadDashboard() {
     try {
+      this.showLoading();
+      
       if (this.userRole === 'admin') {
         await Promise.all([
           this.loadAdminOverview(),
@@ -121,9 +123,30 @@ class AdvancedAnalytics {
       }
 
       this.updateDashboard();
+      this.hideLoading();
     } catch (error) {
       console.error('Error loading dashboard:', error);
+      this.hideLoading();
+      this.showError('Failed to load dashboard data. Please try again.');
     }
+  }
+
+  showLoading() {
+    document.querySelectorAll('.stat-value').forEach(el => {
+      el.classList.add('skeleton-text');
+    });
+    document.querySelectorAll('.chart-wrap').forEach(el => {
+      el.classList.add('skeleton-box');
+    });
+  }
+
+  hideLoading() {
+    document.querySelectorAll('.stat-value').forEach(el => {
+      el.classList.remove('skeleton-text');
+    });
+    document.querySelectorAll('.chart-wrap').forEach(el => {
+      el.classList.remove('skeleton-box');
+    });
   }
 
   /**
@@ -140,12 +163,10 @@ class AdvancedAnalytics {
         return;
       }
 
-      const response = await fetch(`${this.apiBase}/analytics/admin/overview`);
-      const result = await response.json();
-
-      if (result.success) {
-        this.data.adminOverview = result.data;
-        this.setCache('adminOverview', result.data);
+      const result = await window.JanSamadhanAPI.getAnalyticsOverview();
+      if (result) {
+        this.data.adminOverview = result;
+        this.setCache('adminOverview', result);
       }
     } catch (error) {
       console.error('Error loading admin overview:', error);
@@ -160,12 +181,10 @@ class AdvancedAnalytics {
         return;
       }
 
-      const response = await fetch(`${this.apiBase}/analytics/admin/officer-performance?limit=20`);
-      const result = await response.json();
-
-      if (result.success) {
-        this.data.officerPerformance = result.data;
-        this.setCache('officerPerf', result.data);
+      const result = await window.JanSamadhanAPI.getAdminOfficerPerformance(20);
+      if (result) {
+        this.data.officerPerformance = result;
+        this.setCache('officerPerf', result);
       }
     } catch (error) {
       console.error('Error loading officer performance:', error);
@@ -180,12 +199,10 @@ class AdvancedAnalytics {
         return;
       }
 
-      const response = await fetch(`${this.apiBase}/analytics/admin/trends?period=daily&days=30`);
-      const result = await response.json();
-
-      if (result.success) {
-        this.data.trends = result.data;
-        this.setCache('trends', result.data);
+      const result = await window.JanSamadhanAPI.getAnalyticsTrends(30);
+      if (result) {
+        this.data.trends = result;
+        this.setCache('trends', result);
       }
     } catch (error) {
       console.error('Error loading trends:', error);
@@ -194,11 +211,9 @@ class AdvancedAnalytics {
 
   async loadNGOContribution() {
     try {
-      const response = await fetch(`${this.apiBase}/analytics/admin/ngo-contribution`);
-      const result = await response.json();
-
-      if (result.success) {
-        this.data.ngoContribution = result.data;
+      const result = await window.JanSamadhanAPI.getAdminNGOContribution();
+      if (result) {
+        this.data.ngoContribution = result;
       }
     } catch (error) {
       console.error('Error loading NGO contribution:', error);
@@ -207,11 +222,9 @@ class AdvancedAnalytics {
 
   async loadEscalations() {
     try {
-      const response = await fetch(`${this.apiBase}/analytics/admin/escalation-advanced`);
-      const result = await response.json();
-
-      if (result.success) {
-        this.data.escalations = result.data;
+      const result = await window.JanSamadhanAPI.getAdminEscalationAdvanced();
+      if (result) {
+        this.data.escalations = result;
       }
     } catch (error) {
       console.error('Error loading escalations:', error);
@@ -220,11 +233,9 @@ class AdvancedAnalytics {
 
   async loadPeakTimes() {
     try {
-      const response = await fetch(`${this.apiBase}/analytics/admin/peak-times`);
-      const result = await response.json();
-
-      if (result.success) {
-        this.data.peakTimes = result.data;
+      const result = await window.JanSamadhanAPI.getAdminPeakTimes();
+      if (result) {
+        this.data.peakTimes = result;
       }
     } catch (error) {
       console.error('Error loading peak times:', error);
@@ -241,11 +252,9 @@ class AdvancedAnalytics {
     try {
       if (!this.userId) return;
 
-      const response = await fetch(`${this.apiBase}/analytics/officer/${this.userId}/performance`);
-      const result = await response.json();
-
-      if (result.success) {
-        this.data.officerMetrics = result.data;
+      const result = await window.JanSamadhanAPI.getOfficerPerformance(this.userId);
+      if (result) {
+        this.data.officerMetrics = result;
       }
     } catch (error) {
       console.error('Error loading officer metrics:', error);
@@ -256,11 +265,9 @@ class AdvancedAnalytics {
     try {
       if (!this.userId) return;
 
-      const response = await fetch(`${this.apiBase}/analytics/officer/${this.userId}/queue`);
-      const result = await response.json();
-
-      if (result.success) {
-        this.data.queue = result.data;
+      const result = await window.JanSamadhanAPI.getOfficerQueue(this.userId);
+      if (result) {
+        this.data.queue = result;
       }
     } catch (error) {
       console.error('Error loading queue:', error);
@@ -582,24 +589,19 @@ class AdvancedAnalytics {
       // Debounce filter updates
       clearTimeout(this.filterTimeout);
       this.filterTimeout = setTimeout(async () => {
-        const response = await fetch(`${this.apiBase}/analytics/filtered`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            date_range: {
-              start: this.filters.dateRange.start.toISOString(),
-              end: this.filters.dateRange.end.toISOString()
-            },
-            category: this.filters.category,
-            priority: this.filters.priority,
-            region: this.filters.region,
-            status: this.filters.status
-          })
+        const result = await window.JanSamadhanAPI.getFilteredAnalytics({
+          date_range: {
+            start: this.filters.dateRange.start.toISOString(),
+            end: this.filters.dateRange.end.toISOString()
+          },
+          category: this.filters.category,
+          priority: this.filters.priority,
+          region: this.filters.region,
+          status: this.filters.status
         });
 
-        const result = await response.json();
-        if (result.success) {
-          this.data.filtered = result.data;
+        if (result) {
+          this.data.filtered = result;
           this.updateDashboard();
         }
       }, 300);
@@ -617,21 +619,12 @@ class AdvancedAnalytics {
   async exportData() {
     try {
       const format = document.getElementById('exportFormat')?.value || 'json';
-      const response = await fetch(`${this.apiBase}/analytics/export`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filters: this.filters,
-          format: format
-        })
-      });
-
-      const result = await response.json();
+      const result = await window.JanSamadhanAPI.exportAnalytics(this.filters, format);
 
       if (format === 'csv' && result.content) {
         this.downloadCSV(result.content, 'analytics-report.csv');
-      } else if (result.data) {
-        this.downloadJSON(result.data, 'analytics-report.json');
+      } else if (result) {
+        this.downloadJSON(result, 'analytics-report.json');
       }
 
       showToast('✅ Report exported successfully', 'success');

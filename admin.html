@@ -694,7 +694,11 @@
 
         async function initAdvancedAnalytics() {
             try {
-                analyticsManager = new AdvancedAnalyticsManager({
+                if (window.analyticsManager) {
+                    window.analyticsManager.destroy();
+                }
+
+                window.analyticsManager = new AdvancedAnalyticsManager({
                     apiBase: window.API_BASE_URL || '/api',
                     userRole: 'admin',
                     userId: sessionStorage.getItem('js_user') ? JSON.parse(sessionStorage.getItem('js_user')).id : null,

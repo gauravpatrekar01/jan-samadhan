@@ -452,12 +452,18 @@
         // ════════════════════════════════════════════════════════════
         // ADVANCED ANALYTICS INITIALIZATION FOR OFFICERS
         // ════════════════════════════════════════════════════════════
-        let analyticsManager = null;
+        window.analyticsManager = null;
 
         async function initAdvancedAnalytics() {
             try {
                 const user = sessionStorage.getItem('js_user') ? JSON.parse(sessionStorage.getItem('js_user')) : null;
-                analyticsManager = new AdvancedAnalyticsManager({
+                
+                // If manager exists, stop previous auto-refresh to prevent collisions
+                if (window.analyticsManager) {
+                    window.analyticsManager.destroy();
+                }
+
+                window.analyticsManager = new AdvancedAnalyticsManager({
                     apiBase: window.API_BASE_URL || '/api',
                     userRole: 'officer',
                     userId: user?.email || user?.sub,

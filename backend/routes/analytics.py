@@ -88,6 +88,15 @@ def get_date_range_filter(days=30):
 
 def calculate_sla_status(created_date, status, priority='low'):
     """Calculate SLA breach status"""
+    if not created_date:
+        return {'is_breach': False, 'hours_elapsed': 0, 'max_hours': 72, 'percentage': 0}
+        
+    if isinstance(created_date, str):
+        try:
+            created_date = datetime.fromisoformat(created_date.replace('Z', '+00:00'))
+        except:
+            return {'is_breach': False, 'hours_elapsed': 0, 'max_hours': 72, 'percentage': 0}
+            
     sla_hours = {
         'emergency': 4,
         'high': 24,
@@ -95,8 +104,14 @@ def calculate_sla_status(created_date, status, priority='low'):
         'low': 72
     }
     
-    max_hours = sla_hours.get(priority.lower(), 72)
-    hours_elapsed = (datetime.now() - created_date).total_seconds() / 3600
+    max_hours = sla_hours.get((priority or 'low').lower(), 72)
+    
+    if created_date.tzinfo:
+        now = datetime.now(timezone.utc)
+    else:
+        now = datetime.now()
+        
+    hours_elapsed = (now - created_date).total_seconds() / 3600
     
     return {
         'is_breach': hours_elapsed > max_hours and status not in ['resolved', 'closed'],
@@ -227,7 +242,24 @@ def admin_overview(days: int = Query(30), user: dict = Depends(require_role(["ad
             }
         }
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        import traceback
+        print(f"ERROR in admin_overview: {str(e)}")
+        print(traceback.format_exc())
+        return {
+            'success': False, 
+            'error': str(e),
+            'data': {
+                'total_complaints': 0,
+                'resolved_complaints': 0,
+                'pending_complaints': 0,
+                'resolution_rate': 0,
+                'priority_distribution': {'emergency': 0, 'high': 0, 'medium': 0, 'low': 0},
+                'category_distribution': [],
+                'region_performance': [],
+                'sla_breaches': 0,
+                'avg_resolution_time_hours': 0
+            }
+        }
 
 
 @router.get('/admin/officer-performance')
@@ -287,7 +319,8 @@ def admin_officer_performance(limit: int = Query(20), user: dict = Depends(requi
             'data': officer_stats
         }
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        print(f"ERROR in admin_officer_performance: {str(e)}")
+        return {'success': False, 'error': str(e), 'data': []}
 
 
 @router.get('/admin/trends')
@@ -333,7 +366,8 @@ def admin_trends(period: str = Query('daily'), days: int = Query(30), user: dict
             'data': trends
         }
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        print(f"ERROR in admin_trends: {str(e)}")
+        return {'success': False, 'error': str(e), 'data': []}
 
 
 # ════════════════════════════════════════════════════════════════
@@ -394,8 +428,15 @@ def officer_performance(officer_id: str, user: dict = Depends(require_role(["off
                     except:
                         pass
                 
-                if doc.get('feedback', {}).get('rating'):
-                    ratings.append(doc['feedback']['rating'])
+                feedback = doc.get('feedback', [])
+                if isinstance(feedback, dict):
+                    feedback = [feedback]
+                elif not isinstance(feedback, list):
+                    feedback = []
+                    
+                for f in feedback:
+                    if isinstance(f, dict) and f.get('rating'):
+                        ratings.append(f['rating'])
             
             stats['avg_resolution_time'] = total_hours / resolved_count if resolved_count > 0 else 0
             stats['avg_rating'] = sum(ratings) / len(ratings) if ratings else 0
@@ -417,7 +458,19 @@ def officer_performance(officer_id: str, user: dict = Depends(require_role(["off
             }
         }
     except Exception as e:
-        return {'success': False, 'error': str(e)}
+        print(f"ERROR in officer_performance: {str(e)}")
+        return {
+            'success': False, 
+            'error': str(e),
+            'data': {
+                'total_assigned': 0,
+                'resolved': 0,
+                'resolution_rate': 0,
+                'avg_resolution_time_hours': 0,
+                'avg_rating': 0,
+                'efficiency_score': 0
+            }
+        }
 
 
 @router.get('/officer/{officer_id}/queue')

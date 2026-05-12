@@ -1024,16 +1024,25 @@ def update_status(
         current_idx = STATUS_SEQUENCE.index(current_status)
         new_idx = STATUS_SEQUENCE.index(status)
         
-        if new_idx < current_idx and not (current_status == "in_progress" and status == "under_review"):
-            # Allow one-step rollback for review, otherwise block
-            raise ValidationError(f"Invalid status transition from {current_status} to {status}")
+        # Admin can override any transition
+        if user.get("role") != "admin":
+            # Allow one-step rollback for review (e.g. in_progress -> under_review)
+            # OR rollback from resolved to in_progress if needed
+            is_rollback = new_idx < current_idx
+            allowed_rollback = (current_status == "in_progress" and status == "under_review") or \
+                               (current_status == "resolved" and status == "in_progress")
             
-        if new_idx > current_idx + 1 and status != "resolved":
-            # Prevent skipping unless marking as resolved (which can happen from in_progress)
-            if not (current_status == "in_progress" and status == "resolved"):
-                raise ValidationError(f"Cannot skip stages in status flow")
+            if is_rollback and not allowed_rollback:
+                raise ValidationError(f"Invalid status transition from {current_status} to {status}")
+                
+            # Prevent skipping unless marking as resolved or closed
+            if new_idx > current_idx + 1:
+                if status not in ["resolved", "closed"]:
+                    raise ValidationError(f"Cannot skip stages in status flow")
     except ValueError:
-        raise ValidationError(f"Invalid status value: {status}")
+        # If status not in sequence (shouldn't happen with allowed_statuses check), just proceed if admin
+        if user.get("role") != "admin":
+            raise ValidationError(f"Invalid status value: {status}")
 
     stage_map = {
         "submitted": "Submitted",

@@ -181,21 +181,30 @@ def get_dashboard_kpis(
         sla_score = min(sla_compliance_rate, 100)
         
         # Resolution time score (inverse - lower is better)
-        avg_resolution_time = resolution_stats[0]["avg_resolution_time"] if resolution_stats else 0
-        resolution_time_score = max(0, 100 - (avg_resolution_time * 2))  # 2 points per hour over ideal
+        avg_res_time = 0
+        median_res_time = 0
+        if resolution_stats and len(resolution_stats) > 0:
+            avg_res_time = resolution_stats[0].get("avg_resolution_time", 0) or 0
+            median_res_time = resolution_stats[0].get("median_resolution_time", 0) or 0
+            
+        resolution_time_score = max(0, 100 - (avg_res_time * 2))  # 2 points per hour over ideal
         
         # Escalation score (inverse - lower is better)
         escalation_score = max(0, 100 - escalation_rate)
         
         # Satisfaction score
-        satisfaction_score = satisfaction_stats[0]["avg_satisfaction"] if satisfaction_stats else 80
+        avg_satisfaction = 80
+        total_feedback = 0
+        if satisfaction_stats and len(satisfaction_stats) > 0:
+            avg_satisfaction = satisfaction_stats[0].get("avg_satisfaction", 80) or 80
+            total_feedback = satisfaction_stats[0].get("total_feedback", 0) or 0
         
         performance_score = (
             resolution_score * weights["resolution_rate"] +
             sla_score * weights["sla_compliance"] +
             resolution_time_score * weights["avg_resolution_time"] +
             escalation_score * weights["escalation_rate"] +
-            satisfaction_score * weights["satisfaction"]
+            avg_satisfaction * weights["satisfaction"]
         )
         
         return {
@@ -208,8 +217,8 @@ def get_dashboard_kpis(
                 "resolution_rate": round(resolution_rate, 2),
                 
                 # Time-based Metrics
-                "avg_resolution_time_hours": resolution_stats[0]["avg_resolution_time"] if resolution_stats else 0,
-                "median_resolution_time_hours": resolution_stats[0]["median_resolution_time"] if resolution_stats else 0,
+                "avg_resolution_time_hours": round(avg_res_time, 1),
+                "median_resolution_time_hours": round(median_res_time, 1),
                 "sla_compliance_rate": round(sla_compliance_rate, 2),
                 
                 # Recent Activity
@@ -238,8 +247,8 @@ def get_dashboard_kpis(
                 
                 # Customer Satisfaction
                 "customer_satisfaction": {
-                    "avg_satisfaction": round(satisfaction_stats[0]["avg_satisfaction"], 2) if satisfaction_stats else 0,
-                    "total_feedback": satisfaction_stats[0]["total_feedback"] if satisfaction_stats else 0
+                    "avg_satisfaction": round(avg_satisfaction, 2),
+                    "total_feedback": total_feedback
                 },
                 
                 # Metadata
