@@ -22,5 +22,8 @@ class Settings:
         self.CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME", "")
         self.CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY", "")
         self.CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET", "")
+        
+        # Gemini AI Configuration
+        self.GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 settings = Settings()

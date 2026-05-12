@@ -22,7 +22,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from search import search_complaints, get_complaint_count
 from notifications import notify_status_change
-from services.summary_service import generate_marathi_summary
+from services.summary_service import generate_summary, generate_marathi_summary
 from services.geo_service import normalize_geo_complaint, cluster_geo_points, detect_high_risk_zones
 from services.priority_service import compute_priority_score, escalate_complaint_doc
 
@@ -76,7 +76,12 @@ async def generate_and_store_summary(complaint_id: str):
                 f"विभाग: {complaint.get('category', 'इतर')}. "
                 f"प्राधान्य: {complaint.get('priority', 'medium')}."
             )
-            summary = await generate_marathi_summary(source_text)
+            # Detect target language: default to Marathi, use Hindi if source is Hindi
+            target_lang = "Marathi"
+            if str(complaint.get("source_language", "")).lower() == "hi":
+                target_lang = "Hindi"
+                
+            summary = await generate_summary(source_text, target_language=target_lang)
             now_iso = datetime.now(timezone.utc).isoformat()
             collection.update_one(
                 {"id": complaint_id},
