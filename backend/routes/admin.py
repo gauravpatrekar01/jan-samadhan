@@ -5,7 +5,7 @@ from security import hash_password
 from dependencies import require_admin, require_officer_or_admin
 from datetime import datetime, timezone, timedelta
 from government_registry import verify_citizen_record
-from audit import log_audit, get_audit_log
+from audit import log_audit, get_audit_logs
 from errors import ValidationError, NotFoundError, ConflictError, AuthorizationError
 from services.media_service import upload_media
 from fastapi import APIRouter, Depends, UploadFile, File, Form
@@ -277,15 +277,15 @@ def delete_notice(notice_id: str, user: dict = Depends(require_officer_or_admin)
     return {"success": True, "message": "Notice deleted"}
 
 
-@router.get("/audit-log")
-def fetch_audit_log(
+@router.get("/audit-logs")
+def fetch_audit_logs(
     actor_email: str = None,
     action: str = None,
     limit: int = 100,
     admin: dict = Depends(require_admin),
 ):
-    """Retrieve admin/officer audit log"""
-    entries = get_audit_log(actor_email=actor_email, action=action, limit=limit)
+    """Retrieve admin/officer audit logs"""
+    entries = get_audit_logs(actor_email=actor_email, action=action, limit=limit)
     return {"success": True, "data": entries}
 
 

@@ -42,7 +42,7 @@ def log_audit(
     collection.insert_one(audit_entry)
 
 
-def get_audit_log(
+def get_audit_logs(
     actor_email: Optional[str] = None,
     action: Optional[str] = None,
     limit: int = 100,

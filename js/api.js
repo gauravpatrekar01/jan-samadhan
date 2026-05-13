@@ -522,7 +522,7 @@ class JanSamadhanAPI {
         if (actorEmail) params.append('actor_email', actorEmail);
         if (action) params.append('action', action);
         params.append('limit', limit);
-        return this._fetch(`/api/admin/audit-log?${params}`);
+        return this._fetch(`/api/admin/audit-logs?${params}`);
     }
 
     async requestComplaint(id) {

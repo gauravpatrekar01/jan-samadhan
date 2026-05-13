@@ -377,6 +377,17 @@ def check_escalations():
 
 @app.on_event("startup")
 def start_scheduler():
+    # ── Duplicate Collection Validation ──
+    try:
+        collections = db.db.list_collection_names()
+        if "audit_log" in collections and "audit_logs" in collections:
+            logger.warning({
+                "type": "database_validation_warning",
+                "message": "Duplicate audit collections detected: both 'audit_log' and 'audit_logs' exist. Please run 'scripts/merge_audit_logs.py' and remove 'audit_log'."
+            })
+    except Exception as e:
+        logger.error({"type": "startup_validation_error", "error": str(e)})
+
     scheduler.add_job(check_escalations, "interval", minutes=15)
     scheduler.start()
     

@@ -34,6 +34,9 @@ class Database:
             cls.db["audit_logs"].create_index([("timestamp", ASCENDING)])
             cls.db["audit_logs"].create_index([("actor_email", ASCENDING)])
             cls.db["audit_logs"].create_index([("resource_id", ASCENDING)])
+            cls.db["audit_logs"].create_index([("action", ASCENDING)])
+            cls.db["audit_logs"].create_index([("user_email", ASCENDING)]) # For requested compatibility
+            cls.db["audit_logs"].create_index([("complaint_id", ASCENDING)]) # For requested compatibility
 
             cls.db["ngo_requests"].create_index([("ngo_email", ASCENDING)])
             cls.db["ngo_requests"].create_index([("complaint_id", ASCENDING)])
