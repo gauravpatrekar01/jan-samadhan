@@ -740,25 +740,78 @@ def regenerate_complaint_summary(
     target_language: str = Query(None),
     user: dict = Depends(get_current_user),
 ):
-    """Regenerate AI summary for a complaint."""
+    """
+    Restricted Processing Action:
+    Regenerate and PERSIST AI summary for a complaint.
+    Only for owner, admin, officer, or NGO.
+    """
     collection = db.get_collection("complaints")
     complaint = collection.find_one({"id": id}, {"_id": 0})
     if not complaint:
         raise NotFoundError("Complaint")
 
-    # Allow officers, admins, NGOs, and the original owner to regenerate
+    # Strict ownership/privileged checks for PERSISTENT changes
     is_privileged = user.get("role") in ["admin", "officer", "ngo"]
     is_owner = is_citizen_owner(complaint, user)
     
     if not is_privileged and not is_owner:
-        raise AuthorizationError("Not authorized to regenerate summary for this complaint")
+        raise AuthorizationError("Not authorized to trigger background processing for this complaint")
 
     collection.update_one(
         {"id": id},
         {"$set": {"summary_generated": False, "summary_generation_status": "pending", "summary_last_error": None}},
     )
     background_tasks.add_task(generate_and_store_summary, id, target_language)
-    return {"success": True, "message": "Summary regeneration started", "id": id, "target_language": target_language}
+    return {"success": True, "message": "Background summary regeneration started", "id": id}
+
+
+@router.post("/{id}/generate-view-summary")
+@limiter.limit("5/hour")
+async def generate_view_only_summary(
+    id: str,
+    request: Request,
+    target_language: str = Query(None),
+    user: dict = Depends(get_current_user),
+):
+    """
+    Read-Only AI Summary Generation:
+    Generates a transient summary for viewing without modifying the database.
+    Accessible to ALL authenticated users.
+    """
+    collection = db.get_collection("complaints")
+    complaint = collection.find_one({"id": id})
+    if not complaint:
+        raise NotFoundError("Complaint")
+
+    # Fetch grievance text
+    source_text = (
+        f"{complaint.get('title', '')}. "
+        f"{complaint.get('description', '')}. "
+        f"स्थान: {complaint.get('location', 'उपलब्ध नाही')}. "
+        f"विभाग: {complaint.get('category', 'इतर')}. "
+        f"प्राधान्य: {complaint.get('priority', 'medium')}."
+    )
+
+    # Detect language if not provided
+    target_lang = target_language
+    if not target_lang:
+        target_lang = "Marathi"
+        if str(complaint.get("source_language", "")).lower() == "hi":
+            target_lang = "Hindi"
+
+    try:
+        # Generate AI summary directly
+        summary = await generate_summary(source_text, target_language=target_lang)
+        return {
+            "success": True, 
+            "data": {
+                "summary": summary,
+                "id": id,
+                "transient": True
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI Summary generation failed: {str(e)}")
 
 
 @router.get("/")

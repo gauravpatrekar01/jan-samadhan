@@ -369,6 +369,7 @@
                                 <div class="gc-meta">${priorityBadge(g.priority)} ${statusBadge(g.status)}</div>
                             </div>
                         </div>
+                        ${renderMarathiSummaryBlock(g, 'work')}
                         <p style="margin:12px 0; font-size:.9rem">${g.description}</p>
                         <div style="display:flex;gap:10px">
                             <button class="btn btn-primary btn-sm" onclick="openWorkModal('${g.id}')">Update & Upload Evidence</button>
@@ -410,6 +411,7 @@
                                 <div class="gc-meta">${priorityBadge(g.priority)}</div>
                             </div>
                         </div>
+                        ${renderMarathiSummaryBlock(g, 'avail')}
                         <p style="margin:12px 0; font-size:.9rem">${g.description}</p>
                         <button class="btn btn-outline btn-sm" onclick="requestGrievance('${g.id}')">🤝 Request to Handle</button>
                     </div>
@@ -458,8 +460,75 @@
             } catch(e) { showToast(e.message, "error"); }
         }
 
-        // ── All Grievances (NEW) ──
-        let _allGrievSkip = 0;
+        function renderMarathiSummaryBlock(g, context = 'card') {
+            const summaryText = (g.marathi_summary || '').trim();
+            const hasSummary = summaryText.length > 0;
+            const status = (g.summary_generation_status || '').toLowerCase();
+            const uniqueId = `${context}-summary-${g.id}`;
+            
+            let contentHtml = '';
+            if (hasSummary) {
+                contentHtml = `<div id="${uniqueId}" style="white-space:pre-line;line-height:1.5;color:var(--text);font-size:0.88rem">${summaryText}</div>`;
+            } else if (status === 'failed') {
+                contentHtml = `<div style="display:flex;flex-direction:column;gap:8px;color:var(--danger);font-size:0.8rem">
+                     <div style="display:flex;align-items:center;gap:8px">
+                        <span>⚠️ Summary generation failed</span>
+                        <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="regenerateSummary('${g.id}')">🔄 Regenerate</button>
+                     </div>
+                     <button class="btn btn-outline btn-sm" style="align-self:flex-start" onclick="generateViewSummary('${g.id}', '${uniqueId}')">⚡ Quick AI Summary</button>
+                   </div>`;
+            } else if (status === 'pending') {
+                contentHtml = `<div style="display:flex;flex-direction:column;gap:8px;color:var(--text-muted);font-size:0.8rem">
+                     <div style="display:flex;align-items:center;gap:8px">
+                        <span class="spinner-border spinner-border-sm" style="width:12px;height:12px"></span>
+                        <span>AI Analyzing...</span>
+                        <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="regenerateSummary('${g.id}')">🔄 Refresh</button>
+                     </div>
+                     <button class="btn btn-outline btn-sm" style="align-self:flex-start" onclick="generateViewSummary('${g.id}', '${uniqueId}')">⚡ Quick AI Summary</button>
+                   </div>`;
+            } else {
+                contentHtml = `<div style="display:flex;flex-direction:column;gap:8px;color:var(--text-muted);font-size:0.8rem">
+                     <span>No summary yet.</span>
+                     <button class="btn btn-outline btn-sm" style="align-self:flex-start" onclick="generateViewSummary('${g.id}', '${uniqueId}')">⚡ Generate AI Summary</button>
+                   </div>`;
+            }
+
+            return `
+              <div class="summary-box" style="background:rgba(37,99,235,0.04);border-left:3px solid var(--primary-light);padding:10px 14px;border-radius:6px;margin-bottom:12px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                  <div style="font-size:0.75rem;font-weight:800;color:var(--primary-light);text-transform:uppercase;letter-spacing:0.3px">
+                    🤖 AI Summary (Marathi)
+                  </div>
+                </div>
+                ${contentHtml}
+              </div>
+            `;
+        }
+
+        async function regenerateSummary(id) {
+            try {
+                await window.JanSamadhanAPI.regenerateGrievanceSummary(id);
+                showToast('AI analysis started', 'info');
+                setTimeout(() => { loadWork(); loadAllGrievances(); }, 2000);
+            } catch (e) {
+                showToast(`Analysis failed: ${e.message}`, 'error');
+            }
+        }
+
+        async function generateViewSummary(id, targetElementId) {
+            const el = document.getElementById(targetElementId);
+            if (el) el.innerHTML = 'AI thinking...';
+            try {
+                const res = await window.JanSamadhanAPI.generateTransientSummary(id);
+                if (res.success && res.data.summary) {
+                    if (el) el.innerHTML = res.data.summary;
+                    showToast('Quick summary generated', 'success');
+                }
+            } catch (e) {
+                showToast(`Failed: ${e.message}`, 'error');
+                if (el) el.innerHTML = '⚠️ Error';
+            }
+        }
         async function loadAllGrievances(append = false) {
             const container = document.getElementById('allGrievancesList');
             const loadMore = document.getElementById('loadMoreAllGriev');
@@ -526,6 +595,7 @@
                                 </div>
                             </div>
                         </div>
+                        ${renderMarathiSummaryBlock(g, 'all')}
                         <p style="margin:12px 0;font-size:.88rem;color:var(--text-muted);line-height:1.5">${(g.description || '').substring(0, 150)}...</p>
                         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
                             ${actionBtn}

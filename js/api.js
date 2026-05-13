@@ -462,6 +462,11 @@ class JanSamadhanAPI {
         return this._fetch(`/api/complaints/${id}/generate-summary`, { method: 'POST' });
     }
 
+    async generateTransientSummary(id, lang = null) {
+        const url = `/api/complaints/${id}/generate-view-summary${lang ? `?target_language=${lang}` : ''}`;
+        return this._fetch(url, { method: 'POST' });
+    }
+
     async assignComplaint(id, officerEmail) {
         return this._fetch(`/api/complaints/${id}/assign?officer_email=${officerEmail}`, { method: 'PATCH' });
     }

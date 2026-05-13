@@ -500,25 +500,41 @@
             const status = (g.summary_generation_status || '').toLowerCase();
             const uniqueId = `${context}-summary-${g.id}`;
             
-            const isOwner = window._citizenUser && (
-                (g.citizen_email && g.citizen_email.toLowerCase() === window._citizenUser.sub.toLowerCase()) ||
-                (g.email && g.email.toLowerCase() === window._citizenUser.sub.toLowerCase())
+            const user = window._citizenUser;
+            const isOwner = user && (
+                (g.citizen_email && g.citizen_email.toLowerCase() === user.sub.toLowerCase()) ||
+                (g.email && g.email.toLowerCase() === user.sub.toLowerCase())
             );
+            const isPrivileged = user && ["admin", "officer", "ngo"].includes(user.role);
+            const canManageAI = isOwner || isPrivileged;
+            const canGenerateViewSummary = !!user && !hasSummary;
 
             let contentHtml = '';
             if (hasSummary) {
                 contentHtml = `<div id="${uniqueId}" style="white-space:pre-line;line-height:1.5;color:var(--text);font-size:0.9rem">${summaryText}</div>`;
             } else if (status === 'failed') {
-                contentHtml = `<div style="display:flex;align-items:center;gap:8px;color:var(--danger);font-size:0.85rem">
-                     <i class="fas fa-exclamation-triangle"></i>
-                     <span>Summary generation failed</span>
-                     ${isOwner ? `<button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="regenerateSummary('${g.id}')">Retry</button>` : ''}
+                contentHtml = `<div style="display:flex;flex-direction:column;gap:8px;color:var(--danger);font-size:0.85rem">
+                     <div style="display:flex;align-items:center;gap:8px">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Summary generation failed</span>
+                        ${canManageAI ? `<button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="regenerateSummary('${g.id}')">🔄 Regenerate</button>` : ''}
+                     </div>
+                     ${canGenerateViewSummary ? `<button class="btn btn-primary btn-sm" style="align-self:flex-start" onclick="generateViewSummary('${g.id}', '${uniqueId}')">⚡ Quick AI Summary</button>` : ''}
+                   </div>`;
+            } else if (status === 'pending') {
+                contentHtml = `<div style="display:flex;flex-direction:column;gap:8px;color:var(--text-muted);font-size:0.85rem">
+                     <div style="display:flex;align-items:center;gap:8px">
+                        <div class="spinner-border spinner-border-sm" role="status" style="width:12px;height:12px;border-width:2px"></div>
+                        <span>AI is analyzing...</span>
+                        ${canManageAI ? `<button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="regenerateSummary('${g.id}')">🔄 Refresh</button>` : ''}
+                     </div>
+                     ${canGenerateViewSummary ? `<button class="btn btn-primary btn-sm" style="align-self:flex-start" onclick="generateViewSummary('${g.id}', '${uniqueId}')">⚡ Quick AI Summary</button>` : ''}
                    </div>`;
             } else {
-                contentHtml = `<div style="display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:0.85rem">
-                     <div class="spinner-border spinner-border-sm" role="status" style="width:12px;height:12px;border-width:2px"></div>
-                     <span>AI is analyzing grievance...</span>
-                     ${isOwner ? `<button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="regenerateSummary('${g.id}')">Refresh</button>` : ''}
+                // Not generated yet or other state
+                contentHtml = `<div style="display:flex;flex-direction:column;gap:8px;color:var(--text-muted);font-size:0.85rem">
+                     <span>No summary available yet.</span>
+                     ${canGenerateViewSummary ? `<button class="btn btn-primary btn-sm" style="align-self:flex-start" onclick="generateViewSummary('${g.id}', '${uniqueId}')">⚡ Generate AI Summary</button>` : ''}
                    </div>`;
             }
 
@@ -562,10 +578,36 @@
         async function regenerateSummary(id) {
             try {
                 await window.JanSamadhanAPI.regenerateGrievanceSummary(id);
-                showToast('Summary regeneration started', 'info');
+                showToast('Persistent summary regeneration started', 'info');
                 setTimeout(() => viewDetail(id), 1500);
             } catch (e) {
-                showToast(`Failed to regenerate summary: ${e.message}`, 'error');
+                showToast(`Failed to trigger processing: ${e.message}`, 'error');
+            }
+        }
+
+        async function generateViewSummary(id, targetElementId) {
+            const el = document.getElementById(targetElementId);
+            if (el) {
+                el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--primary-light)">
+                    <div class="spinner-border spinner-border-sm" role="status" style="width:12px;height:12px"></div>
+                    <span>AI is thinking...</span>
+                </div>`;
+            }
+            try {
+                const res = await window.JanSamadhanAPI.generateTransientSummary(id);
+                if (res.success && res.data.summary) {
+                    if (el) {
+                        el.innerHTML = res.data.summary;
+                        el.classList.add('fade-in');
+                        // If we are in detail view, maybe show the toggle button if it was hidden
+                        const toggleBtn = document.getElementById(`toggle-btn-${id}`);
+                        if (toggleBtn) toggleBtn.style.display = 'block';
+                    }
+                    showToast('Quick AI summary generated', 'success');
+                }
+            } catch (e) {
+                showToast(`Quick summary failed: ${e.message}`, 'error');
+                if (el) el.innerHTML = `<span style="color:var(--danger)">⚠️ Failed to generate quick summary.</span>`;
             }
         }
 
@@ -616,8 +658,13 @@
     <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
        ${(window._citizenUser && (
                 (g.citizen_email && g.citizen_email.toLowerCase() === window._citizenUser.sub.toLowerCase()) ||
-                (g.email && g.email.toLowerCase() === window._citizenUser.sub.toLowerCase())
-            )) ? `<button class="btn btn-ghost btn-sm" onclick="regenerateSummary('${g.id}')">🔁 Regenerate Summary</button>` : ''}
+                (g.email && g.email.toLowerCase() === window._citizenUser.sub.toLowerCase()) ||
+                ["admin", "officer", "ngo"].includes(window._citizenUser.role)
+            )) ? `<button class="btn btn-ghost btn-sm" onclick="regenerateSummary('${g.id}')">🔄 Regenerate AI Summary</button>` : ''}
+       
+       ${!g.marathi_summary && window._citizenUser ? 
+            `<button class="btn btn-primary btn-sm" onclick="generateViewSummary('${g.id}', 'detail-summary-${g.id}')">⚡ Quick AI Summary</button>` : ''}
+
        ${(g.status === 'resolved' || g.status === 'closed') ? `<button class="btn btn-accent btn-sm" onclick="closeModal('grievanceDetailModal');openFeedback('${g.id}')">⭐ Rate Resolution</button>` : ''}
        ${g.feedbackCount ? `<span class="badge badge-success">⭐ ${g.feedbackAverage || g.feedbackRating}/5 · ${g.feedbackCount} ratings</span>` : ''}
     </div>

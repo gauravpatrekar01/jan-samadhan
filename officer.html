@@ -651,15 +651,26 @@
             if (hasSummary) {
                 contentHtml = `<div id="${uniqueId}" style="white-space:pre-line;line-height:1.5;color:var(--text);font-size:0.88rem">${summaryText}</div>`;
             } else if (status === 'failed') {
-                contentHtml = `<div style="display:flex;align-items:center;gap:8px;color:var(--danger);font-size:0.8rem">
-                     <span>⚠️ Summary generation failed</span>
-                     <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="regenerateSummary('${g.id}')">Retry</button>
+                contentHtml = `<div style="display:flex;flex-direction:column;gap:8px;color:var(--danger);font-size:0.8rem">
+                     <div style="display:flex;align-items:center;gap:8px">
+                        <span>⚠️ Summary generation failed</span>
+                        <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="regenerateSummary('${g.id}')">🔄 Regenerate</button>
+                     </div>
+                     <button class="btn btn-outline btn-sm" style="align-self:flex-start" onclick="generateViewSummary('${g.id}', '${uniqueId}')">⚡ Quick AI Summary</button>
+                   </div>`;
+            } else if (status === 'pending') {
+                contentHtml = `<div style="display:flex;flex-direction:column;gap:8px;color:var(--text-muted);font-size:0.8rem">
+                     <div style="display:flex;align-items:center;gap:8px">
+                        <span class="spinner-border spinner-border-sm" style="width:12px;height:12px"></span>
+                        <span>AI Analyzing...</span>
+                        <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="regenerateSummary('${g.id}')">🔄 Refresh</button>
+                     </div>
+                     <button class="btn btn-outline btn-sm" style="align-self:flex-start" onclick="generateViewSummary('${g.id}', '${uniqueId}')">⚡ Quick AI Summary</button>
                    </div>`;
             } else {
-                contentHtml = `<div style="display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:0.8rem">
-                     <span class="spinner-border spinner-border-sm" style="width:12px;height:12px"></span>
-                     <span>AI Analyzing...</span>
-                     <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="regenerateSummary('${g.id}')">Refresh</button>
+                contentHtml = `<div style="display:flex;flex-direction:column;gap:8px;color:var(--text-muted);font-size:0.8rem">
+                     <span>No summary available yet.</span>
+                     <button class="btn btn-outline btn-sm" style="align-self:flex-start" onclick="generateViewSummary('${g.id}', '${uniqueId}')">⚡ Generate AI Summary</button>
                    </div>`;
             }
 
@@ -673,6 +684,21 @@
                 ${contentHtml}
               </div>
             `;
+        }
+
+        async function generateViewSummary(id, targetElementId) {
+            const el = document.getElementById(targetElementId);
+            if (el) el.innerHTML = 'AI thinking...';
+            try {
+                const res = await window.JanSamadhanAPI.generateTransientSummary(id);
+                if (res.success && res.data.summary) {
+                    if (el) el.innerHTML = res.data.summary;
+                    showToast('Quick summary generated', 'success');
+                }
+            } catch (e) {
+                showToast(`Failed: ${e.message}`, 'error');
+                if (el) el.innerHTML = '⚠️ Error';
+            }
         }
 
         async function regenerateSummary(id) {
