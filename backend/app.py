@@ -14,6 +14,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from errors import APIError
+from fastapi.exceptions import RequestValidationError
 
 # ── Structured Logging ──
 logger = logging.getLogger()
@@ -233,6 +234,35 @@ async def value_error_handler(request: Request, exc: ValueError):
             "error": {
                 "code": "VALIDATION_ERROR",
                 "message": str(exc)
+            }
+        }
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = []
+    for error in exc.errors():
+        msg = error.get("msg", "Validation error")
+        loc = " -> ".join([str(l) for l in error.get("loc", [])])
+        errors.append(f"{loc}: {msg}")
+    
+    # Take the first error as the main message for simplicity
+    main_message = exc.errors()[0].get("msg", "Validation error") if exc.errors() else "Validation error"
+    
+    logger.warning({
+        "type": "request_validation_error",
+        "path": request.url.path,
+        "errors": errors
+    })
+    
+    return JSONResponse(
+        status_code=422,
+        content={
+            "success": False,
+            "error": {
+                "code": "VALIDATION_FAILED",
+                "message": main_message,
+                "details": errors
             }
         }
     )

@@ -1046,7 +1046,8 @@
         <div class="form-group" id="aadharGroup" style="display:none">
           <label class="form-label">Aadhaar Number <span class="req">*</span></label>
           <input type="text" class="form-control" id="loginAadhar" placeholder="12-digit Aadhaar number"
-            pattern="\d{12}">
+            pattern="\d{12}" title="Must be a 12-digit number">
+          <small style="font-size: 0.75rem; color: var(--text-muted)">Needed for government verification</small>
         </div>
 
         <div class="form-group">
@@ -1057,6 +1058,9 @@
         <div class="form-group">
           <label class="form-label">Password <span class="req">*</span></label>
           <input type="password" class="form-control" id="loginPassword" placeholder="••••••••" required>
+          <div id="passwordHint" style="display:none; font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+            Must include: 8+ chars, A-Z, a-z, 0-9, & special char.
+          </div>
         </div>
 
         <button type="submit" id="authSubmitBtn" class="btn btn-primary w-full" style="justify-content:center">🔑 Login
@@ -1255,6 +1259,9 @@
       const title = document.getElementById('authModalTitle');
       if (title) title.innerText = mode === 'login' ? '🔑 Login to JanSamadhan' : '📝 Create Account';
 
+      const hint = document.getElementById('passwordHint');
+      if (hint) hint.style.display = mode === 'signup' && window.JanSamadhanAuth.role === 'citizen' ? 'block' : 'none';
+
       const btn = document.getElementById('authSubmitBtn');
       if (btn) btn.innerText = mode === 'login' ? '🔑 Login & Enter Portal' : '📝 Sign Up & Register';
     }
@@ -1339,13 +1346,32 @@
 
       try {
         console.log("📡 Contacting backend at:", window.API_BASE_URL || 'unknown');
-
         let response;
+
         if (mode === 'signup') {
           if (role !== 'citizen') {
             throw new Error('Officers must be created by the admin. Please login instead.');
           }
-
+          
+          if (!name || name.trim().length < 2) {
+            throw new Error('Please enter your full name');
+          }
+          
+          if (role === 'citizen') {
+            if (!aadhar || !/^\d{12}$/.test(aadhar)) {
+              throw new Error('Please enter a valid 12-digit Aadhaar number');
+            }
+            
+            // Basic check for password complexity to match backend requirements
+            const hasUpper = /[A-Z]/.test(password);
+            const hasLower = /[a-z]/.test(password);
+            const hasNumber = /[0-9]/.test(password);
+            const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+            
+            if (password.length < 8 || !hasUpper || !hasLower || !hasNumber || !hasSpecial) {
+              throw new Error('Citizen password must be 8+ chars and include uppercase, lowercase, number, and special character');
+            }
+          }
 
           console.log("📝 Registering new user:", email);
           await window.JanSamadhanAPI.register({ name, email, password, role: role, aadhar });
@@ -1402,7 +1428,20 @@
         }, 800);
       } catch (err) {
         console.error(" Auth Error:", err.message, err);
-        showToast((err.message || 'Login failed') + ' Kindly try once Again !', 'error');
+        
+        let displayError = err.message || 'Login failed';
+        
+        // If error is from 422 Unprocessable Content, try to show the first validation error
+        if (err.message && (err.message.includes('422') || err.message.includes('VALIDATION'))) {
+            // Check if it's a known error message or needs more context
+            if (err.message.includes('Citizen password')) {
+                displayError = "Password must include uppercase, lowercase, number, and special character.";
+            } else if (err.message.includes('Aadhar')) {
+                displayError = "Aadhar must be a 12-digit number.";
+            }
+        }
+        
+        showToast(displayError + ' Kindly try once Again !', 'error');
         btn.innerHTML = originalText;
         btn.disabled = false;
       }

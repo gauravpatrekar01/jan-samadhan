@@ -500,6 +500,11 @@
             const status = (g.summary_generation_status || '').toLowerCase();
             const uniqueId = `${context}-summary-${g.id}`;
             
+            const isOwner = window._citizenUser && (
+                (g.citizen_email && g.citizen_email.toLowerCase() === window._citizenUser.sub.toLowerCase()) ||
+                (g.email && g.email.toLowerCase() === window._citizenUser.sub.toLowerCase())
+            );
+
             let contentHtml = '';
             if (hasSummary) {
                 contentHtml = `<div id="${uniqueId}" style="white-space:pre-line;line-height:1.5;color:var(--text);font-size:0.9rem">${summaryText}</div>`;
@@ -507,13 +512,13 @@
                 contentHtml = `<div style="display:flex;align-items:center;gap:8px;color:var(--danger);font-size:0.85rem">
                      <i class="fas fa-exclamation-triangle"></i>
                      <span>Summary generation failed</span>
-                     <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="regenerateSummary('${g.id}')">Retry</button>
+                     ${isOwner ? `<button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="regenerateSummary('${g.id}')">Retry</button>` : ''}
                    </div>`;
             } else {
                 contentHtml = `<div style="display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:0.85rem">
                      <div class="spinner-border spinner-border-sm" role="status" style="width:12px;height:12px;border-width:2px"></div>
                      <span>AI is analyzing grievance...</span>
-                     <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="regenerateSummary('${g.id}')">Refresh</button>
+                     ${isOwner ? `<button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="regenerateSummary('${g.id}')">Refresh</button>` : ''}
                    </div>`;
             }
 
@@ -609,7 +614,10 @@
     <div style="font-weight:700;font-size:.88rem;margin-bottom:8px">Resolution Progress:</div>
     ${renderProgressBar(getProgressFromStatus(g.status))}
     <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
-       <button class="btn btn-ghost btn-sm" onclick="regenerateSummary('${g.id}')">🔁 Regenerate Summary</button>
+       ${(window._citizenUser && (
+                (g.citizen_email && g.citizen_email.toLowerCase() === window._citizenUser.sub.toLowerCase()) ||
+                (g.email && g.email.toLowerCase() === window._citizenUser.sub.toLowerCase())
+            )) ? `<button class="btn btn-ghost btn-sm" onclick="regenerateSummary('${g.id}')">🔁 Regenerate Summary</button>` : ''}
        ${(g.status === 'resolved' || g.status === 'closed') ? `<button class="btn btn-accent btn-sm" onclick="closeModal('grievanceDetailModal');openFeedback('${g.id}')">⭐ Rate Resolution</button>` : ''}
        ${g.feedbackCount ? `<span class="badge badge-success">⭐ ${g.feedbackAverage || g.feedbackRating}/5 · ${g.feedbackCount} ratings</span>` : ''}
     </div>
