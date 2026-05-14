@@ -730,7 +730,7 @@
 
         const user = window._citizenUser;
         const isOwner =
-          user &&
+          user && user.sub &&
           ((g.citizen_email &&
             g.citizen_email.toLowerCase() === user.sub.toLowerCase()) ||
             (g.email && g.email.toLowerCase() === user.sub.toLowerCase()));
@@ -857,6 +857,7 @@
           let res;
           try {
             res = await window.JanSamadhanAPI.getGrievanceByID(id);
+            console.log("Fetched grievance detail:", res);
           } catch (e) {
             console.error("Failed to fetch detail", e);
             showToast("Failed to load grievance details", "error");
@@ -864,8 +865,10 @@
             return;
           }
 
-          const g = res?.data || res;
-          if (!g) {
+          // JanSamadhanAPI.getGrievanceByID already returns the unwrapped data (res.data)
+          // so 'res' should be the grievance object. However, we add safety checks.
+          const g = res;
+          if (!g || typeof g !== 'object') {
             showToast("Grievance not found", "error");
             closeModal("grievanceDetailModal");
             return;
@@ -880,16 +883,17 @@
           const safeLocation = escapeHTML(g.location || "N/A");
           const safeDescription = escapeHTML(g.description || "");
 
+          const utils = window.JanSamadhan.utils;
           document.getElementById("modalGID").innerHTML =
-            `${displayID} &nbsp; ${priorityBadge(g.priority)} ${statusBadge(g.status)}`;
+            `${displayID} &nbsp; ${utils.priorityBadge(g.priority)} ${utils.statusBadge(g.status)}`;
           document.getElementById("modalContent").innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;font-size:.88rem">
       <div><span style="color:var(--text-muted);font-size:.75rem">TITLE</span><br><strong>${safeTitle}</strong></div>
       <div><span style="color:var(--text-muted);font-size:.75rem">CATEGORY</span><br><strong>${categoryIcon(g.category)} ${safeCategory}</strong></div>
       <div><span style="color:var(--text-muted);font-size:.75rem">REGION</span><br><strong>${safeRegion}</strong></div>
       <div><span style="color:var(--text-muted);font-size:.75rem">LOCATION</span><br><strong>📍 ${safeLocation}</strong></div>
-      <div><span style="color:var(--text-muted);font-size:.75rem">FILED ON</span><br><strong>${formatDate(g.createdAt || g.created_at || g.timestamp)}</strong></div>
-      <div style="background:rgba(249,115,22,.05);padding:8px;border-radius:4px"><span style="color:var(--text-muted);font-size:.75rem">🕒 SLA DEADLINE</span><br><strong>${formatDeadline(g.sla_deadline)}</strong><br>${getDeadlineBadge(g.sla_deadline)}</div>
+      <div><span style="color:var(--text-muted);font-size:.75rem">FILED ON</span><br><strong>${utils.formatDate ? utils.formatDate(g.createdAt || g.created_at || g.timestamp) : (g.createdAt || g.created_at || g.timestamp || "N/A")}</strong></div>
+      <div style="background:rgba(249,115,22,.05);padding:8px;border-radius:4px"><span style="color:var(--text-muted);font-size:.75rem">🕒 SLA DEADLINE</span><br><strong>${utils.formatDeadline ? utils.formatDeadline(g.sla_deadline) : (g.sla_deadline || "No deadline")}</strong><br>${utils.getDeadlineBadge ? utils.getDeadlineBadge(g.sla_deadline) : ""}</div>
     </div>
     ${renderMarathiSummaryBlock(g, "detail")}
     <div id="full-description-${gid}" style="background:var(--bg);padding:14px;border-radius:8px;margin-bottom:16px;font-size:.9rem;line-height:1.6;display:${g.marathi_summary ? "none" : "block"}">${safeDescription}</div>
@@ -928,7 +932,7 @@
     ${renderProgressBar(getProgressFromStatus(g.status))}
     <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
        ${
-         window._citizenUser &&
+         window._citizenUser && window._citizenUser.sub &&
          ((g.citizen_email &&
            g.citizen_email.toLowerCase() ===
              window._citizenUser.sub.toLowerCase()) ||
