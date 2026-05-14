@@ -217,6 +217,22 @@
         </div>
     </div>
 
+    <!-- COMPLAINT DETAIL MODAL (NGO) -->
+    <div class="modal-overlay" id="grievanceDetailModal">
+        <div class="modal-box" style="max-width:600px">
+            <div class="modal-header">
+                <h3 id="modalGID">📋 Grievance Detail</h3>
+                <button class="modal-close" onclick="closeModal('grievanceDetailModal')">✕</button>
+            </div>
+            <div id="modalContent" style="padding:20px; max-height: 70vh; overflow-y: auto;">
+                <!-- Populated by JS -->
+            </div>
+            <div class="modal-footer" style="padding:16px 20px; border-top:1px solid var(--border); text-align:right">
+                <button class="btn btn-ghost" onclick="closeModal('grievanceDetailModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- UPDATE WORK MODAL -->
     <div class="modal-overlay" id="workUpdateModal">
         <div class="modal-box">
@@ -373,10 +389,72 @@
                         <p style="margin:12px 0; font-size:.9rem">${g.description}</p>
                         <div style="display:flex;gap:10px">
                             <button class="btn btn-primary btn-sm" onclick="openWorkModal('${g.id}')">Update & Upload Evidence</button>
+                            <button class="btn btn-ghost btn-sm" onclick="viewDetail('${g.id}')">👁️ View Details</button>
                         </div>
                     </div>
                 `).join('');
             } catch(e) { console.error(e); }
+        }
+
+        async function viewDetail(id) {
+            try {
+                const g = await window.JanSamadhanAPI.getGrievanceByID(id);
+                if (!g) throw new Error("Grievance not found");
+
+                document.getElementById('modalGID').textContent = `📋 Detail: ${g.grievanceID || g.id}`;
+                const content = document.getElementById('modalContent');
+
+                content.innerHTML = `
+                    <div style="font-size:.88rem;line-height:1.6">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+                            <div><span style="color:var(--text-muted);font-size:.75rem">CATEGORY</span><br><strong>${categoryIcon(g.category)} ${g.category}</strong></div>
+                            <div><span style="color:var(--text-muted);font-size:.75rem">PRIORITY</span><br>${priorityBadge(g.priority)}</div>
+                            <div><span style="color:var(--text-muted);font-size:.75rem">STATUS</span><br>${statusBadge(g.status)}</div>
+                            <div><span style="color:var(--text-muted);font-size:.75rem">REGION</span><br><strong>📍 ${g.region || 'N/A'}</strong></div>
+                        </div>
+
+                        ${renderMarathiSummaryBlock(g, 'modal')}
+
+                        <div style="margin-bottom:16px">
+                            <div style="color:var(--text-muted);font-size:.75rem;margin-bottom:4px">DESCRIPTION</div>
+                            <div style="background:var(--bg);padding:12px;border-radius:8px;font-size:.9rem">${g.description || 'No description provided'}</div>
+                        </div>
+
+                        ${g.media && g.media.length > 0 ? `
+                            <div style="margin-bottom:16px">
+                                <div style="color:var(--text-muted);font-size:.75rem;margin-bottom:8px">ATTACHMENTS</div>
+                                <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(80px, 1fr));gap:10px">
+                                    ${g.media.map(m => `
+                                        <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg-card);cursor:pointer" onclick="window.open('${m.url}', '_blank')">
+                                            ${m.media_type === 'image' ? `<img src="${m.url}" style="width:100%;height:60px;object-fit:cover">` : '<div style="height:60px;display:flex;items:center;justify-content:center;font-size:1.5rem;background:rgba(0,0,0,0.05)">📄</div>'}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${g.history && g.history.length > 0 ? `
+                            <div>
+                                <div style="color:var(--text-muted);font-size:.75rem;margin-bottom:8px">HISTORY</div>
+                                <div style="display:flex;flex-direction:column;gap:8px">
+                                    ${g.history.map((h, idx) => `
+                                        <div style="padding:8px 12px;background:var(--bg);border-radius:8px;border-left:3px solid ${idx === 0 ? 'var(--primary-light)' : 'var(--border)'}">
+                                            <div style="display:flex;justify-content:space-between;font-size:.8rem">
+                                                <span style="font-weight:700;color:var(--primary-light)">${h.status.toUpperCase().replace('_', ' ')}</span>
+                                                <span style="color:var(--text-muted)">${new Date(h.timestamp).toLocaleString('en-IN')}</span>
+                                            </div>
+                                            <div style="font-size:.75rem;margin-top:2px">${h.remarks || 'No remarks'}</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+                openModal('grievanceDetailModal');
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
         }
 
         async function loadAvailable() {

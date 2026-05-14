@@ -1014,6 +1014,25 @@
   <!-- ════════════════════════════════════════════
      LOGIN MODAL
 ════════════════════════════════════════════ -->
+  <!-- PUBLIC GRIEVANCE DETAIL MODAL -->
+  <div class="modal-overlay" id="publicGrievanceDetailModal">
+    <div class="modal-box" style="max-width:600px">
+      <div class="modal-header">
+        <div>
+          <h3 id="publicDetailTitle">📋 Grievance Details</h3>
+          <p style="font-size:.85rem;margin-top:4px;color:var(--text-muted)">Public Information & Status</p>
+        </div>
+        <button class="modal-close" onclick="closeModal('publicGrievanceDetailModal')">✕</button>
+      </div>
+      <div id="publicDetailContent" style="padding:20px; max-height: 70vh; overflow-y: auto;">
+        <!-- Populated by JS -->
+      </div>
+      <div class="modal-footer" style="padding:16px 20px; border-top:1px solid var(--border); text-align:right">
+        <button class="btn btn-ghost" onclick="closeModal('publicGrievanceDetailModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="loginModal">
     <div class="modal-box" style="max-width:440px">
       <div class="modal-header">
@@ -1627,9 +1646,83 @@
 
     ${g.assigned_officer && g.assigned_officer !== 'null' ? `<div style="background:rgba(37,99,235,.06);border-left:3px solid var(--primary-light);padding:10px 14px;border-radius:6px;margin-bottom:16px"><span style="font-size:.75rem;font-weight:700;color:var(--primary-light)">ASSIGNED TO</span><br>${g.assigned_officer}</div>` : '<div style="background:rgba(217,119,6,.06);border-left:3px solid var(--warning);padding:10px 14px;border-radius:6px;margin-bottom:16px"><span style="font-size:.75rem;font-weight:700;color:var(--warning)">STATUS</span><br>Pending Assignment</div>'}
     <div style="text-align:center;margin-top:16px">
-      <a href="citizen.html" class="btn btn-primary btn-sm">View Full Details →</a>
+      <button class="btn btn-primary btn-sm" onclick="showPublicGrievanceDetails('${g.id}')">View Full Details →</button>
     </div>
   `;
+    }
+
+    async function showPublicGrievanceDetails(id) {
+      try {
+        const g = await window.JanSamadhanAPI.getGrievanceByID(id);
+        if (!g) {
+          showToast('Grievance not found', 'error');
+          return;
+        }
+
+        const content = document.getElementById('publicDetailContent');
+        document.getElementById('publicDetailTitle').textContent = `📋 ${g.grievanceID || g.id}`;
+
+        content.innerHTML = `
+          <div style="font-size:.88rem;line-height:1.6">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+              <div><span style="color:var(--text-muted);font-size:.75rem">CATEGORY</span><br><strong>${JanSamadhan.utils.categoryIcon(g.category)} ${g.category}</strong></div>
+              <div><span style="color:var(--text-muted);font-size:.75rem">PRIORITY</span><br>${JanSamadhan.utils.priorityBadge(g.priority)}</div>
+              <div><span style="color:var(--text-muted);font-size:.75rem">STATUS</span><br>${JanSamadhan.utils.statusBadge(g.status)}</div>
+              <div><span style="color:var(--text-muted);font-size:.75rem">REGION</span><br><strong>📍 ${g.region || 'N/A'}</strong></div>
+            </div>
+
+            <div style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:16px">
+              <div style="color:var(--text-muted);font-size:.75rem;margin-bottom:4px">FILED BY</div>
+              <div style="font-weight:600">${g.name || 'Citizen'}</div>
+              <div style="font-size:.75rem;color:var(--text-muted)">📅 ${new Date(g.createdAt || g.created_at).toLocaleString('en-IN')}</div>
+            </div>
+
+            <div style="background:rgba(37,99,235,0.04);border-left:4px solid var(--primary-light);padding:12px 16px;border-radius:8px;margin-bottom:16px">
+              <div style="font-size:0.75rem;font-weight:800;color:var(--primary-light);text-transform:uppercase;margin-bottom:8px">🤖 AI SUMMARY (Marathi)</div>
+              <div style="white-space:pre-line;line-height:1.5">${g.marathi_summary || (g.summary_generation_status === 'pending' ? '⏳ AI is analyzing...' : 'No summary available.')}</div>
+            </div>
+
+            <div style="margin-bottom:16px">
+              <div style="color:var(--text-muted);font-size:.75rem;margin-bottom:4px">DESCRIPTION</div>
+              <div style="background:var(--bg);padding:12px;border-radius:8px;font-size:.9rem">${g.description || 'No description provided'}</div>
+            </div>
+
+            ${g.media && g.media.length > 0 ? `
+              <div style="margin-bottom:16px">
+                <div style="color:var(--text-muted);font-size:.75rem;margin-bottom:8px">ATTACHMENTS</div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                  ${g.media.map(m => `
+                    <div style="width:70px;height:70px;border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer" onclick="window.open('${m.url}', '_blank')">
+                      ${m.media_type === 'image' ? `<img src="${m.url}" style="width:100%;height:100%;object-fit:cover">` : '<div style="display:flex;items:center;justify-content:center;height:100%;font-size:1.5rem;background:#f5f5f5">📄</div>'}
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+            ${g.history && g.history.length > 0 ? `
+              <div>
+                <div style="color:var(--text-muted);font-size:.75rem;margin-bottom:8px">HISTORY</div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  ${g.history.map((h, idx) => `
+                    <div style="padding:8px 12px;background:var(--bg);border-radius:8px;border-left:3px solid ${idx === 0 ? 'var(--primary-light)' : 'var(--border)'}">
+                      <div style="display:flex;justify-content:space-between;font-size:.8rem">
+                        <span style="font-weight:700;color:var(--primary-light)">${h.status.toUpperCase().replace('_', ' ')}</span>
+                        <span style="color:var(--text-muted)">${new Date(h.timestamp).toLocaleString('en-IN')}</span>
+                      </div>
+                      <div style="font-size:.75rem;margin-top:2px">${h.remarks || 'No remarks'}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+
+        openModal('publicGrievanceDetailModal');
+      } catch (e) {
+        showToast('Failed to load details: ' + e.message, 'error');
+      }
     }
     window.addEventListener("load", function () {
       const loader = document.getElementById("pageLoader");

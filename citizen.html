@@ -338,11 +338,11 @@
             let grievances = [];
 
             try {
-                grievances = await window.JanSamadhanAPI.getAllGrievances();
+                const res = await window.JanSamadhanAPI.getAllGrievances();
+                grievances = Array.isArray(res) ? res : (res?.data || []);
             } catch (e) {
-                console.warn("Failed to fetch from API, using dummy", e);
-                const allForDemo = await window.JanSamadhanAPI.getAllGrievances();
-                grievances = allForDemo.slice(0, 3);
+                console.warn("Failed to fetch from API", e);
+                grievances = [];
             }
 
             // Load all for public feed (max 10)
@@ -360,15 +360,16 @@
 
             let grievances = [];
             try {
-                grievances = await window.JanSamadhanAPI.getMyGrievances();
+                const res = await window.JanSamadhanAPI.getMyGrievances();
+                grievances = Array.isArray(res) ? res : (res?.data || []);
 
                 // Client-side filtering for simplicity
                 if (search) {
                     const q = search.toLowerCase();
                     grievances = grievances.filter(g =>
-                        g.id.includes(q) ||
-                        g.description.toLowerCase().includes(q) ||
-                        g.category.toLowerCase().includes(q)
+                        (g.id || g.grievanceID || '').toLowerCase().includes(q) ||
+                        (g.description || '').toLowerCase().includes(q) ||
+                        (g.category || '').toLowerCase().includes(q)
                     );
                 }
                 if (statusFilter) {
@@ -423,15 +424,17 @@
         }
 
         function grievanceCard(g, showProgress = false, rank = null) {
-            const displayID = g.id ? `GS-${g.id.substring(0, 8).toUpperCase()}` : 'N/A';
+            const gid = g.id || g.grievanceID || 'N/A';
+            const displayID = gid !== 'N/A' ? `GS-${gid.substring(gid.length - 8).toUpperCase()}` : 'N/A';
             const ratingCount = g.feedbackCount || (g.feedback ? g.feedback.length : 0);
             const avgRating = g.feedbackAverage ?? (ratingCount ? (g.feedback ? (g.feedback.reduce((sum, item) => sum + (item.rating || 0), 0) / ratingCount).toFixed(1) : g.feedbackRating || 0) : 0);
             
             const utils = window.JanSamadhan.utils;
             const upvotes = g.votes || 0;
+            const filedDate = g.createdAt || g.created_at || g.timestamp;
 
             return `
-    <div class="grievance-card priority-${g.priority ? g.priority.toLowerCase() : 'medium'}" id="gc-${g.id}">
+    <div class="grievance-card priority-${g.priority ? g.priority.toLowerCase() : 'medium'}" id="gc-${gid}">
       ${rank ? `<div class="queue-rank">${rank}</div>` : ''}
       <div class="gc-header">
         <div class="gc-icon" style="background:${utils.categoryColor(g.category)}">${utils.categoryIcon(g.category)}</div>
@@ -441,24 +444,24 @@
           <div class="gc-meta">
             ${utils.priorityBadge(g.priority)}
             ${utils.statusBadge(g.status)}
-            <span style="font-size:.78rem;color:var(--text-muted)">📅 Filed: ${utils.timeAgo(g.created_at || g.timestamp)}</span>
+            <span style="font-size:.78rem;color:var(--text-muted)">📅 Filed: ${utils.timeAgo(filedDate)}</span>
             <span style="font-size:.78rem;color:var(--text-muted)">🕒 Deadline: ${formatDeadline(g.sla_deadline)}</span>
           </div>
         </div>
       </div>
       ${renderMarathiSummaryBlock(g, 'card')}
-      <p id="card-desc-${g.id}" style="font-size:.875rem;color:var(--text-muted);margin-bottom:12px;line-height:1.5;display:${g.marathi_summary ? 'none' : 'block'}">
+      <p id="card-desc-${gid}" style="font-size:.875rem;color:var(--text-muted);margin-bottom:12px;line-height:1.5;display:${g.marathi_summary ? 'none' : 'block'}">
         ${(g.description || '').substring(0, 120)}${(g.description || '').length > 120 ? '...' : ''}
-        ${g.marathi_summary ? `<a href="javascript:void(0)" onclick="document.getElementById('card-desc-${g.id}').style.display='block';this.style.display='none'" style="color:var(--primary-light);font-size:0.75rem;margin-left:4px">Show Original</a>` : ''}
+        ${g.marathi_summary ? `<a href="javascript:void(0)" onclick="document.getElementById('card-desc-${gid}').style.display='block';this.style.display='none'" style="color:var(--primary-light);font-size:0.75rem;margin-left:4px">Show Original</a>` : ''}
       </p>
       <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:12px">📍 ${g.location || 'N/A'} &nbsp;|&nbsp; 🏙️ ${g.region || 'Delhi'}</div>
       ${showProgress ? renderProgressBar(getProgressFromStatus(g.status)) : ''}
       <div class="gc-actions">
-        <button class="btn btn-ghost btn-sm" onclick="viewDetail('${g.id}')">👁️ View Details</button>
-        <button class="btn btn-ghost btn-sm ${g.user_vote === 'up' ? 'voted' : ''}" id="upvote-btn-${g.id}" onclick="upvote('${g.id}', this)" style="gap:4px">
+        <button class="btn btn-ghost btn-sm" onclick="viewDetail('${gid}')">👁️ View Details</button>
+        <button class="btn btn-ghost btn-sm ${g.user_vote === 'up' ? 'voted' : ''}" id="upvote-btn-${gid}" onclick="upvote('${gid}', this)" style="gap:4px">
             👍 <span class="vote-count">${upvotes}</span>
         </button>
-        ${(g.status === 'resolved' || g.status === 'closed') ? `<button class="btn btn-sm" style="background:rgba(249,115,22,.1);color:var(--accent)" onclick="openFeedback('${g.id}')">⭐ Rate Resolution</button>` : ''}
+        ${(g.status === 'resolved' || g.status === 'closed') ? `<button class="btn btn-sm" style="background:rgba(249,115,22,.1);color:var(--accent)" onclick="openFeedback('${gid}')">⭐ Rate Resolution</button>` : ''}
         ${ratingCount ? `<span class="badge badge-success">⭐ ${avgRating}/5 · ${ratingCount} ratings</span>` : ''}
       </div>
     </div>
@@ -612,15 +615,29 @@
         }
 
         async function viewDetail(id) {
-            let g;
-            try {
-                g = await window.JanSamadhanAPI.getGrievanceByID(id);
-            } catch (e) {
-                console.error("Failed to fetch detail", e);
+            if (!id || id === 'undefined') {
+                showToast('Invalid Grievance ID', 'error');
                 return;
             }
 
-            const displayID = `GS-${g.id.substring(0, 8).toUpperCase()}`;
+            let res;
+            try {
+                res = await window.JanSamadhanAPI.getGrievanceByID(id);
+            } catch (e) {
+                console.error("Failed to fetch detail", e);
+                showToast('Failed to load grievance details', 'error');
+                return;
+            }
+
+            const g = res?.data || res;
+            if (!g) {
+                showToast('Grievance not found', 'error');
+                return;
+            }
+
+            const gid = g.id || g.grievanceID || id;
+            const displayID = `GS-${gid.substring(gid.length - 8).toUpperCase()}`;
+            
             document.getElementById('modalGID').innerHTML = `${displayID} &nbsp; ${priorityBadge(g.priority)} ${statusBadge(g.status)}`;
             document.getElementById('modalContent').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;font-size:.88rem">
@@ -628,11 +645,11 @@
       <div><span style="color:var(--text-muted);font-size:.75rem">CATEGORY</span><br><strong>${categoryIcon(g.category)} ${g.category}</strong></div>
       <div><span style="color:var(--text-muted);font-size:.75rem">REGION</span><br><strong>${g.region || 'N/A'}</strong></div>
       <div><span style="color:var(--text-muted);font-size:.75rem">LOCATION</span><br><strong>📍 ${g.location || 'N/A'}</strong></div>
-      <div><span style="color:var(--text-muted);font-size:.75rem">FILED ON</span><br><strong>${formatDate(g.created_at)}</strong></div>
+      <div><span style="color:var(--text-muted);font-size:.75rem">FILED ON</span><br><strong>${formatDate(g.createdAt || g.created_at || g.timestamp)}</strong></div>
       <div style="background:rgba(249,115,22,.05);padding:8px;border-radius:4px"><span style="color:var(--text-muted);font-size:.75rem">🕒 SLA DEADLINE</span><br><strong>${formatDeadline(g.sla_deadline)}</strong><br>${getDeadlineBadge(g.sla_deadline)}</div>
     </div>
     ${renderMarathiSummaryBlock(g, 'detail')}
-    <div id="full-description-${g.id}" style="background:var(--bg);padding:14px;border-radius:8px;margin-bottom:16px;font-size:.9rem;line-height:1.6;display:${g.marathi_summary ? 'none' : 'block'}">${g.description}</div>
+    <div id="full-description-${gid}" style="background:var(--bg);padding:14px;border-radius:8px;margin-bottom:16px;font-size:.9rem;line-height:1.6;display:${g.marathi_summary ? 'none' : 'block'}">${g.description}</div>
     
     ${g.media && g.media.length > 0 ? `
       <div style="margin-bottom:20px">
@@ -660,18 +677,21 @@
                 (g.citizen_email && g.citizen_email.toLowerCase() === window._citizenUser.sub.toLowerCase()) ||
                 (g.email && g.email.toLowerCase() === window._citizenUser.sub.toLowerCase()) ||
                 ["admin", "officer", "ngo"].includes(window._citizenUser.role)
-            )) ? `<button class="btn btn-ghost btn-sm" onclick="regenerateSummary('${g.id}')">🔄 Regenerate AI Summary</button>` : ''}
+            )) ? `<button class="btn btn-ghost btn-sm" onclick="regenerateSummary('${gid}')">🔄 Regenerate AI Summary</button>` : ''}
        
        ${!g.marathi_summary && window._citizenUser ? 
-            `<button class="btn btn-primary btn-sm" onclick="generateViewSummary('${g.id}', 'detail-summary-${g.id}')">⚡ Quick AI Summary</button>` : ''}
+            `<button class="btn btn-primary btn-sm" onclick="generateViewSummary('${gid}', 'detail-summary-${gid}')">⚡ Quick AI Summary</button>` : ''}
 
-       ${(g.status === 'resolved' || g.status === 'closed') ? `<button class="btn btn-accent btn-sm" onclick="closeModal('grievanceDetailModal');openFeedback('${g.id}')">⭐ Rate Resolution</button>` : ''}
+       ${(g.status === 'resolved' || g.status === 'closed') ? `<button class="btn btn-accent btn-sm" onclick="closeModal('grievanceDetailModal');openFeedback('${gid}')">⭐ Rate Resolution</button>` : ''}
        ${g.feedbackCount ? `<span class="badge badge-success">⭐ ${g.feedbackAverage || g.feedbackRating}/5 · ${g.feedbackCount} ratings</span>` : ''}
     </div>
   `;
             openModal('grievanceDetailModal');
-            startSummaryPolling(id, g);
+            startSummaryPolling(gid, g);
         }
+
+        // Attach to window to ensure global availability
+        window.viewDetail = viewDetail;
 
         let _summaryPollTimer = null;
         let _summaryPollAttempts = 0;
@@ -873,6 +893,7 @@
                     result.innerHTML = `<div style="background:rgba(220,38,38,.05);padding:16px;border-radius:8px;border-left:3px solid var(--danger);text-align:center"><div style="color:var(--danger);font-weight:700;margin-bottom:8px">❌ Grievance Not Found</div><div style="font-size:.85rem;color:var(--text-muted)">ID: <strong>${id}</strong> | Check the ID and try again</div></div>`; 
                     return; 
                 }
+                const gid = g.id || g.grievanceID || id;
                 const displayID = g.grievanceID || g.id;
                 result.innerHTML = `
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${priorityBadge(g.priority)} ${statusBadge(g.status)} ${g.escalated ? '<span class="escalation-tag">🚨 ESCALATED</span>' : ''}</div>
@@ -880,7 +901,7 @@
         <div style="font-size:.8rem;color:var(--text-muted);margin:6px 0">📍 ${g.region || 'N/A'}</div>
         <div style="font-size:.85rem;margin:8px 0"><strong>Grievance ID:</strong> ${displayID}</div>
         ${g.assigned_officer && g.assigned_officer !== 'null' ? `<div style="margin-top:10px;padding:8px;background:rgba(37,99,235,.06);border-left:3px solid var(--primary-light);border-radius:6px;font-size:.85rem">🧑‍💼 <strong>Assigned to: ${g.assigned_officer}</strong></div>` : '<div style="margin-top:10px;padding:8px;background:rgba(217,119,6,.06);border-left:3px solid var(--warning);border-radius:6px;font-size:.85rem">⏳ <strong>Pending Assignment to Officer</strong></div>'}
-        <button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="viewDetail('${g.id}')">Full Details →</button>
+        <button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="viewDetail('${gid}')">Full Details →</button>
       `;
             } catch (e) {
                 result.innerHTML = `<div style="background:rgba(220,38,38,.05);padding:16px;border-radius:8px;border-left:3px solid var(--danger);text-align:center"><div style="color:var(--danger);font-weight:700;margin-bottom:8px">❌ Error Fetching Grievance</div><div style="font-size:.85rem;color:var(--text-muted)">Unable to retrieve ID: ${id}</div></div>`;
@@ -906,13 +927,16 @@
                showList = grievances.slice(0, 3);
             }
 
-            container.innerHTML = showList.map(g => `
-    <div style="padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="viewDetail('${g.id}')">
+            container.innerHTML = showList.map(g => {
+                const gid = g.id || g.grievanceID;
+                return `
+    <div style="padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="viewDetail('${gid}')">
       <div style="font-size:1.3rem">${categoryIcon(g.category)}</div>
-      <div style="flex:1"><div style="font-weight:600;font-size:.9rem">${g.id ? g.id.toUpperCase().substring(0, 8) : g.grievanceID}</div><div style="font-size:.78rem;color:var(--text-muted)">${g.category}</div></div>
+      <div style="flex:1"><div style="font-weight:600;font-size:.9rem">${gid ? gid.toUpperCase().substring(0, 8) : 'N/A'}</div><div style="font-size:.78rem;color:var(--text-muted)">${g.category}</div></div>
       ${statusBadge(g.status)}
     </div>
-  `).join('');
+  `;
+            }).join('');
         }
 
         // ── Mock PDF download ──
