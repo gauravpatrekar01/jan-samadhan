@@ -171,6 +171,7 @@ def get_assigned_complaints(
 ):
     """Get complaints assigned to current officer or all (if admin)"""
     assigned_to = user["sub"] if user.get("role") == "officer" else None
+    # Filter out complaints that are already converted to projects
     complaints = search_complaints(
         assigned_to=assigned_to,
         status=status,
@@ -178,6 +179,11 @@ def get_assigned_complaints(
         skip=skip,
         limit=limit,
     )
+    # Filter out approved conversions in-memory or improve search_complaints
+    # For now, we'll exclude them here if status is not explicitly requested
+    if not status:
+        complaints = [c for c in complaints if c.get("project_conversion_status") != "approved"]
+    
     complaints = [post_process_complaint(c, user) for c in complaints]
     total = get_complaint_count(assigned_to=assigned_to)
     return {"success": True, "data": complaints, "total": total}

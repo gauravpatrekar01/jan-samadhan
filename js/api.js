@@ -671,6 +671,64 @@ class JanSamadhanAPI {
             body: JSON.stringify(payload)
         });
     }
+
+    // ── Project Module Endpoints ──
+    async requestProjectConversion(complaintId, data) {
+        const params = new URLSearchParams({ complaint_id: complaintId, ...data });
+        return this._fetch(`/api/projects/project-conversion/request?${params}`, { method: 'POST' });
+    }
+
+    async getPendingProjectConversions() {
+        return this._fetch('/api/projects/project-conversion/pending');
+    }
+
+    async approveProjectConversion(complaintId, remarks = '') {
+        return this._fetch(`/api/projects/project-conversion/approve?complaint_id=${complaintId}&admin_remarks=${remarks}`, { method: 'POST' });
+    }
+
+    async rejectProjectConversion(complaintId, reason) {
+        return this._fetch(`/api/projects/project-conversion/reject?complaint_id=${complaintId}&reason=${reason}`, { method: 'POST' });
+    }
+
+    async getProjects() {
+        return this._fetch('/api/projects/');
+    }
+
+    async getProject(projectId) {
+        return this._fetch(`/api/projects/${projectId}`);
+    }
+
+    async updateProject(projectId, data) {
+        return this._fetch(`/api/projects/${projectId}/update`, { method: 'PUT', body: JSON.stringify(data) });
+    }
+
+    async addProjectMilestone(projectId, milestone) {
+        return this._fetch(`/api/projects/milestone?project_id=${projectId}`, { method: 'POST', body: JSON.stringify(milestone) });
+    }
+
+    async addProjectProgressUpdate(update) {
+        return this._fetch('/api/projects/progress-update', { method: 'POST', body: JSON.stringify(update) });
+    }
+
+    async requestDeadlineExtension(extensionRequest) {
+        return this._fetch('/api/projects/request-extension', { method: 'POST', body: JSON.stringify(extensionRequest) });
+    }
+
+    async getPendingExtensions() {
+        return this._fetch('/api/projects/pending-extensions');
+    }
+
+    async approveExtension(requestId) {
+        return this._fetch(`/api/projects/approve-extension?request_id=${requestId}`, { method: 'POST' });
+    }
+
+    async rejectExtension(requestId, reason) {
+        return this._fetch(`/api/projects/reject-extension?request_id=${requestId}&reason=${reason}`, { method: 'POST' });
+    }
+
+    async getExtensionHistory(projectId) {
+        return this._fetch(`/api/projects/extension-history/${projectId}`);
+    }
 }
 
 // Create global API instance

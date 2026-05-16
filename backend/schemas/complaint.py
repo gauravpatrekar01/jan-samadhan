@@ -63,6 +63,16 @@ class ComplaintCreate(BaseModel):
     # Social validation fields
     votes: int = 0
     comments: Optional[List[Dict[str, Any]]] = []
+    
+    # Project conversion fields
+    project_conversion_requested: bool = False
+    project_conversion_status: Literal["none", "pending", "approved", "rejected"] = "none"
+    project_conversion_reason: Optional[str] = None
+    project_conversion_requested_by: Optional[str] = None
+    project_conversion_requested_at: Optional[datetime] = None
+    linked_project_id: Optional[str] = None
+    escalation_level: int = 1
+    expected_resolution_date: Optional[datetime] = None
 
     @field_validator("title")
     @classmethod

@@ -28,6 +28,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/heatmap.js/2.0.5/heatmap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-heat/1.0.5/leaflet-heat.min.js"></script>
     <script src="js/heatmap-advanced.js"></script>
+    <style>
+        .status-blue { background: #dbeafe !important; color: #1e40af !important; border: 1px solid #bfdbfe !important; }
+        .status-yellow { background: #fef9c3 !important; color: #854d0e !important; border: 1px solid #fef08a !important; }
+        .status-orange { background: #ffedd5 !important; color: #9a3412 !important; border: 1px solid #fed7aa !important; }
+        .status-red { background: #fee2e2 !important; color: #991b1b !important; border: 1px solid #fecaca !important; }
+        .status-green { background: #dcfce7 !important; color: #166534 !important; border: 1px solid #bbf7d0 !important; }
+    </style>
 </head>
 
 <body>
@@ -66,6 +73,9 @@
             <div class="nav-section-label">Management</div>
             <div class="nav-item" onclick="showPage('allComplaints',this)">
                 <span class="nav-icon">📋</span> All Complaints
+            </div>
+            <div class="nav-item" onclick="showPage('govProjects',this)">
+                <span class="nav-icon">🏗️</span> Government Projects
             </div>
             <div class="nav-item" onclick="showPage('escalations',this)">
                 <span class="nav-icon">🚨</span> Escalations
@@ -371,6 +381,31 @@
                 <div id="officerNoticesList" class="announcement-list"></div>
             </div>
 
+            <!-- ─── GOVERNMENT PROJECTS ─── -->
+            <div class="dash-page" id="page-govProjects">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">🏗️ Government Infrastructure Projects</div>
+                        <div class="page-subtitle">Manage long-term projects converted from public complaints</div>
+                    </div>
+                </div>
+                <div class="filters-bar">
+                    <div class="search-bar" style="flex:1">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="projectSearch" placeholder="Search projects..." oninput="loadGovProjects()">
+                    </div>
+                    <select class="filter-select" id="projectStatusFilter" onchange="loadGovProjects()">
+                        <option value="">All Status</option>
+                        <option>Project Created</option>
+                        <option>Work Started</option>
+                        <option>Under Construction</option>
+                        <option>Delayed</option>
+                        <option>Completed</option>
+                    </select>
+                </div>
+                <div class="grievance-list" id="govProjectsList"></div>
+            </div>
+
         </div>
     </div>
 
@@ -418,31 +453,53 @@
         </div>
     </div>
     <div class="modal-overlay" id="updateModal">
-        <div class="modal-box">
+        <!-- ... existing update modal ... -->
+    </div>
+
+    <!-- PROJECT CONVERSION MODAL -->
+    <div class="modal-overlay" id="convertProjectModal">
+        <div class="modal-box" style="max-width:600px">
             <div class="modal-header">
-                <h3>🔄 Update Grievance Status</h3>
-                <button class="modal-close" onclick="closeModal('updateModal')">✕</button>
+                <h3>🏗️ Convert to Government Project</h3>
+                <button class="modal-close" onclick="closeModal('convertProjectModal')">✕</button>
             </div>
-            <div id="updateModalGrievanceInfo"
-                style="background:var(--bg);padding:14px;border-radius:8px;margin-bottom:20px;font-size:.88rem"></div>
-            <div class="form-group">
-                <label class="form-label">Update Status <span class="req">*</span></label>
-                <select class="form-control" id="newStatusSelect">
-                    <option>Submitted</option>
-                    <option>Under Review</option>
-                    <option>In Progress</option>
-                    <option>Resolved</option>
-                    <option>Closed</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Officer Remarks</label>
-                <textarea class="form-control" id="newRemarksInput" rows="3"
-                    placeholder="Add your action taken, inspection notes, etc."></textarea>
-            </div>
-            <div style="display:flex;gap:10px">
-                <button class="btn btn-primary" onclick="confirmUpdate()">✅ Confirm Update</button>
-                <button class="btn btn-ghost" onclick="closeModal('updateModal')">Cancel</button>
+            <div style="padding:20px">
+                <div class="form-group">
+                    <label class="form-label">Reason for Project Conversion <span class="req">*</span></label>
+                    <textarea class="form-control" id="convReason" rows="3" placeholder="e.g. Requires complete road redevelopment and contractor involvement."></textarea>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
+                    <div class="form-group">
+                        <label class="form-label">Project Scale</label>
+                        <select class="form-control" id="convScale">
+                            <option>Small Local</option>
+                            <option>Medium District</option>
+                            <option>Large Municipal</option>
+                            <option>Mega Infrastructure</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Urgency Level</label>
+                        <select class="form-control" id="convUrgency">
+                            <option>Normal</option>
+                            <option>High Priority</option>
+                            <option>Critical / Public Safety</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Estimated Budget (₹)</label>
+                        <input type="number" class="form-control" id="convBudget" placeholder="Amount in Lakhs">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Estimated Duration</label>
+                        <input type="text" class="form-control" id="convDuration" placeholder="e.g. 6 months">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Suggested Department</label>
+                    <input type="text" class="form-control" id="convDept" placeholder="e.g. Public Works Department">
+                </div>
+                <button class="btn btn-primary w-full" onclick="submitProjectConversion()">🚀 Submit Request to Admin</button>
             </div>
         </div>
     </div>
@@ -526,6 +583,7 @@
             if (id === 'escalations') loadEscalations();
             if (id === 'notices') loadOfficerNotices();
             if (id === 'ngoRequests') loadNGORequests();
+            if (id === 'govProjects') loadGovProjects();
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -651,6 +709,7 @@
                   <div class="gc-actions" style="margin-top:14px">
                     <button class="btn btn-primary btn-sm" onclick="openUpdateModal('${g.id}')">🔄 Update Status</button>
                     <button class="btn btn-ghost btn-sm" onclick="viewDetail('${g.id}')">👁️ View Details</button>
+                    ${g.category === 'Infrastructure' || g.priority === 'high' || g.priority === 'emergency' ? `<button class="btn btn-outline btn-sm" onclick="openConvertModal('${g.id}')">🏗️ Project Conversion</button>` : ''}
                     <button class="btn btn-ghost btn-sm" onclick="quickResolve('${g.id}')">✅ Quick Resolve</button>
                     ${g.feedbackCount ? `<span class="badge badge-success">⭐ ${g.feedbackAverage || g.feedbackRating}/5 · ${g.feedbackCount} ratings</span>` : ''}
                   </div>
@@ -798,6 +857,111 @@
                 setTimeout(() => loadQueue(), 2000);
             } catch (e) {
                 showToast(`Analysis failed: ${e.message}`, 'error');
+            }
+        }
+
+        // ── Government Projects Logic ──
+        let _convertGID = null;
+
+        function openConvertModal(id) {
+            _convertGID = id;
+            openModal('convertProjectModal');
+        }
+
+        async function submitProjectConversion() {
+            const data = {
+                reason: document.getElementById('convReason').value,
+                scale: document.getElementById('convScale').value,
+                urgency: document.getElementById('convUrgency').value,
+                budget: parseFloat(document.getElementById('convBudget').value) || 0,
+                duration: document.getElementById('convDuration').value,
+                department: document.getElementById('convDept').value
+            };
+
+            if (!data.reason) return showToast('Please provide a reason', 'warning');
+            if (data.budget <= 0) return showToast('Please provide an estimated budget', 'warning');
+
+            try {
+                const res = await window.JanSamadhanAPI.requestProjectConversion(_convertGID, data);
+                showToast(res.message || 'Project conversion request submitted', 'success');
+                closeModal('convertProjectModal');
+                loadQueue();
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        async function loadGovProjects() {
+            console.log('🏗️ Loading government projects...');
+            try {
+                const res = await window.JanSamadhanAPI.getProjects();
+                console.log('📦 Received projects response:', res);
+                const projects = res.data || res;
+                const container = document.getElementById('govProjectsList');
+                if (!container) return;
+
+                const search = document.getElementById('projectSearch')?.value.toLowerCase() || '';
+                const statusFilter = document.getElementById('projectStatusFilter')?.value || '';
+
+                let filtered = projects;
+                if (search) {
+                    filtered = filtered.filter(p => 
+                        p.project_id.toLowerCase().includes(search) || 
+                        p.title.toLowerCase().includes(search) ||
+                        p.department.toLowerCase().includes(search)
+                    );
+                }
+                if (statusFilter) {
+                    filtered = filtered.filter(p => p.status === statusFilter);
+                }
+
+                if (!filtered || !filtered.length) {
+                    container.innerHTML = `
+                        <div class="card" style="text-align:center;padding:60px 20px;background:rgba(107,114,128,.05);border-radius:12px;border:2px dashed var(--border)">
+                            <div style="font-size:3rem;margin-bottom:16px">🏗️</div>
+                            <div style="font-size:1.1rem;font-weight:700;color:var(--text-muted)">No Projects Found</div>
+                            <div style="font-size:.9rem;color:var(--text-muted);margin-top:8px">
+                                ${search || statusFilter ? 'Try adjusting your filters.' : 'No active government projects assigned.'}
+                            </div>
+                        </div>`;
+                    return;
+                }
+
+                container.innerHTML = filtered.map(p => `
+                    <div class="grievance-card row-hover" style="border-left: 4px solid var(--primary)">
+                        <div class="gc-header">
+                            <div style="flex:1">
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <div class="gc-id">${p.project_id}</div>
+                                    ${p.delay_status ? '<span class="badge" style="background:#fef2f2;color:#991b1b;border:1px solid #fee2e2;font-size:0.65rem">⚠️ Delayed</span>' : ''}
+                                </div>
+                                <div class="gc-title">${p.title}</div>
+                                <div class="gc-meta">
+                                    <span class="status-pill ${getProjectStatusClass(p.status)}" style="font-size:0.65rem; padding: 2px 8px; border-radius: 10px; font-weight: 700;">${p.status}</span>
+                                    <span style="font-size:.78rem;color:var(--text-muted)">🏢 ${p.department}</span>
+                                    <span style="font-size:.78rem;color:var(--text-muted)">📅 Deadline: ${new Date(p.current_deadline).toLocaleDateString()}</span>
+                                </div>
+                            </div>
+                            <div style="text-align:right">
+                                <div style="font-size:1.4rem;font-weight:800;color:var(--primary)">${p.progress_percentage}%</div>
+                                <div style="font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Progress</div>
+                            </div>
+                        </div>
+                        <div style="margin: 16px 0 12px 0; background: #f1f5f9; height: 10px; border-radius: 5px; overflow: hidden; border:1px solid var(--border)">
+                            <div style="background: linear-gradient(90deg, var(--primary), var(--primary-light)); width: ${p.progress_percentage}%; height: 100%; transition: width 0.5s ease;"></div>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+                            <div style="font-size:0.8rem;color:var(--text-muted)">
+                                💰 Budget: <strong>₹${p.budget}L</strong>
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="window.location.href='project-details.html?id=${p.project_id}'">🛠️ Manage Project</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('❌ Error loading projects:', e);
+                const container = document.getElementById('govProjectsList');
+                if (container) container.innerHTML = `<div class="card" style="text-align:center;padding:40px;color:red">Failed to load projects: ${e.message}</div>`;
             }
         }
 

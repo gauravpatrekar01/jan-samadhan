@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Details – JanSamadhan</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <style>
+        .project-header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 40px;
+            border-radius: var(--radius-lg);
+            margin-bottom: 30px;
+        }
+        .milestone-card {
+            border-left: 4px solid var(--border);
+            padding-left: 20px;
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .milestone-card.completed { border-left-color: var(--success); }
+        .milestone-dot {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: var(--border);
+            position: absolute;
+            left: -8px; top: 0;
+        }
+        .completed .milestone-dot { background: var(--success); }
+        .progress-circle {
+            width: 120px; height: 120px;
+            border-radius: 50%;
+            border: 8px solid rgba(255,255,255,0.2);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; font-weight: 800;
+        }
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .status-blue { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+        .status-yellow { background: #fef9c3; color: #854d0e; border: 1px solid #fef08a; }
+        .status-orange { background: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; }
+        .status-red { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .status-green { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    </style>
+</head>
+<body>
+    <div class="toast-container"></div>
+    
+    <div class="dash-main" style="margin-left:0; padding: 20px; max-width: 1200px; margin: 0 auto;">
+        <div class="topbar" style="border-radius: var(--radius-md); margin-bottom: 20px;">
+            <button class="btn btn-ghost" onclick="history.back()">← Back to Dashboard</button>
+            <div class="topbar-title" id="projTitle">Loading Project...</div>
+        </div>
+
+        <div id="projectContent">
+            <div class="card" style="text-align:center; padding: 50px;">
+                <div class="skeleton" style="height:200px"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UPDATE STATUS MODAL -->
+    <div class="modal-overlay" id="updateStatusModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>🔄 Update Project Status</h3>
+                <button class="modal-close" onclick="closeModal('updateStatusModal')">✕</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">New Status</label>
+                <select id="newStatus" class="form-control" onchange="autoFillProgress()">
+                    <option>Budget Approval Pending</option>
+                    <option>Budget Approved</option>
+                    <option>Tender Issued</option>
+                    <option>Contractor Assigned</option>
+                    <option>Site Survey Started</option>
+                    <option>Work Started</option>
+                    <option>Under Construction</option>
+                    <option>Milestone In Progress</option>
+                    <option>Delayed</option>
+                    <option>Inspection Pending</option>
+                    <option>Quality Verification</option>
+                    <option>Rework Required</option>
+                    <option>Reinspection Pending</option>
+                    <option>Completed</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Overall Progress (%)</label>
+                <input type="number" id="newProgress" class="form-control" min="0" max="100" placeholder="e.g. 25">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Work Update / Remarks</label>
+                <textarea id="newRemarks" class="form-control" rows="3" placeholder="Describe the current status and work done..."></textarea>
+            </div>
+            <button class="btn btn-primary w-full" onclick="submitStatusUpdate()">Save Update</button>
+        </div>
+    </div>
+
+    <!-- REQUEST EXTENSION MODAL -->
+    <div class="modal-overlay" id="requestExtensionModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>⏳ Request Deadline Extension</h3>
+                <button class="modal-close" onclick="closeModal('requestExtensionModal')">✕</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">New Requested Deadline</label>
+                <input type="date" id="extDate" class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Reason for Delay</label>
+                <textarea id="extReason" class="form-control" rows="3" placeholder="e.g. Heavy rainfall delayed foundation work."></textarea>
+            </div>
+            <button class="btn btn-primary w-full" onclick="submitExtension()">Submit Request</button>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('id');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!projectId) {
+                showToast('Project ID missing', 'error');
+                return;
+            }
+            loadProject();
+        });
+
+        function getStatusClass(status) {
+            const blue = ["Project Approved", "Tender Issued", "Contractor Assigned", "Site Survey Started", "Work Started", "Under Construction", "Milestone In Progress", "Inspection Pending", "Quality Verification", "Reinspection Pending"];
+            const yellow = ["Complaint Submitted", "Under Officer Review", "Project Conversion Requested", "Awaiting Admin Approval", "Budget Approval Pending"];
+            const orange = ["Delayed", "Deadline Extension Requested", "Deadline Extension Approved", "Rework Required"];
+            const red = ["Escalated"];
+            const green = ["Budget Approved", "Completed"];
+
+            if (blue.includes(status)) return "status-blue";
+            if (yellow.includes(status)) return "status-yellow";
+            if (orange.includes(status)) return "status-orange";
+            if (red.includes(status)) return "status-red";
+            if (green.includes(status)) return "status-green";
+            return "status-blue";
+        }
+
+        const statusProgressMap = {
+            "Project Approved": 5,
+            "Budget Approval Pending": 10,
+            "Budget Approved": 15,
+            "Tender Issued": 20,
+            "Contractor Assigned": 25,
+            "Site Survey Started": 30,
+            "Work Started": 35,
+            "Under Construction": 50,
+            "Milestone In Progress": 70,
+            "Inspection Pending": 85,
+            "Quality Verification": 90,
+            "Reinspection Pending": 95,
+            "Completed": 100
+        };
+
+        function autoFillProgress() {
+            const status = document.getElementById('newStatus').value;
+            const progressInput = document.getElementById('newProgress');
+            if (statusProgressMap[status] !== undefined) {
+                progressInput.value = statusProgressMap[status];
+            }
+        }
+
+        async function loadProject() {
+            try {
+                const res = await window.JanSamadhanAPI.getProject(projectId);
+                const p = res.data || res;
+                document.getElementById('projTitle').textContent = `🏗️ Project: ${p.project_id}`;
+                
+                const content = document.getElementById('projectContent');
+                content.innerHTML = `
+                    <div class="project-header">
+                        <div style="display:flex; justify-content:space-between; align-items:center">
+                            <div>
+                                <h1 style="margin-bottom:10px">${p.title}</h1>
+                                <p style="opacity:0.9; max-width: 600px;">${p.description}</p>
+                                <div style="margin-top:20px; display:flex; gap:15px; align-items:center">
+                                    <span class="status-badge ${getStatusClass(p.status)}">${p.status}</span>
+                                    <span class="badge" style="background:rgba(255,255,255,0.2); color:white">📍 ${p.department}</span>
+                                </div>
+                            </div>
+                            <div class="progress-circle">
+                                ${p.progress_percentage}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 2fr 1fr; gap:30px">
+                        <div>
+                            <div class="card">
+                                <h3 style="margin-bottom:20px">🛠️ Project Milestones</h3>
+                                <div id="milestonesList">
+                                    ${(p.milestones || []).map(m => `
+                                        <div class="milestone-card ${m.status === 'Completed' ? 'completed' : ''}">
+                                            <div class="milestone-dot"></div>
+                                            <div style="font-weight:700">${m.name || m.title}</div>
+                                            <div style="font-size:.85rem; color:var(--text-muted)">Target: ${new Date(m.target_date || m.expected_date).toLocaleDateString()}</div>
+                                            <div style="font-size:.8rem; margin-top:5px">${m.description || m.remarks || ''}</div>
+                                        </div>
+                                    `).join('') || '<p style="color:var(--text-muted)">No milestones defined.</p>'}
+                                </div>
+                            </div>
+
+                            <div class="card" style="margin-top:30px">
+                                <h3 style="margin-bottom:20px">📜 Progress Updates</h3>
+                                <div id="updatesList">
+                                    ${(p.progress_updates || []).slice().reverse().map(u => `
+                                        <div style="padding:15px; border-bottom:1px solid var(--border)">
+                                            <div style="display:flex; justify-content:space-between">
+                                                <span style="font-weight:700">${u.percentage || u.progress_increment}% Progress</span>
+                                                <span style="font-size:.75rem; color:var(--text-muted)">${new Date(u.timestamp).toLocaleString()}</span>
+                                            </div>
+                                            <div style="font-size:.85rem; margin-top:5px">${u.remarks || u.description}</div>
+                                        </div>
+                                    `).join('') || '<p style="color:var(--text-muted)">No updates logged yet.</p>'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="card">
+                                <h3 style="margin-bottom:20px">📅 Timeline</h3>
+                                <div style="margin-bottom:15px">
+                                    <div class="form-label">Start Date</div>
+                                    <div style="font-weight:700">${new Date(p.start_date).toLocaleDateString()}</div>
+                                </div>
+                                <div style="margin-bottom:15px">
+                                    <div class="form-label">Current Deadline</div>
+                                    <div style="font-weight:700; color:var(--primary)">${new Date(p.end_date).toLocaleDateString()}</div>
+                                </div>
+                                <div style="display:flex; flex-direction:column; gap:10px; margin-top:20px">
+                                    <button class="btn btn-primary" onclick="openModal('updateStatusModal')">🔄 Update Project Status</button>
+                                    <button class="btn btn-outline" onclick="openModal('requestExtensionModal')">⏳ Request Extension</button>
+                                </div>
+                            </div>
+
+                            <div class="card" style="margin-top:30px">
+                                <h3 style="margin-bottom:20px">💰 Budget Info</h3>
+                                <div class="form-label">Approved Budget</div>
+                                <div style="font-size:1.5rem; font-weight:800; color:var(--success)">₹${p.budget} Lakhs</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        async function submitStatusUpdate() {
+            const status = document.getElementById('newStatus').value;
+            const progress = document.getElementById('newProgress').value;
+            const remarks = document.getElementById('newRemarks').value;
+
+            if (progress === '') return showToast('Please enter progress percentage', 'warning');
+
+            try {
+                await window.JanSamadhanAPI._fetch(`/api/projects/${projectId}/update`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ 
+                        status: status,
+                        progress_percentage: parseInt(progress),
+                        update_remarks: remarks || `Status updated to ${status}`
+                    })
+                });
+                showToast('Project updated successfully', 'success');
+                closeModal('updateStatusModal');
+                loadProject();
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        async function submitExtension() {
+            const date = document.getElementById('extDate').value;
+            const reason = document.getElementById('extReason').value;
+
+            if (!date || !reason) return showToast('Fill all fields', 'warning');
+
+            try {
+                await window.JanSamadhanAPI.requestDeadlineExtension({
+                    project_id: projectId,
+                    new_deadline: date,
+                    reason: reason,
+                    reason_category: 'Other', // Default category
+                    requested_by: getSessionUser()?.sub || 'Officer'
+                });
+                showToast('Extension request submitted', 'success');
+                closeModal('requestExtensionModal');
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

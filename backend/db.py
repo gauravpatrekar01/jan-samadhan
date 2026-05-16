@@ -43,6 +43,17 @@ class Database:
             cls.db["ngo_requests"].create_index([("status", ASCENDING)])
 
             cls.db["users"].create_index([("registration_number", ASCENDING)], unique=True, sparse=True)
+
+            # Projects Collection Indexes
+            cls.db["projects"].create_index([("project_id", ASCENDING)], unique=True)
+            cls.db["projects"].create_index([("originating_complaint_id", ASCENDING)])
+            cls.db["projects"].create_index([("status", ASCENDING)])
+            cls.db["projects"].create_index([("assigned_officer", ASCENDING)])
+            cls.db["projects"].create_index([("department", ASCENDING)])
+            
+            # Extension Requests Indexes
+            cls.db["extension_requests"].create_index([("project_id", ASCENDING)])
+            cls.db["extension_requests"].create_index([("status", ASCENDING)])
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"Database index creation encountered an issue: {e}")

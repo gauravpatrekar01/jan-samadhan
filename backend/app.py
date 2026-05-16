@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from jose import JWTError
 import os
-from routes import auth, complaints, admin, ngo, analytics, translations, chatbot, reports, predictions, public, kpis, report_downloads
+from routes import auth, complaints, admin, ngo, analytics, translations, chatbot, reports, predictions, public, kpis, report_downloads, projects
 from db import db
 from config import settings
 from limiter import limiter
@@ -411,6 +411,7 @@ app.include_router(translations.router, prefix="/api/translations", tags=["trans
 app.include_router(chatbot.router, prefix="/api/chatbot", tags=["chatbot"])
 app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
 app.include_router(report_downloads.router, prefix="/api/reports/download", tags=["report-downloads"])
+app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
 
 # ── Static Files (Uploads Fallback) ──
 os.makedirs("static/uploads", exist_ok=True)

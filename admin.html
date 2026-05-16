@@ -69,6 +69,14 @@
             <div class="nav-item" onclick="showPage('announcements',this)"><span class="nav-icon">📢</span>
                 Announcements</div>
 
+            <div class="nav-section-label">Government Projects</div>
+            <div class="nav-item" onclick="showPage('convRequests',this)">
+                <span class="nav-icon">🏗️</span> Conversion Requests
+            </div>
+            <div class="nav-item" onclick="showPage('extRequests',this)">
+                <span class="nav-icon">⏳</span> Extension Requests
+            </div>
+
             <div class="nav-item" onclick="showPage('users',this)"><span class="nav-icon">👥</span> User Management
             </div>
             <div class="nav-item" onclick="showPage('audit',this)"><span class="nav-icon">📋</span> Audit Log
@@ -456,6 +464,54 @@
                 <div class="assignment-queue" id="assignmentQueue"></div>
             </div>
 
+            <!-- ─── CONVERSION REQUESTS ─── -->
+            <div class="dash-page" id="page-convRequests">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">🏗️ Project Conversion Requests</div>
+                        <div class="page-subtitle">Review officer requests to convert complaints into infrastructure projects</div>
+                    </div>
+                </div>
+                <div class="card" style="padding:0; overflow:hidden">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Complaint</th>
+                                <th>Requested By</th>
+                                <th>Estimated Budget</th>
+                                <th>Justification</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="convRequestsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ─── EXTENSION REQUESTS ─── -->
+            <div class="dash-page" id="page-extRequests">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">⏳ Deadline Extension Requests</div>
+                        <div class="page-subtitle">Review requests for project completion deadline extensions</div>
+                    </div>
+                </div>
+                <div class="card" style="padding:0; overflow:hidden">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Project ID</th>
+                                <th>Current Deadline</th>
+                                <th>New Requested</th>
+                                <th>Reason</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="extRequestsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- ─── AUDIT LOG ─── -->
             <div class="dash-page" id="page-audit">
                 <div class="page-header">
@@ -734,6 +790,8 @@
             if (id === 'escalations') loadAdminEscalations();
             if (id === 'announcements') loadAdminAnnouncements();
             if (id === 'users') loadUsers();
+            if (id === 'convRequests') loadConversionRequests();
+            if (id === 'extRequests') loadExtensionRequests();
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -777,7 +835,6 @@
                     window.adminHeatmapManager.invalidateSize();
                     await window.adminHeatmapManager.loadData();
                 }
-                
                 // Update heatmapGrid stats
                 try {
                     const all = await window.JanSamadhanAPI.getAllGrievances();
@@ -1620,6 +1677,131 @@
             } catch (e) { showToast(e.message, "error"); }
         }
 
+        // ── Government Projects Logic ──
+
+        async function loadConversionRequests() {
+            console.log('🏗️ Loading project conversion requests...');
+            try {
+                const requests = await window.JanSamadhanAPI.getPendingProjectConversions();
+                console.log('📦 Received requests:', requests);
+                const tbody = document.getElementById('convRequestsTableBody');
+                if (!tbody) return;
+
+                if (!requests || !requests.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted)">No pending infrastructure project requests found.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = requests.map(r => `
+                    <tr class="row-hover">
+                        <td>
+                            <div style="font-weight:700;color:var(--primary)">${r.title}</div>
+                            <div style="font-size:.7rem;color:var(--text-muted)">ID: ${r.id}</div>
+                            <div style="font-size:.7rem;color:var(--text-muted)">Cat: ${r.category}</div>
+                        </td>
+                        <td>
+                            <div style="font-weight:600">${r.project_conversion_requested_by}</div>
+                            <div style="font-size:.7rem;color:var(--text-muted)">${new Date(r.project_conversion_requested_at).toLocaleString()}</div>
+                        </td>
+                        <td>
+                            <div style="font-weight:700;color:var(--success)">₹${r.project_conversion_details?.estimated_budget} Lakhs</div>
+                            <div style="font-size:.7rem;color:var(--text-muted)">Scale: ${r.project_conversion_details?.scale}</div>
+                        </td>
+                        <td style="max-width:300px">
+                            <div style="font-size:.85rem;line-height:1.4">${r.project_conversion_reason}</div>
+                            <div style="font-size:.75rem;margin-top:4px;color:var(--primary)">Suggested: ${r.project_conversion_details?.suggested_department}</div>
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:8px">
+                                <button class="btn btn-primary btn-sm" onclick="approveConversion('${r.id}')" title="Approve & Create Project">✔ Approve</button>
+                                <button class="btn btn-outline btn-sm" onclick="rejectConversion('${r.id}')" title="Reject Request">✖ Reject</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error('❌ Error loading conversions:', e);
+                const tbody = document.getElementById('convRequestsTableBody');
+                if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;color:red">Failed to load requests: ${e.message}</td></tr>`;
+            }
+        }
+
+        async function approveConversion(id) {
+            if (!confirm('Approve this project conversion?')) return;
+            try {
+                await window.JanSamadhanAPI.approveProjectConversion(id, 'Approved by admin');
+                showToast('Project created successfully', 'success');
+                loadConversionRequests();
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        async function rejectConversion(id) {
+            const reason = prompt('Enter rejection reason:');
+            if (!reason) return;
+            try {
+                await window.JanSamadhanAPI.rejectProjectConversion(id, reason);
+                showToast('Request rejected', 'info');
+                loadConversionRequests();
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        async function loadExtensionRequests() {
+            try {
+                const requests = await window.JanSamadhanAPI.getPendingExtensions();
+                const tbody = document.getElementById('extRequestsTableBody');
+                if (!tbody) return;
+
+                if (!requests || !requests.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px">No pending requests</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = requests.map(r => `
+                    <tr>
+                        <td>${r.project_id}</td>
+                        <td>Current</td>
+                        <td><strong>${new Date(r.new_deadline).toLocaleDateString()}</strong></td>
+                        <td>${r.reason}</td>
+                        <td>
+                            <div style="display:flex;gap:6px">
+                                <button class="btn btn-primary btn-sm" onclick="approveExtension('${r._id}')">Approve</button>
+                                <button class="btn btn-ghost btn-sm" onclick="rejectExtension('${r._id}')">Reject</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function approveExtension(requestId) {
+            if (!confirm('Approve this deadline extension?')) return;
+            try {
+                await window.JanSamadhanAPI.approveExtension(requestId);
+                showToast('Deadline updated', 'success');
+                loadExtensionRequests();
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        async function rejectExtension(requestId) {
+            const reason = prompt('Enter rejection reason:');
+            if (!reason) return;
+            try {
+                await window.JanSamadhanAPI.rejectExtension(requestId, reason);
+                showToast('Request rejected', 'info');
+                loadExtensionRequests();
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
     </script>
     <script>
         // Override showPage after all scripts load to add assignment and audit logic
@@ -1630,6 +1812,8 @@
             if (id === 'audit') loadAuditLog();
             if (id === 'ngoRequests') loadNGORequests();
             if (id === 'ngoVerification') loadNGOVerification();
+            if (id === 'convRequests') loadConversionRequests();
+            if (id === 'extRequests') loadExtensionRequests();
         };
 
         // ── Report Download (PDF / Excel) ──
