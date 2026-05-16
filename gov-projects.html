@@ -7,122 +7,292 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <style>
-        .projects-hero {
-            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
-            color: white;
-            padding: 60px 20px;
-            text-align: center;
-            border-radius: 0 0 var(--radius-xl) var(--radius-xl);
-            margin-bottom: 40px;
+        :root {
+            --glass: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --card-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05), 0 4px 10px -5px rgba(0, 0, 0, 0.03);
+            --card-hover-shadow: 0 20px 40px -10px rgba(37, 99, 235, 0.15);
         }
+
+        body {
+            background-color: #f8fafc;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.03) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, rgba(37, 99, 235, 0.02) 0, transparent 50%);
+            min-height: 100vh;
+        }
+
+        .projects-hero {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%);
+            color: white;
+            padding: 100px 20px;
+            text-align: center;
+            border-radius: 0 0 60px 60px;
+            margin-bottom: -60px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.2);
+        }
+
+        .projects-hero::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2v-4h4v-2h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2v-4h4v-2H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.5;
+        }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            padding: 0 24px;
+        }
+
+        .search-container {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
         .projects-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 25px;
-            padding: 20px;
-            max-width: 1400px;
-            margin: 0 auto;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 32px;
+            padding-bottom: 60px;
         }
+
         .project-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
+            background: white;
+            border-radius: 28px;
+            border: 1px solid rgba(226, 232, 240, 0.8);
             overflow: hidden;
-            transition: all var(--transition);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
+            box-shadow: var(--card-shadow);
+            animation: fadeIn 0.6s ease-out both;
         }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .project-card:hover {
-            transform: translateY(-10px);
-            box-shadow: var(--shadow-xl);
-            border-color: var(--primary-light);
+            transform: translateY(-12px);
+            box-shadow: var(--card-hover-shadow);
+            border-color: rgba(37, 99, 235, 0.2);
         }
+
         .project-img-placeholder {
-            height: 180px;
-            background: linear-gradient(45deg, #f1f5f9, #e2e8f0);
+            height: 200px;
+            background: linear-gradient(45deg, #f1f5f9 0%, #e2e8f0 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 3rem;
+            font-size: 4rem;
+            position: relative;
         }
+
+        .project-img-placeholder::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 50%;
+            background: linear-gradient(to top, rgba(255,255,255,1), transparent);
+        }
+
         .project-body {
-            padding: 24px;
+            padding: 30px;
             flex: 1;
+            display: flex;
+            flex-direction: column;
         }
-        .project-status-bar {
-            height: 8px;
-            background: #f1f5f9;
-            border-radius: 4px;
-            margin: 15px 0;
-            overflow: hidden;
-        }
-        .project-status-fill {
-            height: 100%;
-            background: var(--primary-light);
-            border-radius: 4px;
-            transition: width 1s ease;
-        }
+
         .dept-tag {
             font-size: 0.7rem;
             font-weight: 800;
             text-transform: uppercase;
-            color: var(--primary-light);
-            background: rgba(37,99,235,0.05);
-            padding: 4px 10px;
-            border-radius: 4px;
+            color: #2563eb;
+            background: rgba(37, 99, 235, 0.08);
+            padding: 6px 14px;
+            border-radius: 12px;
+            letter-spacing: 1px;
+        }
+
+        .project-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            margin: 16px 0 12px;
+            color: #1e293b;
+            line-height: 1.3;
+        }
+
+        .project-desc {
+            font-size: 0.95rem;
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .project-status-bar {
+            height: 10px;
+            background: #f1f5f9;
+            border-radius: 20px;
+            margin: 12px 0;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .project-status-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #2563eb);
+            border-radius: 20px;
+            transition: width 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .project-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 12px;
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #f8fafc;
+            padding: 6px 12px;
+            border-radius: 10px;
+            border: 1px solid #f1f5f9;
+        }
+
+        .status-pill {
+            padding: 6px 16px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        .project-title {
-            font-size: 1.25rem;
-            font-weight: 800;
-            margin: 10px 0;
-            color: var(--text);
-        }
-        .project-meta {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-top: auto;
-        }
-        .status-pill {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
+
+        .status-blue { background: #eff6ff; color: #1e40af; border: 1px solid #dbeafe; }
+        .status-green { background: #f0fdf4; color: #166534; border: 1px solid #dcfce7; }
+        .status-yellow { background: #fffbeb; color: #92400e; border: 1px solid #fef3c7; }
+
+        .btn-track {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 14px;
             font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
         }
-        .status-active { background: #dcfce7; color: #166534; }
-        .status-pending { background: #fef9c3; color: #854d0e; }
+
+        .btn-track:hover {
+            background: #1d4ed8;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+        }
+
+        .input-premium {
+            border: 2px solid #e2e8f0;
+            padding: 12px 20px;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        .input-premium:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Dark Mode Support */
+        [data-theme="dark"] {
+            --bg-body: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --glass: rgba(30, 41, 59, 0.8);
+        }
+        
+        [data-theme="dark"] body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+        }
+        
+        [data-theme="dark"] .project-card {
+            background: var(--bg-card);
+            border-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .project-title { color: white; }
+        [data-theme="dark"] .search-container { background: var(--glass); }
+        [data-theme="dark"] .input-premium { background: #0f172a; border-color: var(--border-color); color: white; }
+        [data-theme="dark"] .meta-item { background: #0f172a; border-color: var(--border-color); }
+        [data-theme="dark"] .top-nav { background: #0f172a !important; border-bottom: 1px solid var(--border-color) !important; }
     </style>
 </head>
 <body>
     <div class="toast-container"></div>
     
-    <div style="padding: 15px 24px; background: white; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1000;">
-        <div style="display: flex; gap: 12px;">
-            <button class="btn btn-ghost btn-sm" onclick="history.back()">← Back</button>
-            <button class="btn btn-outline btn-sm" onclick="window.location.href='index.html'">🏠 Home</button>
+    <div class="top-nav" style="padding: 12px 24px; background: white; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1000; transition: all 0.3s;">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; box-shadow: 0 4px 12px rgba(37,99,235,0.2);">🏛️</div>
+                <div style="font-size: 1.25rem; font-weight: 900; letter-spacing: -0.5px; color: var(--primary)">Jan<span style="color: #1e293b; transition: color 0.3s;">Samadhan</span></div>
+            </div>
+            <div style="display: flex; gap: 4px;">
+                <button class="btn btn-ghost btn-sm" onclick="history.back()" style="padding: 6px 12px">← Back</button>
+                <button class="btn btn-ghost btn-sm" onclick="window.location.href='index.html'" style="padding: 6px 12px">🏠 Home</button>
+            </div>
         </div>
-        <div class="logo-text-brand" style="font-size: 1.1rem; color: var(--primary)">JanSamadhan Portal</div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <button class="btn btn-outline btn-sm" onclick="toggleDark()" style="border-radius: 10px; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center;">🌙</button>
+            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; border-left: 2px solid #f1f5f9; padding-left: 15px; margin-left: 5px;">Citizen Portal</div>
+        </div>
     </div>
 
     <div class="projects-hero">
-        <h1 style="color:white; margin-bottom:15px">City Infrastructure Roadmap</h1>
-        <p style="opacity:0.9; font-size:1.1rem; max-width:800px; margin:0 auto">Track the progress of ongoing government projects, smart city initiatives, and public welfare works in your region.</p>
+        <h1 style="color:white; margin-bottom:15px; font-size: 3rem; font-weight: 900; letter-spacing: -1.5px;">City Infrastructure Roadmap</h1>
+        <p style="opacity:0.9; font-size:1.2rem; max-width:800px; margin:0 auto; font-weight: 500;">Real-time transparency into the development projects shaping our city's future.</p>
     </div>
 
     <div class="container">
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:30px; flex-wrap:wrap; gap:20px">
-            <div>
-                <div class="section-title">Active Government Projects</div>
-                <p style="color:var(--text-muted); font-size:0.9rem">Search projects or enter a Project ID to track progress.</p>
+        <div class="search-container">
+            <div style="flex: 1; min-width: 300px;">
+                <h3 style="margin-bottom: 8px; font-weight: 800; color: #0f172a">🔍 Tracking & Search</h3>
+                <p style="color: #64748b; font-size: 0.9rem">Search projects or enter a Project ID to track progress.</p>
             </div>
-            <div style="display:flex; gap:12px; flex-wrap:wrap">
-                <div style="position:relative">
-                    <input type="text" id="trackProjInput" placeholder="Enter Project ID (PROJ-...)" class="form-control" style="width:250px; padding-right:40px">
-                    <button onclick="trackProjectID()" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1.2rem">🔍</button>
+            
+            <div style="display:flex; gap:16px; flex-wrap:wrap; flex: 2; justify-content: flex-end;">
+                <div style="position:relative; flex: 1; max-width: 300px;">
+                    <input type="text" id="trackProjInput" placeholder="Project ID (PROJ-...)" class="input-premium">
+                    <button onclick="trackProjectID()" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.6">🚀</button>
                 </div>
-                <input type="text" id="projSearch" placeholder="Filter by name/region..." class="form-control" style="width:250px" oninput="filterProjects()">
+                <div style="position:relative; flex: 1; max-width: 300px;">
+                    <input type="text" id="projSearch" placeholder="Filter by name/region..." class="input-premium" oninput="filterProjects()">
+                </div>
             </div>
         </div>
 
@@ -165,7 +335,7 @@
                 return;
             }
 
-            grid.innerHTML = projects.map(p => {
+            grid.innerHTML = projects.map((p, index) => {
                 const progress = p.progress_percentage || 0;
                 const icons = {
                     'Infrastructure': '🏗️',
@@ -176,36 +346,39 @@
                     'Healthcare': '🏥'
                 };
                 const icon = icons[p.department] || '🏗️';
+                const statusClass = window.getProjectStatusClass ? window.getProjectStatusClass(p.status) : 'status-blue';
 
                 return `
-                    <div class="project-card">
+                    <div class="project-card" style="animation-delay: ${index * 0.1}s">
                         <div class="project-img-placeholder">${icon}</div>
                         <div class="project-body">
                             <div style="display:flex; justify-content:space-between; align-items:center">
                                 <span class="dept-tag">${p.department}</span>
-                                <span class="status-pill ${p.status === 'Completed' ? 'status-active' : 'status-pending'}">${p.status}</span>
+                                <span class="status-pill ${statusClass}">${p.status}</span>
                             </div>
                             <h3 class="project-title">${p.title}</h3>
-                            <p style="font-size:0.88rem; color:var(--text-muted); line-height:1.5; margin-bottom:15px">
+                            <p class="project-desc">
                                 ${p.description.substring(0, 100)}${p.description.length > 100 ? '...' : ''}
                             </p>
                             
                             <div style="margin-bottom:20px">
-                                <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:700; margin-bottom:6px">
-                                    <span>Completion</span>
-                                    <span>${progress}%</span>
+                                <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-weight:800; margin-bottom:8px">
+                                    <span style="color: #1e293b">Construction Progress</span>
+                                    <span style="color: #2563eb">${progress}%</span>
                                 </div>
                                 <div class="project-status-bar">
                                     <div class="project-status-fill" style="width:${progress}%"></div>
                                 </div>
                             </div>
 
-                            <div class="project-meta">
-                                <span>📍 ${p.region}</span>
-                                <span>Target: ${formatDeadline(p.current_deadline)}</span>
+                            <div class="project-meta-row">
+                                <div class="meta-item">📍 ${p.region}</div>
+                                <div class="meta-item">📅 ${formatDeadline(p.current_deadline)}</div>
                             </div>
 
-                            <button class="btn btn-primary w-full" style="margin-top:20px" onclick="window.location.href='project-details.html?id=${p.project_id}'">View Full Details →</button>
+                            <button class="btn-track" style="margin-top:24px; width: 100%" onclick="window.location.href='project-details.html?id=${p.project_id}'">
+                                View Roadmap Details →
+                            </button>
                         </div>
                     </div>
                 `;
@@ -239,6 +412,12 @@
                 showToast("Invalid Project ID", "error");
             }
         }
+
+        // Theme initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('js_theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        });
     </script>
 </body>
 </html>

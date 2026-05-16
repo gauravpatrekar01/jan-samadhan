@@ -163,7 +163,7 @@ async def reject_project_conversion(
 # 2. Project Management
 
 @router.get("/")
-async def get_projects(user: dict = Depends(get_current_user)):
+async def get_projects():
     projects = []
     for doc in db.get_collection("projects").find({}):
         doc["_id"] = str(doc["_id"])
@@ -196,7 +196,7 @@ async def get_pending_extensions(user: dict = Depends(require_admin)):
     return {"success": True, "data": extensions}
 
 @router.get("/{project_id}")
-async def get_project(project_id: str, user: dict = Depends(get_current_user)):
+async def get_project(project_id: str):
     project = db.get_collection("projects").find_one({"project_id": project_id})
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
