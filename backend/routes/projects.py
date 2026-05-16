@@ -21,6 +21,7 @@ async def request_project_conversion(
     budget: float,
     duration: str,
     department: str,
+    deadline: str,
     user: dict = Depends(require_officer)
 ):
     complaints = db.get_collection("complaints")
@@ -39,7 +40,8 @@ async def request_project_conversion(
             "urgency": urgency,
             "estimated_budget": budget,
             "estimated_duration": duration,
-            "suggested_department": department
+            "suggested_department": department,
+            "estimated_deadline": deadline
         }
     }
     
@@ -94,6 +96,10 @@ async def approve_project_conversion(
     # Assuming duration is something like "6 months" or "180 days" - for simplicity let's use 180 days default if parsing fails
     expected_completion = now # placeholder
     
+    # Use the suggested deadline from conversion details
+    suggested_deadline = details.get("estimated_deadline")
+    deadline_dt = datetime.fromisoformat(suggested_deadline) if suggested_deadline else now
+    
     project_data = {
         "project_id": project_id,
         "title": complaint["title"],
@@ -109,9 +115,9 @@ async def approve_project_conversion(
         "progress_percentage": 0,
         "geo_location": complaint.get("location_geo"),
         "start_date": now.isoformat(),
-        "expected_completion": now.isoformat(), # Should be calculated
-        "current_deadline": now.isoformat(),
-        "original_deadline": now.isoformat(),
+        "expected_completion": deadline_dt.isoformat(),
+        "current_deadline": deadline_dt.isoformat(),
+        "original_deadline": deadline_dt.isoformat(),
         "total_extensions": 0,
         "delay_status": False,
         "milestones": [],
@@ -160,6 +166,18 @@ async def reject_project_conversion(
 async def get_projects(user: dict = Depends(get_current_user)):
     projects = list(db.get_collection("projects").find({}, {"_id": 0}))
     return {"success": True, "data": projects}
+
+@router.get("/pending-extensions")
+async def get_pending_extensions(user: dict = Depends(require_admin)):
+    extensions = []
+    projects_col = db.get_collection("projects")
+    for doc in db.get_collection("extension_requests").find({"status": "pending"}):
+        doc["_id"] = str(doc["_id"])
+        # Fetch current deadline from project
+        proj = projects_col.find_one({"project_id": doc["project_id"]}, {"current_deadline": 1})
+        doc["current_deadline"] = proj["current_deadline"] if proj else "N/A"
+        extensions.append(doc)
+    return {"success": True, "data": extensions}
 
 @router.get("/{project_id}")
 async def get_project(project_id: str, user: dict = Depends(get_current_user)):
@@ -261,10 +279,6 @@ async def request_deadline_extension(
     
     return {"success": True, "message": "Extension request submitted"}
 
-@router.get("/pending-extensions")
-async def get_pending_extensions(user: dict = Depends(require_admin)):
-    extensions = list(db.get_collection("extension_requests").find({"status": "pending"}, {"_id": 0}))
-    return {"success": True, "data": extensions}
 
 @router.post("/approve-extension")
 async def approve_extension(

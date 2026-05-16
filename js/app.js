@@ -158,6 +158,20 @@ window.JanSamadhan = {
             } catch (e) {
                 return "";
             }
+        },
+        getProjectStatusClass(status) {
+            const blue = ["Project Approved", "Tender Issued", "Contractor Assigned", "Site Survey Started", "Work Started", "Under Construction", "Milestone In Progress", "Inspection Pending", "Quality Verification", "Reinspection Pending"];
+            const yellow = ["Complaint Submitted", "Under Officer Review", "Project Conversion Requested", "Awaiting Admin Approval", "Budget Approval Pending"];
+            const orange = ["Delayed", "Deadline Extension Requested", "Deadline Extension Approved", "Rework Required"];
+            const red = ["Escalated"];
+            const green = ["Budget Approved", "Completed"];
+
+            if (blue.includes(status)) return "status-blue";
+            if (yellow.includes(status)) return "status-yellow";
+            if (orange.includes(status)) return "status-orange";
+            if (red.includes(status)) return "status-red";
+            if (green.includes(status)) return "status-green";
+            return "status-blue";
         }
     }
 };
@@ -257,6 +271,7 @@ function renderProgressBar(percent) {
 // Global aliases for backward compatibility
 window.formatDeadline = window.JanSamadhan.utils.formatDeadline;
 window.getDeadlineBadge = window.JanSamadhan.utils.getDeadlineBadge;
+window.getProjectStatusClass = window.JanSamadhan.utils.getProjectStatusClass;
 window.timeAgo = window.JanSamadhan.utils.timeAgo;
 window.priorityBadge = window.JanSamadhan.utils.priorityBadge;
 window.statusBadge = window.JanSamadhan.utils.statusBadge;

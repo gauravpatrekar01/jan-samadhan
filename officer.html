@@ -499,6 +499,10 @@
                     <label class="form-label">Suggested Department</label>
                     <input type="text" class="form-control" id="convDept" placeholder="e.g. Public Works Department">
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Target Completion Date (Deadline)</label>
+                    <input type="date" class="form-control" id="convDeadline">
+                </div>
                 <button class="btn btn-primary w-full" onclick="submitProjectConversion()">🚀 Submit Request to Admin</button>
             </div>
         </div>
@@ -885,11 +889,13 @@
                 urgency: document.getElementById('convUrgency').value,
                 budget: parseFloat(document.getElementById('convBudget').value) || 0,
                 duration: document.getElementById('convDuration').value,
-                department: document.getElementById('convDept').value
+                department: document.getElementById('convDept').value,
+                deadline: document.getElementById('convDeadline').value
             };
 
             if (!data.reason) return showToast('Please provide a reason', 'warning');
             if (data.budget <= 0) return showToast('Please provide an estimated budget', 'warning');
+            if (!data.deadline) return showToast('Please select a target deadline', 'warning');
 
             try {
                 const res = await window.JanSamadhanAPI.requestProjectConversion(_convertGID, data);

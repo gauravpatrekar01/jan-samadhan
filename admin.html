@@ -1750,10 +1750,14 @@
         }
 
         async function loadExtensionRequests() {
+            console.log('⏳ Loading pending extension requests...');
+            const tbody = document.getElementById('extRequestsTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px"><span class="spinner-border spinner-border-sm"></span> Loading...</td></tr>';
+
             try {
                 const requests = await window.JanSamadhanAPI.getPendingExtensions();
-                const tbody = document.getElementById('extRequestsTableBody');
-                if (!tbody) return;
+                console.log('📦 Extension requests received:', requests);
 
                 if (!requests || !requests.length) {
                     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px">No pending requests</td></tr>';
@@ -1762,20 +1766,31 @@
 
                 tbody.innerHTML = requests.map(r => `
                     <tr>
-                        <td>${r.project_id}</td>
-                        <td>Current</td>
-                        <td><strong>${new Date(r.new_deadline).toLocaleDateString()}</strong></td>
-                        <td>${r.reason}</td>
                         <td>
-                            <div style="display:flex;gap:6px">
-                                <button class="btn btn-primary btn-sm" onclick="approveExtension('${r._id}')">Approve</button>
-                                <button class="btn btn-ghost btn-sm" onclick="rejectExtension('${r._id}')">Reject</button>
+                            <div style="font-weight:700">${r.project_id}</div>
+                        </td>
+                        <td>
+                            <div style="color:var(--text-muted)">${r.current_deadline !== 'N/A' ? new Date(r.current_deadline).toLocaleDateString() : 'N/A'}</div>
+                        </td>
+                        <td>
+                            <div style="font-weight:800; color:var(--primary)">${new Date(r.new_deadline).toLocaleDateString()}</div>
+                        </td>
+                        <td>
+                            <div style="font-size:0.85rem">${r.reason}</div>
+                            <div style="font-size:0.75rem; color:var(--text-muted)">Cat: ${r.reason_category}</div>
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:8px">
+                                <button class="btn btn-primary btn-sm" onclick="approveExtension('${r._id}')">✔ Approve</button>
+                                <button class="btn btn-outline btn-sm" onclick="rejectExtension('${r._id}')">✖ Reject</button>
                             </div>
                         </td>
                     </tr>
                 `).join('');
             } catch (e) {
-                console.error(e);
+                console.error('❌ Error loading extensions:', e);
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--danger)">Failed to load requests: ${e.message}</td></tr>`;
+                showToast('Failed to load extension requests', 'error');
             }
         }
 
