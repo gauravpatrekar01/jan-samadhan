@@ -120,6 +120,44 @@ window.JanSamadhan = {
                 if (count > 0) return `${count}${i} ago`;
             }
             return 'N/A';
+        },
+        formatDeadline(deadline) {
+            if (!deadline) return "No deadline set";
+            try {
+                const d = new Date(deadline);
+                if (isNaN(d.getTime())) return deadline;
+                
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const day = d.getDate().toString().padStart(2, '0');
+                const month = months[d.getMonth()];
+                const year = d.getFullYear();
+                let hours = d.getHours();
+                const minutes = d.getMinutes().toString().padStart(2, '0');
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12;
+                hours = hours ? hours : 12; 
+                
+                return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
+            } catch (e) {
+                return deadline;
+            }
+        },
+        getDeadlineBadge(deadline) {
+            if (!deadline) return "";
+            try {
+                const now = new Date();
+                const d = new Date(deadline);
+                if (isNaN(d.getTime())) return "";
+
+                if (d < now) return `<span class="badge badge-danger">🚨 Overdue</span>`;
+                
+                const diff = (d - now) / (1000 * 60 * 60);
+                if (diff < 12) return `<span class="badge badge-warning">⏰ Urgent</span>`;
+                
+                return `<span class="badge badge-success">🕒 On Track</span>`;
+            } catch (e) {
+                return "";
+            }
         }
     }
 };
@@ -216,27 +254,12 @@ function renderProgressBar(percent) {
     return `<div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${percent}%"></div></div>`;
 }
 
-function formatDeadline(deadline) {
-    if (!deadline) return "No deadline set";
-    const d = new Date(deadline);
-    return d.toLocaleString(navigator.language, {
-        month: 'short', day: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-    });
-}
-
-function getDeadlineBadge(deadline) {
-    if (!deadline) return "";
-    const now = new Date();
-    const d = new Date(deadline);
-
-    if (d < now) return `<span class="badge badge-error">🚨 Overdue</span>`;
-    
-    const diff = (d - now) / (1000 * 60 * 60);
-    if (diff < 6) return `<span class="badge badge-warning">⏰ Urgent</span>`;
-    
-    return `<span class="badge badge-success">🕒 On Time</span>`;
-}
+// Global aliases for backward compatibility
+window.formatDeadline = window.JanSamadhan.utils.formatDeadline;
+window.getDeadlineBadge = window.JanSamadhan.utils.getDeadlineBadge;
+window.timeAgo = window.JanSamadhan.utils.timeAgo;
+window.priorityBadge = window.JanSamadhan.utils.priorityBadge;
+window.statusBadge = window.JanSamadhan.utils.statusBadge;
 
 // Global Modal Management
 function openModal(id) {

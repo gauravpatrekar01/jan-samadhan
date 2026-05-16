@@ -892,9 +892,19 @@
       <div><span style="color:var(--text-muted);font-size:.75rem">CATEGORY</span><br><strong>${categoryIcon(g.category)} ${safeCategory}</strong></div>
       <div><span style="color:var(--text-muted);font-size:.75rem">REGION</span><br><strong>${safeRegion}</strong></div>
       <div><span style="color:var(--text-muted);font-size:.75rem">LOCATION</span><br><strong>📍 ${safeLocation}</strong></div>
-      <div><span style="color:var(--text-muted);font-size:.75rem">FILED ON</span><br><strong>${utils.formatDate ? utils.formatDate(g.createdAt || g.created_at || g.timestamp) : (g.createdAt || g.created_at || g.timestamp || "N/A")}</strong></div>
+      <div><span style="color:var(--text-muted);font-size:.75rem">FILED ON</span><br><strong>${new Date(g.createdAt || g.created_at || g.timestamp).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong></div>
       <div style="background:rgba(249,115,22,.05);padding:8px;border-radius:4px"><span style="color:var(--text-muted);font-size:.75rem">🕒 SLA DEADLINE</span><br><strong>${utils.formatDeadline ? utils.formatDeadline(g.sla_deadline) : (g.sla_deadline || "No deadline")}</strong><br>${utils.getDeadlineBadge ? utils.getDeadlineBadge(g.sla_deadline) : ""}</div>
     </div>
+    
+    ${g.linked_project_id ? `
+        <div style="background:linear-gradient(135deg, rgba(22,163,74,0.1), rgba(22,163,74,0.05)); padding:16px; border-radius:10px; margin-bottom:16px; border:1px solid rgba(22,163,74,0.2); display:flex; align-items:center; justify-content:space-between">
+            <div>
+                <div style="font-size:0.7rem; font-weight:800; color:var(--success); text-transform:uppercase; letter-spacing:0.5px">Infrastructure Project Initialized</div>
+                <div style="font-size:0.9rem; font-weight:700; margin-top:2px">This complaint is now a Govt Project: ${g.linked_project_id}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px">You can track long-term progress here.</div>
+            </div>
+        </div>
+    ` : ''}
     ${renderMarathiSummaryBlock(g, "detail")}
     <div id="full-description-${gid}" style="background:var(--bg);padding:14px;border-radius:8px;margin-bottom:16px;font-size:.9rem;line-height:1.6;display:${g.marathi_summary ? "none" : "block"}">${safeDescription}</div>
     ` +
@@ -1214,21 +1224,52 @@
 
       // ── Track (in dashboard) ──
       async function dashTrack() {
-        const id = document
-          .getElementById("dashTrackInput")
-          ?.value.trim()
-          .toUpperCase();
+        const id = document.getElementById("dashTrackInput")?.value.trim().toUpperCase();
         const result = document.getElementById("dashTrackResult");
         if (!id) {
-          showToast("Enter a Grievance ID", "warning");
+          showToast("Enter an ID", "warning");
           return;
         }
+        
+        const isProject = id.startsWith('PROJ-');
+        
         try {
-          const g = await window.JanSamadhanAPI.getGrievanceByID(id);
-          if (!g) {
-            result.innerHTML = `<div style="background:rgba(220,38,38,.05);padding:16px;border-radius:8px;border-left:3px solid var(--danger);text-align:center"><div style="color:var(--danger);font-weight:700;margin-bottom:8px">❌ Grievance Not Found</div><div style="font-size:.85rem;color:var(--text-muted)">ID: <strong>${id}</strong> | Check the ID and try again</div></div>`;
+          let data;
+          if (isProject) {
+              data = await window.JanSamadhanAPI.getProject(id);
+          } else {
+              data = await window.JanSamadhanAPI.getGrievanceByID(id);
+          }
+          
+          if (!data) {
+            result.innerHTML = `<div style="background:rgba(220,38,38,.05);padding:16px;border-radius:8px;border-left:3px solid var(--danger);text-align:center"><div style="color:var(--danger);font-weight:700;margin-bottom:8px">❌ ${isProject ? 'Project' : 'Grievance'} Not Found</div><div style="font-size:.85rem;color:var(--text-muted)">ID: <strong>${id}</strong></div></div>`;
             return;
           }
+
+          if (isProject) {
+            const p = data;
+            result.innerHTML = `
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+                    <span class="badge badge-success">🏗️ Infrastructure</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted)">ID: ${p.project_id}</span>
+                </div>
+                <div style="font-weight:700; font-size:0.95rem; margin-bottom:8px">${p.title}</div>
+                <div style="margin-bottom:12px">
+                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:4px">
+                        <span>Progress</span>
+                        <span>${p.progress_percentage}%</span>
+                    </div>
+                    ${renderProgressBar(p.progress_percentage)}
+                </div>
+                <div style="font-size:0.8rem; color:var(--text-muted)">
+                    📍 ${p.region} | Status: <strong>${p.status}</strong>
+                </div>
+                <button class="btn btn-primary btn-sm w-full" style="margin-top:12px" onclick="window.location.href='project-details.html?id=${p.project_id}'">Track Roadmap →</button>
+            `;
+            return;
+          }
+
+          const g = data;
           const gid = g.id || g.grievanceID || id;
           const displayID = g.grievanceID || g.id;
           result.innerHTML = `

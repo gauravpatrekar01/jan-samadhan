@@ -1560,8 +1560,14 @@
       btn.innerText = '⏳ Tracking...';
 
       let g = null;
+      let isProject = id.startsWith('PROJ-');
+      
       try {
-        g = await window.JanSamadhanAPI.getGrievanceByID(id);
+        if (isProject) {
+            g = await window.JanSamadhanAPI.getProject(id);
+        } else {
+            g = await window.JanSamadhanAPI.getGrievanceByID(id);
+        }
       } catch (e) {
         console.error(e);
       }
@@ -1595,15 +1601,58 @@
         result.innerHTML = `
       <div style="text-align:center;padding:40px;background:rgba(220,38,38,.05);border-radius:12px;border:2px dashed var(--danger)">
         <div style="font-size:3rem;margin-bottom:12px">❌</div>
-        <div style="font-weight:700;color:var(--danger);font-size:1.1rem">Grievance Not Found</div>
+        <div style="font-weight:700;color:var(--danger);font-size:1.1rem">${isProject ? 'Project' : 'Grievance'} Not Found</div>
         <div style="font-size:.9rem;color:var(--text-muted);margin-top:12px;line-height:1.6">
-          We could not find a grievance with ID <strong>${id}</strong>.<br>
+          We could not find a ${isProject ? 'project' : 'grievance'} with ID <strong>${id}</strong>.<br>
           Please verify the ID and try again.<br>
-          <span style="font-size:.85rem;margin-top:8px;display:block">ID Format: <strong>JSM-YYYY-XXXX</strong> (e.g., JSM-2026-A1B2C3D4)</span>
+          <span style="font-size:.85rem;margin-top:8px;display:block">Format: <strong>${isProject ? 'PROJ-XXXXXXXX' : 'JSM-YYYY-XXXX'}</strong></span>
         </div>
         <button class="btn btn-ghost" onclick="document.getElementById('trackInput').focus()" style="margin-top:16px">Try Again</button>
       </div>
     `;
+        return;
+      }
+
+      if (isProject) {
+        result.className = 'visible';
+        const progress = g.progress_percentage || 0;
+        result.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <h3 style="color:var(--primary-light)">🏗️ ${g.project_id}</h3>
+            <span class="badge" style="background:var(--primary-light)15; color:var(--primary-light)">Infrastructure Project</span>
+          </div>
+          <div style="background:var(--bg); padding:16px; border-radius:10px; margin-bottom:16px">
+            <div style="font-weight:700; font-size:1rem; margin-bottom:4px">${g.title}</div>
+            <div style="font-size:0.85rem; color:var(--text-muted)">📍 ${g.region} | Dept: ${g.department}</div>
+          </div>
+          
+          <div style="margin-bottom:20px">
+            <div style="display:flex; justify-content:between; margin-bottom:6px">
+              <span style="font-size:0.85rem; font-weight:700">Project Progress</span>
+              <span style="font-size:0.85rem; font-weight:700; margin-left:auto">${progress}%</span>
+            </div>
+            ${renderProgressBar(progress)}
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px; display:flex; justify-content:space-between">
+                <span>Status: <strong>${g.status}</strong></span>
+                <span>Target: ${new Date(g.end_date).toLocaleDateString()}</span>
+            </div>
+          </div>
+
+          ${g.progress_updates && g.progress_updates.length > 0 ? `
+            <div style="border-top:1px solid var(--border); padding-top:16px">
+                <div style="font-size:0.85rem; font-weight:700; margin-bottom:10px">Latest Update</div>
+                <div style="background:rgba(22,163,74,0.05); padding:12px; border-radius:8px">
+                    <div style="font-weight:600; font-size:0.88rem; color:var(--success)">${g.progress_updates[g.progress_updates.length-1].update_title}</div>
+                    <div style="font-size:0.82rem; margin-top:4px">${g.progress_updates[g.progress_updates.length-1].description}</div>
+                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:8px">${new Date(g.progress_updates[g.progress_updates.length-1].timestamp).toLocaleString()}</div>
+                </div>
+            </div>
+          ` : ''}
+          
+          <div style="text-align:center; margin-top:20px">
+            <button class="btn btn-primary btn-sm" onclick="window.location.href='project-details.html?id=${g.project_id}'">View Full Project Roadmap →</button>
+          </div>
+        `;
         return;
       }
 

@@ -149,6 +149,24 @@
     border-radius: 10px;
 }
 
+/* ── Generic Badges ── */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    border: 1px solid transparent;
+}
+.badge-danger { background: #fee2e2; color: #dc2626; border-color: #fecaca; }
+.badge-warning { background: #fff7ed; color: #d97706; border-color: #ffedd5; }
+.badge-success { background: #f0fdf4; color: #16a34a; border-color: #dcfce7; }
+.badge-info { background: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
+.badge-error { background: #fee2e2; color: #dc2626; border-color: #fecaca; } /* Alias */
+
 .sidebar-footer {
     padding: 16px;
     border-top: 1px solid rgba(255, 255, 255, .07);

@@ -737,8 +737,18 @@
                         <div style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:16px">
                             <div style="color:var(--text-muted);font-size:.75rem;margin-bottom:4px">CITIZEN INFO</div>
                             <div style="font-weight:600">${g.name || 'Unknown'} (${g.citizen_email || g.email || 'N/A'})</div>
-                            <div style="font-size:.75rem;color:var(--text-muted)">📅 Filed: ${new Date(g.created_at || g.createdAt).toLocaleString('en-IN')}</div>
+                            <div style="font-size:.75rem;color:var(--text-muted)">📅 Filed: ${new Date(g.created_at || g.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
                         </div>
+
+                        ${g.linked_project_id ? `
+                            <div style="background:linear-gradient(135deg, rgba(37,99,235,0.1), rgba(37,99,235,0.05)); padding:16px; border-radius:10px; margin-bottom:16px; border:1px solid rgba(37,99,235,0.2); display:flex; align-items:center; justify-content:space-between">
+                                <div>
+                                    <div style="font-size:0.7rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px">Infrastructure Project Active</div>
+                                    <div style="font-size:0.9rem; font-weight:700; margin-top:2px">Project ID: ${g.linked_project_id}</div>
+                                </div>
+                                <button class="btn btn-primary btn-sm" onclick="window.location.href='project-details.html?id=${g.linked_project_id}'">🏗️ View Project</button>
+                            </div>
+                        ` : ''}
 
                         ${renderMarathiSummaryBlock(g, 'modal')}
 
@@ -774,7 +784,7 @@
                                         <div style="padding:8px 12px;background:var(--bg);border-radius:8px;border-left:3px solid ${idx === 0 ? 'var(--primary-light)' : 'var(--border)'}">
                                             <div style="display:flex;justify-content:space-between;font-size:.8rem">
                                                 <span style="font-weight:700;color:var(--primary-light)">${h.status.toUpperCase().replace('_', ' ')}</span>
-                                                <span style="color:var(--text-muted)">${new Date(h.timestamp).toLocaleString('en-IN')}</span>
+                                                <span style="color:var(--text-muted)">${new Date(h.timestamp).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                                             </div>
                                             <div style="font-size:.75rem;margin-top:2px">${h.remarks || 'No remarks'}</div>
                                         </div>
