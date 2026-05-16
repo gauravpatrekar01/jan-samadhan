@@ -53,7 +53,9 @@
       try {
         const response = await window.JanSamadhanAPI.adminLogin({ email, password });
         showToast('Admin authenticated successfully.', 'success');
-        if (response && response.data && response.data.role === 'admin') {
+        
+        // The API returns the user object directly, so check for role on the response
+        if (response && response.role === 'admin') {
           window.location.href = 'admin.html';
         }
       } catch (err) {
