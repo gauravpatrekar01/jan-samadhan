@@ -124,20 +124,22 @@ window.JanSamadhan = {
         formatDeadline(deadline) {
             if (!deadline) return "No deadline set";
             try {
-                const d = new Date(deadline);
+                // Handle MongoDB space format (e.g. "2026-06-07 00:00:00")
+                let dateStr = deadline;
+                if (typeof deadline === 'string' && deadline.includes(' ') && !deadline.includes('T')) {
+                    dateStr = deadline.replace(' ', 'T');
+                }
+                
+                const d = new Date(dateStr);
                 if (isNaN(d.getTime())) return deadline;
                 
                 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                 const day = d.getDate().toString().padStart(2, '0');
                 const month = months[d.getMonth()];
                 const year = d.getFullYear();
-                let hours = d.getHours();
-                const minutes = d.getMinutes().toString().padStart(2, '0');
-                const ampm = hours >= 12 ? 'PM' : 'AM';
-                hours = hours % 12;
-                hours = hours ? hours : 12; 
                 
-                return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
+                // For target dates, usually just the date is enough
+                return `${day} ${month} ${year}`;
             } catch (e) {
                 return deadline;
             }

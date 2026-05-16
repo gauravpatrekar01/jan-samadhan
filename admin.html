@@ -1770,10 +1770,10 @@
                             <div style="font-weight:700">${r.project_id}</div>
                         </td>
                         <td>
-                            <div style="color:var(--text-muted)">${r.current_deadline !== 'N/A' ? new Date(r.current_deadline).toLocaleDateString() : 'N/A'}</div>
+                            <div style="color:var(--text-muted)">${formatDeadline(r.current_deadline)}</div>
                         </td>
                         <td>
-                            <div style="font-weight:800; color:var(--primary)">${new Date(r.new_deadline).toLocaleDateString()}</div>
+                            <div style="font-weight:800; color:var(--primary)">${formatDeadline(r.new_deadline)}</div>
                         </td>
                         <td>
                             <div style="font-size:0.85rem">${r.reason}</div>

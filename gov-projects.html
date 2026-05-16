@@ -202,7 +202,7 @@
 
                             <div class="project-meta">
                                 <span>📍 ${p.region}</span>
-                                <span>Target: ${new Date(p.end_date).toLocaleDateString('en-IN', {month:'short', year:'numeric'})}</span>
+                                <span>Target: ${formatDeadline(p.current_deadline)}</span>
                             </div>
 
                             <button class="btn btn-primary w-full" style="margin-top:20px" onclick="window.location.href='project-details.html?id=${p.project_id}'">View Full Details →</button>

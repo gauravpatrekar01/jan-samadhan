@@ -955,7 +955,7 @@
                                 <div class="gc-meta">
                                     <span class="status-pill ${getProjectStatusClass(p.status)}" style="font-size:0.65rem; padding: 2px 8px; border-radius: 10px; font-weight: 700;">${p.status}</span>
                                     <span style="font-size:.78rem;color:var(--text-muted)">🏢 ${p.department}</span>
-                                    <span style="font-size:.78rem;color:var(--text-muted)">📅 Deadline: ${new Date(p.current_deadline).toLocaleDateString()}</span>
+                                    <span style="font-size:.78rem;color:var(--text-muted)">📅 Deadline: ${formatDeadline(p.current_deadline)}</span>
                                 </div>
                             </div>
                             <div style="text-align:right">

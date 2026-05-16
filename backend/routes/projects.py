@@ -164,7 +164,14 @@ async def reject_project_conversion(
 
 @router.get("/")
 async def get_projects(user: dict = Depends(get_current_user)):
-    projects = list(db.get_collection("projects").find({}, {"_id": 0}))
+    projects = []
+    for doc in db.get_collection("projects").find({}):
+        doc["_id"] = str(doc["_id"])
+        # Ensure dates are ISO strings
+        for date_field in ["current_deadline", "original_deadline", "expected_completion", "start_date", "updatedAt"]:
+            if date_field in doc and isinstance(doc[date_field], datetime):
+                doc[date_field] = doc[date_field].isoformat()
+        projects.append(doc)
     return {"success": True, "data": projects}
 
 @router.get("/pending-extensions")
@@ -173,17 +180,32 @@ async def get_pending_extensions(user: dict = Depends(require_admin)):
     projects_col = db.get_collection("projects")
     for doc in db.get_collection("extension_requests").find({"status": "pending"}):
         doc["_id"] = str(doc["_id"])
+        
+        # Ensure new_deadline is ISO string
+        if isinstance(doc.get("new_deadline"), datetime):
+            doc["new_deadline"] = doc["new_deadline"].isoformat()
+            
         # Fetch current deadline from project
         proj = projects_col.find_one({"project_id": doc["project_id"]}, {"current_deadline": 1})
-        doc["current_deadline"] = proj["current_deadline"] if proj else "N/A"
+        if proj and isinstance(proj.get("current_deadline"), datetime):
+             doc["current_deadline"] = proj["current_deadline"].isoformat()
+        else:
+             doc["current_deadline"] = proj.get("current_deadline", "N/A") if proj else "N/A"
+             
         extensions.append(doc)
     return {"success": True, "data": extensions}
 
 @router.get("/{project_id}")
 async def get_project(project_id: str, user: dict = Depends(get_current_user)):
-    project = db.get_collection("projects").find_one({"project_id": project_id}, {"_id": 0})
+    project = db.get_collection("projects").find_one({"project_id": project_id})
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+    
+    project["_id"] = str(project["_id"])
+    for date_field in ["current_deadline", "original_deadline", "expected_completion", "start_date", "updatedAt"]:
+        if date_field in project and isinstance(project[date_field], datetime):
+            project[date_field] = project[date_field].isoformat()
+            
     return {"success": True, "data": project}
 
 @router.put("/{project_id}/update")
