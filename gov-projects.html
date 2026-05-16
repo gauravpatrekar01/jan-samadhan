@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Government Projects – JanSamadhan</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <style>
+        .projects-hero {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+            border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+            margin-bottom: 40px;
+        }
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .project-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            transition: all var(--transition);
+            display: flex;
+            flex-direction: column;
+        }
+        .project-card:hover {
+            transform: translateY(-10px);
+            box-shadow: var(--shadow-xl);
+            border-color: var(--primary-light);
+        }
+        .project-img-placeholder {
+            height: 180px;
+            background: linear-gradient(45deg, #f1f5f9, #e2e8f0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+        }
+        .project-body {
+            padding: 24px;
+            flex: 1;
+        }
+        .project-status-bar {
+            height: 8px;
+            background: #f1f5f9;
+            border-radius: 4px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        .project-status-fill {
+            height: 100%;
+            background: var(--primary-light);
+            border-radius: 4px;
+            transition: width 1s ease;
+        }
+        .dept-tag {
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--primary-light);
+            background: rgba(37,99,235,0.05);
+            padding: 4px 10px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+        }
+        .project-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin: 10px 0;
+            color: var(--text);
+        }
+        .project-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: auto;
+        }
+        .status-pill {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .status-active { background: #dcfce7; color: #166534; }
+        .status-pending { background: #fef9c3; color: #854d0e; }
+    </style>
+</head>
+<body>
+    <div class="toast-container"></div>
+    
+    <div style="padding: 15px 24px; background: white; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1000;">
+        <div style="display: flex; gap: 12px;">
+            <button class="btn btn-ghost btn-sm" onclick="history.back()">← Back</button>
+            <button class="btn btn-outline btn-sm" onclick="window.location.href='index.html'">🏠 Home</button>
+        </div>
+        <div class="logo-text-brand" style="font-size: 1.1rem; color: var(--primary)">JanSamadhan Portal</div>
+    </div>
+
+    <div class="projects-hero">
+        <h1 style="color:white; margin-bottom:15px">City Infrastructure Roadmap</h1>
+        <p style="opacity:0.9; font-size:1.1rem; max-width:800px; margin:0 auto">Track the progress of ongoing government projects, smart city initiatives, and public welfare works in your region.</p>
+    </div>
+
+    <div class="container">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:30px; flex-wrap:wrap; gap:20px">
+            <div>
+                <div class="section-title">Active Government Projects</div>
+                <p style="color:var(--text-muted); font-size:0.9rem">Search projects or enter a Project ID to track progress.</p>
+            </div>
+            <div style="display:flex; gap:12px; flex-wrap:wrap">
+                <div style="position:relative">
+                    <input type="text" id="trackProjInput" placeholder="Enter Project ID (PROJ-...)" class="form-control" style="width:250px; padding-right:40px">
+                    <button onclick="trackProjectID()" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1.2rem">🔍</button>
+                </div>
+                <input type="text" id="projSearch" placeholder="Filter by name/region..." class="form-control" style="width:250px" oninput="filterProjects()">
+            </div>
+        </div>
+
+        <div id="projectsGrid" class="projects-grid">
+            <!-- Loading state -->
+            <div style="grid-column:1/-1; text-align:center; padding:100px">
+                <div class="spinner-border" style="width:40px; height:40px; border-width:4px; color:var(--primary-light)"></div>
+                <p style="margin-top:20px; color:var(--text-muted)">Fetching city development data...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        let allProjects = [];
+
+        document.addEventListener('DOMContentLoaded', loadProjects);
+
+        async function loadProjects() {
+            try {
+                const res = await window.JanSamadhanAPI.getProjects();
+                allProjects = Array.isArray(res) ? res : (res.data || []);
+                renderProjects(allProjects);
+            } catch (err) {
+                showToast("Failed to load projects", "error");
+                document.getElementById('projectsGrid').innerHTML = `
+                    <div style="grid-column:1/-1; text-align:center; padding:100px; color:var(--danger)">
+                        <h3>⚠️ Connection Error</h3>
+                        <p>Unable to fetch live project data. Please try again later.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderProjects(projects) {
+            const grid = document.getElementById('projectsGrid');
+            if (!projects.length) {
+                grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:100px; color:var(--text-muted)">No active projects found matching your search.</div>';
+                return;
+            }
+
+            grid.innerHTML = projects.map(p => {
+                const progress = p.progress_percentage || 0;
+                const icons = {
+                    'Infrastructure': '🏗️',
+                    'Water Supply': '💧',
+                    'Electricity': '⚡',
+                    'Sanitation': '🧹',
+                    'Transport': '🚌',
+                    'Healthcare': '🏥'
+                };
+                const icon = icons[p.department] || '🏗️';
+
+                return `
+                    <div class="project-card">
+                        <div class="project-img-placeholder">${icon}</div>
+                        <div class="project-body">
+                            <div style="display:flex; justify-content:space-between; align-items:center">
+                                <span class="dept-tag">${p.department}</span>
+                                <span class="status-pill ${p.status === 'Completed' ? 'status-active' : 'status-pending'}">${p.status}</span>
+                            </div>
+                            <h3 class="project-title">${p.title}</h3>
+                            <p style="font-size:0.88rem; color:var(--text-muted); line-height:1.5; margin-bottom:15px">
+                                ${p.description.substring(0, 100)}${p.description.length > 100 ? '...' : ''}
+                            </p>
+                            
+                            <div style="margin-bottom:20px">
+                                <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:700; margin-bottom:6px">
+                                    <span>Completion</span>
+                                    <span>${progress}%</span>
+                                </div>
+                                <div class="project-status-bar">
+                                    <div class="project-status-fill" style="width:${progress}%"></div>
+                                </div>
+                            </div>
+
+                            <div class="project-meta">
+                                <span>📍 ${p.region}</span>
+                                <span>Target: ${new Date(p.end_date).toLocaleDateString('en-IN', {month:'short', year:'numeric'})}</span>
+                            </div>
+
+                            <button class="btn btn-primary w-full" style="margin-top:20px" onclick="window.location.href='project-details.html?id=${p.project_id}'">View Full Details →</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterProjects() {
+            const q = document.getElementById('projSearch').value.toLowerCase();
+            const filtered = allProjects.filter(p => 
+                p.title.toLowerCase().includes(q) || 
+                p.description.toLowerCase().includes(q) || 
+                p.region.toLowerCase().includes(q) ||
+                p.department.toLowerCase().includes(q) ||
+                p.project_id.toLowerCase().includes(q)
+            );
+            renderProjects(filtered);
+        }
+
+        async function trackProjectID() {
+            const id = document.getElementById('trackProjInput').value.trim().toUpperCase();
+            if (!id) return showToast("Please enter a Project ID", "warning");
+            
+            try {
+                const res = await window.JanSamadhanAPI.getProject(id);
+                if (res) {
+                    window.location.href = `project-details.html?id=${id}`;
+                } else {
+                    showToast("Project not found", "error");
+                }
+            } catch (e) {
+                showToast("Invalid Project ID", "error");
+            }
+        }
+    </script>
+</body>
+</html>

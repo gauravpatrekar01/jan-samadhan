@@ -54,9 +54,10 @@
     <div class="toast-container"></div>
     
     <div class="dash-main" style="margin-left:0; padding: 20px; max-width: 1200px; margin: 0 auto;">
-        <div class="topbar" style="border-radius: var(--radius-md); margin-bottom: 20px;">
-            <button class="btn btn-ghost" onclick="history.back()">← Back to Dashboard</button>
-            <div class="topbar-title" id="projTitle">Loading Project...</div>
+        <div class="topbar" style="border-radius: var(--radius-md); margin-bottom: 20px; display: flex; gap: 12px; align-items: center;">
+            <button class="btn btn-ghost" onclick="history.back()">← Back</button>
+            <button class="btn btn-outline btn-sm" onclick="window.location.href='index.html'">🏠 Home</button>
+            <div class="topbar-title" id="projTitle" style="margin-left: auto;">Loading Project...</div>
         </div>
 
         <div id="projectContent">
@@ -243,7 +244,7 @@
                                     <div class="form-label">Current Deadline</div>
                                     <div style="font-weight:700; color:var(--primary)">${new Date(p.end_date).toLocaleDateString()}</div>
                                 </div>
-                                <div style="display:flex; flex-direction:column; gap:10px; margin-top:20px">
+                                <div id="projectActions" style="display:none; flex-direction:column; gap:10px; margin-top:20px">
                                     <button class="btn btn-primary" onclick="openModal('updateStatusModal')">🔄 Update Project Status</button>
                                     <button class="btn btn-outline" onclick="openModal('requestExtensionModal')">⏳ Request Extension</button>
                                 </div>
@@ -257,6 +258,12 @@
                         </div>
                     </div>
                 `;
+
+                // Check permissions
+                const user = getSessionUser();
+                if (user && (user.role === 'officer' || user.role === 'admin')) {
+                    document.getElementById('projectActions').style.display = 'flex';
+                }
             } catch (e) {
                 showToast(e.message, 'error');
             }
