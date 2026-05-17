@@ -16,23 +16,7 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
-# Gemini Configuration using new google-genai SDK
-client1 = None
-if settings.GEMINI_API_KEY:
-    try:
-        client1 = genai.Client(api_key=settings.GEMINI_API_KEY)
-    except Exception as e:
-        logger.error(f"Failed to initialize Gemini Client 1: {e}")
-
-client2 = None
-if settings.GEMINI_API_KEY2:
-    try:
-        client2 = genai.Client(api_key=settings.GEMINI_API_KEY2)
-    except Exception as e:
-        logger.error(f"Failed to initialize Gemini Client 2: {e}")
-
-if not client1 and not client2:
-    logger.error("CRITICAL: No valid Gemini API keys found.")
+from services.gemini_pool import gemini_pool
 
 # Cache
 summary_cache = TTLCache(maxsize=1000, ttl=3600)
@@ -91,28 +75,7 @@ def _sanitize_output(text: str) -> str:
             
     return "\n".join(lines)
 
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type(Exception),
-    reraise=True,
-)
-async def _call_gemini_with_client(client, prompt: str) -> str | None:
-    if not client:
-        return None
 
-    try:
-        response = await asyncio.to_thread(
-            client.models.generate_content,
-            model="gemini-flash-latest", 
-            contents=prompt
-        )
-        if response and response.text:
-            return response.text.strip()
-    except Exception as e:
-        logger.error(f"Gemini API Error: {e}")
-        raise e
-    return None
 
 async def generate_summary(
     text: str,
@@ -153,24 +116,20 @@ Citizen Complaint to Process:
 {cleaned_input}
 """
 
-    clients_to_try = []
-    if client2: clients_to_try.append(client2)
-    if client1: clients_to_try.append(client1)
-
-    last_error = None
-    for idx, target_client in enumerate(clients_to_try):
-        try:
-            result = await _call_gemini_with_client(target_client, prompt)
-            if result:
-                final_summary = _sanitize_output(result)
-                summary_cache[cache_key] = final_summary
-                logger.info("Summary generated successfully.")
-                return final_summary
-        except Exception as e:
-            last_error = e
-            logger.warning(f"Gemini client failover: {e}")
-
-    logger.error(f"All Gemini clients failed. Fallback triggered. Last error: {last_error}")
+    try:
+        ai_result = await gemini_pool.generate_content_async(
+            prompt=prompt,
+            system_instruction="You are an expert Government Public Relations Officer in Maharashtra.",
+            model="gemini-2.5-flash"
+        )
+        if ai_result and ai_result["response"]:
+            final_summary = _sanitize_output(ai_result["response"])
+            summary_cache[cache_key] = final_summary
+            logger.info("Summary generated successfully.")
+            return final_summary
+    except Exception as e:
+        last_error = e
+        logger.error(f"Gemini pool failover failed. Fallback triggered. Last error: {last_error}")
 
     # Fallback
     severity = "सामान्य"
