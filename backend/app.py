@@ -379,6 +379,8 @@ def check_escalations():
 def start_scheduler():
     # ── Duplicate Collection Validation ──
     try:
+        if db.db is None:
+            db.connect()
         collections = db.db.list_collection_names()
         if "audit_log" in collections and "audit_logs" in collections:
             logger.warning({

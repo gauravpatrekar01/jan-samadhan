@@ -7,7 +7,7 @@ class Settings:
     def __init__(self):
         self.MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
         self.DATABASE_NAME = os.getenv("DATABASE_NAME", "jansamadhan")
-        self.JWT_SECRET = os.getenv("JWT_SECRET", "")
+        self.JWT_SECRET = os.getenv("JWT_SECRET") or os.getenv("SECRET_KEY", "fallback-secret-key")
         self.ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
         self.ALGORITHM = os.getenv("ALGORITHM", "HS256")
         self.ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*")

@@ -14,29 +14,34 @@ load_dotenv()
 router = APIRouter()
 
 # Gemini client
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-MODEL = "gemini-2.5-flash"  # Fallback to standard model if 3.1 is unavailable, but let's stick to what user asked below
+client = None
+gemini_key = os.getenv("GEMINI_API_KEY")
+if gemini_key:
+    try:
+        client = genai.Client(api_key=gemini_key)
+    except Exception as e:
+        print(f"CRITICAL: Failed to initialize Gemini client in chatbot: {e}")
 
-# Actually the user explicitly asked for gemini-3.1-flash-lite-preview
 MODEL = "gemini-3.1-flash-lite-preview"
 
 # ─── Retry wrapper ───
-_orig_gen = client.models.generate_content
+if client is not None:
+    _orig_gen = client.models.generate_content
 
-def _retry_gen(*args, **kwargs):
-    for i in range(4):
-        try:
-            return _orig_gen(*args, **kwargs)
-        except (ServerError, ClientError) as e:
-            code = getattr(e, "code", None)
-            if code in (429, 503) and i < 3:
-                wait = 5 * (i + 1)
-                print(f"Retrying after {wait}s due to {code}...")
-                time.sleep(wait)
-                continue
-            raise
+    def _retry_gen(*args, **kwargs):
+        for i in range(4):
+            try:
+                return _orig_gen(*args, **kwargs)
+            except (ServerError, ClientError) as e:
+                code = getattr(e, "code", None)
+                if code in (429, 503) and i < 3:
+                    wait = 5 * (i + 1)
+                    print(f"Retrying after {wait}s due to {code}...")
+                    time.sleep(wait)
+                    continue
+                raise
 
-client.models.generate_content = _retry_gen
+    client.models.generate_content = _retry_gen
 
 # ─── Request schema ───
 class AIRequest(BaseModel):
@@ -88,6 +93,21 @@ professional_cfg = types.GenerateContentConfig(
 # ─── API Endpoint ───
 @router.post("/generate")
 def generate_response(data: AIRequest):
+    if not client:
+        # Provide a local rule-based response fallback if AI is not configured
+        query_lower = data.query.lower()
+        if "login" in query_lower:
+            fallback = "JanSamadhan: login requires a valid citizen or officer account. If your login isn't working, verify the email/password or make sure the database is running."
+        elif "status" in query_lower or "complaint" in query_lower:
+            fallback = "JanSamadhan: You can track your complaint status in the Citizen Dashboard or the Public Grievance section using the complaint ID."
+        else:
+            fallback = "JanSamadhan AI is currently offline. Please try again later or check system logs."
+        return {
+            "status": "success",
+            "response": fallback,
+            "answer": fallback
+        }
+
     try:
         response = client.models.generate_content(
             model=MODEL,
