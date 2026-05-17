@@ -650,7 +650,8 @@
                 }
                 
                 // Test getting user profile
-                const profile = await fetch('http://localhost:8000/api/auth/user', {
+                const apiBase = window.JanSamadhanAPI?.baseURL || window.API_BASE_URL || 'http://localhost:8000';
+                const profile = await fetch(`${apiBase}/api/auth/user`, {
                     headers: {
                         'Authorization': `Bearer ${user.token}`,
                         'Content-Type': 'application/json'

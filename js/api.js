@@ -148,10 +148,7 @@ class JanSamadhanAPI {
 
             // Check for other errors
             if (!response.ok) {
-                const errorMsg = data.detail ||
-                    data.error?.message ||
-                    data.message ||
-                    `Request failed: ${response.status}`;
+                const errorMsg = data.detail?.error?.message || data.detail?.message || data.error?.message || data.message || `Request failed: ${response.status}`;
                 console.error("❌ API Error:", errorMsg, data);
                 throw new Error(errorMsg);
             }
@@ -730,9 +727,6 @@ class JanSamadhanAPI {
         return this._fetch(`/api/projects/extension-history/${projectId}`);
     }
 }
-
-// Create global API instance
-window.JanSamadhanAPI = new JanSamadhanAPI();
 
 // Storage event listener for cross-tab synchronization
 window.addEventListener('storage', (event) => {

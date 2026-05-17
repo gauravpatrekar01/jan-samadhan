@@ -214,11 +214,11 @@
 
     <script>
         // API configuration
-        const API_BASE_URL = (() => {
-            if (!window.location.hostname || window.location.hostname === '') {
+        const API_BASE_URL = window.API_BASE_URL || (() => {
+            if (window.location.protocol === 'file:') {
                 return 'http://localhost:8000';
             }
-            return `http://${window.location.hostname}:8000`;
+            return window.location.origin;
         })();
 
         let authToken = null;
@@ -358,7 +358,7 @@
             log('auth-output', '🔍 Starting token validation...', 'info');
 
             try {
-                const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+                const response = await fetch(`${API_BASE_URL}/api/auth/user`, {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
                     }

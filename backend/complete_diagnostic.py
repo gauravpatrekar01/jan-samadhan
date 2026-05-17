@@ -29,6 +29,7 @@ def test_complete_grievance_flow():
         "name": "Test User",
         "email": f"test{int(time.time())}@example.com",
         "password": "TestPassword123!",
+        "aadhar": "123456789012",
         "role": "citizen"
     }
     

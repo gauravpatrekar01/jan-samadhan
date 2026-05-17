@@ -1,7 +1,14 @@
+import sys
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+except Exception:
+    pass
+
 import logging
 import time
 from pythonjsonlogger import jsonlogger
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from jose import JWTError
@@ -97,28 +104,6 @@ async def detect_user_language(request: Request, call_next):
 @app.exception_handler(APIError)
 async def api_error_handler(request: Request, exc: APIError):
     return JSONResponse(status_code=exc.status_code, content=exc.detail)
-
-
-@app.exception_handler(Exception)
-async def general_exception_handler(request: Request, exc: Exception):
-    logger.error({
-        "type": "unhandled_exception",
-        "path": request.url.path,
-        "method": request.method,
-        "error": str(exc),
-        "error_type": type(exc).__name__
-    })
-    return JSONResponse(
-        status_code=500,
-        content={
-            "success": False,
-            "error": {
-                "code": "INTERNAL_SERVER_ERROR",
-                "message": "An unexpected error occurred on the server.",
-                "detail": str(exc) if os.getenv("DEBUG") else None
-            }
-        }
-    )
 
 
 @app.exception_handler(RateLimitExceeded)
@@ -266,6 +251,20 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             }
         }
     )
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    # Preserve structured details from custom APIError and normalize standard HTTPException responses
+    detail = exc.detail if isinstance(exc.detail, dict) else {"message": str(exc.detail)}
+    response_content = {
+        "success": False,
+        "error": {
+            "code": detail.get("error", {}).get("code", detail.get("code", exc.status_code)),
+            "message": detail.get("error", {}).get("message", detail.get("message", str(exc.detail))),
+            "details": detail.get("error", {}).get("details") or detail.get("details")
+        }
+    }
+    return JSONResponse(status_code=exc.status_code, content=response_content)
 
 @app.exception_handler(KeyError)
 async def key_error_handler(request: Request, exc: KeyError):

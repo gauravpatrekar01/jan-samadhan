@@ -1352,6 +1352,13 @@
         aadhar = document.getElementById('loginAadhar').value;
       }
 
+      if (typeof email === 'string') {
+        email = email.trim().toLowerCase();
+      }
+      if (typeof password === 'string') {
+        password = password.trim();
+      }
+
       const btn = e.submitter || document.getElementById('authSubmitBtn');
       if (!btn) {
 

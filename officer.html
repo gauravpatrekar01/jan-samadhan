@@ -1380,7 +1380,8 @@
                 if (status) params.set('status', status);
 
                 const endpoint = format === 'pdf' ? 'officer/pdf' : 'officer/excel';
-                const url = `${window.JanSamadhanAPI?.baseURL || 'http://localhost:8000'}/api/reports/download/${endpoint}?${params}`;
+                const baseURL = window.JanSamadhanAPI?.baseURL ?? window.API_BASE_URL ?? (window.location.protocol === 'file:' ? 'http://localhost:8000' : window.location.origin);
+                const url = `${baseURL}/api/reports/download/${endpoint}?${params}`;
 
                 const user = JSON.parse(sessionStorage.getItem('js_user') || localStorage.getItem('js_user') || '{}');
                 const token = user.token;

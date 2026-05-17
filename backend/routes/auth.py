@@ -4,7 +4,7 @@ from db import db
 from security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token, verify_token_type, validate_refresh_token
 from limiter import limiter
 from fastapi import Request, UploadFile, File, Form, HTTPException
-import os, uuid, shutil, logging
+import os, re, uuid, shutil, logging
 
 logger = logging.getLogger(__name__)
 from government_registry import verify_citizen_record
@@ -34,14 +34,16 @@ def get_user_profile(user_payload: dict = Depends(get_current_user)):
 @limiter.limit("5/minute")
 def register(request: Request, user: UserCreate):
     collection = db.get_collection("users")
+    normalized_email = user.email.strip().lower()
 
-    if collection.find_one({"email": user.email}):
+    if collection.find_one({"email": normalized_email}):
         raise ConflictError("User already exists")
 
     if user.role not in {"citizen", "ngo"}:
         raise ValidationError("Only citizens and NGOs can sign up directly")
 
     user_dict = user.model_dump()
+    user_dict["email"] = normalized_email
     user_dict["role"] = user.role
     user_dict["password"] = hash_password(user.password)
     user_dict["createdAt"] = datetime.now(timezone.utc).isoformat()
@@ -145,7 +147,8 @@ def upload_local_doc(file: UploadFile = File(...)):
 @limiter.limit("5/minute")
 def login(request: Request, user: UserLogin):
     collection = db.get_collection("users")
-    db_user = collection.find_one({"email": user.email})
+    lookup_email = user.email.strip()
+    db_user = collection.find_one({"email": {"$regex": f"^{re.escape(lookup_email)}$", "$options": "i"}})
 
     if not db_user or not verify_password(user.password, db_user["password"]):
         raise AuthenticationError("Invalid credentials")
@@ -168,7 +171,8 @@ def login(request: Request, user: UserLogin):
 @limiter.limit("5/minute")
 def admin_login(request: Request, user: UserLogin):
     collection = db.get_collection("users")
-    db_user = collection.find_one({"email": user.email})
+    lookup_email = user.email.strip()
+    db_user = collection.find_one({"email": {"$regex": f"^{re.escape(lookup_email)}$", "$options": "i"}})
 
     if not db_user or not verify_password(user.password, db_user["password"]):
         raise AuthenticationError("Invalid credentials")
