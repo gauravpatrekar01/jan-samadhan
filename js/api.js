@@ -1,13 +1,11 @@
 // Enhanced API wrapper with robust token refresh mechanism
 const API_BASE_URL = (() => {
+    if (window.JS_API_BASE_URL) return window.JS_API_BASE_URL;
     const { hostname, protocol, port } = window.location;
-    // If we're on a local dev server (Live Server, Vite, etc.) or file system
-    if (protocol === 'file:' || 
-        hostname === 'localhost' || 
-        hostname === '127.0.0.1' || 
-        hostname.startsWith('192.168.') || 
-        (port && port !== '8000')) {
-        return 'http://localhost:8000';
+    // Local development fallbacks
+    if (protocol === 'file:') return 'http://127.0.0.1:8000';
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        if (port && port !== '8000') return `http://${hostname}:8000`;
     }
     return ''; // Relative path for production
 })();
