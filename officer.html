@@ -453,7 +453,27 @@
         </div>
     </div>
     <div class="modal-overlay" id="updateModal">
-        <!-- ... existing update modal ... -->
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>🔄 Update Grievance Status</h3>
+                <button class="modal-close" onclick="closeModal('updateModal')">✕</button>
+            </div>
+            <div id="updateModalGrievanceInfo" style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:16px;font-size:.88rem"></div>
+            <div class="form-group">
+                <label class="form-label">New Status</label>
+                <select class="form-control" id="newStatusSelect">
+                    <option>Submitted</option>
+                    <option>Under Review</option>
+                    <option>In Progress</option>
+                    <option>Resolved</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Remarks</label>
+                <textarea class="form-control" id="newRemarksInput" rows="3" placeholder="Explain the action taken..."></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="confirmUpdate()">Confirm Update</button>
+        </div>
     </div>
 
     <!-- PROJECT CONVERSION MODAL -->

@@ -21,7 +21,7 @@ from audit import log_audit
 from bson import ObjectId
 from bson.errors import InvalidId
 from search import search_complaints, get_complaint_count
-from notifications import notify_status_change
+from notifications import notify_status_change, notify_complaint_registered
 from services.summary_service import generate_summary, generate_marathi_summary
 from services.geo_service import normalize_geo_complaint, cluster_geo_points, detect_high_risk_zones
 from services.priority_service import compute_priority_score, escalate_complaint_doc
@@ -120,6 +120,16 @@ async def generate_and_store_summary(complaint_id: str, target_language: str | N
                     "$inc": {"summary_attempts": 1},
                 },
             )
+            
+            # Trigger SMS Notification for AI Report
+            from notifications import send_notification
+            citizen_email = complaint.get("citizen_email", "")
+            # Phone may be in complaint or user doc. Fallback logic inside send_notification
+            if citizen_email:
+                subject = f"AI Summary Generated for {complaint_id}"
+                message = f"An AI summary for complaint {complaint_id} has been generated. JanSamadhan"
+                send_notification(citizen_email, subject, message, channel="sms", complaint_id=complaint_id)
+                
             return
         except Exception as e:
             error_text = str(e)
@@ -440,6 +450,14 @@ def create_complaint(
             print("✅ Audit log: OK")
         except Exception as audit_error:
             print(f"⚠️ Audit log failed: {audit_error}")
+            
+        # Send SMS notification
+        try:
+            citizen_phone = user_doc.get("phone") if user_doc else None
+            background_tasks.add_task(notify_complaint_registered, user["sub"], complaint_id, citizen_name, citizen_phone)
+            print("✅ SMS notification queued")
+        except Exception as sms_error:
+            print(f"⚠️ SMS notification failed to queue: {sms_error}")
         
         # Prepare response
         response_data = {
@@ -685,6 +703,14 @@ async def create_complaint_with_media(
         
         # Start background task for summary generation
         background_tasks.add_task(generate_and_store_summary, complaint_id)
+        
+        # Send SMS notification
+        try:
+            citizen_phone = user_doc.get("phone") if user_doc else None
+            background_tasks.add_task(notify_complaint_registered, user["sub"], complaint_id, citizen_name, citizen_phone)
+            print("✅ SMS notification queued")
+        except Exception as sms_error:
+            print(f"⚠️ SMS notification failed to queue: {sms_error}")
         
         # Prepare response
         response_data = {

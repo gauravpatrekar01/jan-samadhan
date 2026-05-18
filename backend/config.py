@@ -27,4 +27,17 @@ class Settings:
         self.GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
         self.GEMINI_API_KEY2 = os.getenv("GEMINI_API_KEY2", "")
 
+        # SMS Gateway Configuration
+        self.SMS_GATEWAY_URL = os.getenv("SMS_GATEWAY_URL", "http://192.168.1.5:3000/send")
+        self.SMS_GATEWAY_TOKEN = os.getenv("SMS_GATEWAY_TOKEN", "")
+        self.DEVICE_ID = os.getenv("DEVICE_ID", "")
+        
+        self.OTP_EXPIRY_MINUTES = int(os.getenv("OTP_EXPIRY_MINUTES", "5"))
+        self.ESCALATION_DAYS = int(os.getenv("ESCALATION_DAYS", "7"))
+        self.MAX_SMS_RETRIES = int(os.getenv("MAX_SMS_RETRIES", "3"))
+        self.SMS_TIMEOUT_SECONDS = int(os.getenv("SMS_TIMEOUT_SECONDS", "10"))
+        self.DEFAULT_LANGUAGE = os.getenv("DEFAULT_LANGUAGE", "en")
+        self.SENDER_NAME = os.getenv("SENDER_NAME", "JANSYS")
+        self.SMS_DEBUG = os.getenv("SMS_DEBUG", "false").lower() == "true"
+
 settings = Settings()

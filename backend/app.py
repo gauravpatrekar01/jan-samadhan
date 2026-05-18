@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from jose import JWTError
 import os
-from routes import auth, complaints, admin, ngo, analytics, translations, chatbot, reports, predictions, public, kpis, report_downloads, projects
+from routes import auth, complaints, admin, ngo, analytics, translations, chatbot, reports, predictions, public, kpis, report_downloads, projects, notifications as notifications_router
 from db import db
 from config import settings
 from limiter import limiter
@@ -392,9 +392,18 @@ def start_scheduler():
     scheduler.add_job(check_escalations, "interval", minutes=15)
     scheduler.start()
     
+    # Start SMS and OTP background scheduler
+    from scheduler.jobs import start_scheduler as start_sms_scheduler
+    start_sms_scheduler()
+    
 @app.on_event("shutdown")
 def stop_scheduler():
     scheduler.shutdown()
+    
+    # Stop SMS scheduler
+    from scheduler.jobs import shutdown_scheduler as shutdown_sms_scheduler
+    shutdown_sms_scheduler()
+
 
 
 from fastapi.staticfiles import StaticFiles
@@ -413,6 +422,7 @@ app.include_router(chatbot.router, prefix="/api/chatbot", tags=["chatbot"])
 app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
 app.include_router(report_downloads.router, prefix="/api/reports/download", tags=["report-downloads"])
 app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
+app.include_router(notifications_router.router, prefix="/api/notifications", tags=["notifications"])
 
 # ── Static Files (Uploads Fallback) ──
 os.makedirs("static/uploads", exist_ok=True)
