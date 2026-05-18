@@ -8,6 +8,9 @@ import datetime
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.insert(0, os.path.dirname(__file__))
 
+from limiter import limiter
+limiter.enabled = False
+
 from app import app
 from db import db
 
@@ -114,7 +117,9 @@ def test_soft_delete_citizen_fail_not_submitted():
         headers={"Authorization": f"Bearer {citizen_token}"}
     )
     assert response.status_code == 400
-    assert "only delete complaints in 'submitted'" in response.json()["detail"]
+    res_json = response.json()
+    error_msg = res_json.get("error", {}).get("message", "")
+    assert "only delete complaints in 'submitted'" in error_msg
 
     # Admin can still override and delete it
     admin_delete = client.delete(
@@ -139,7 +144,8 @@ def test_reopen_complaint_success():
     # Citizen reopens complaint
     reopen_res = client.post(
         f"/api/complaints/{complaint_id}/reopen",
-        headers={"Authorization": f"Bearer {citizen_token}"}
+        headers={"Authorization": f"Bearer {citizen_token}"},
+        json={"reason": "Test reason"}
     )
     assert reopen_res.status_code == 200
 
@@ -196,7 +202,8 @@ def test_reopen_complaint_fail_deleted():
     # Citizen tries to reopen it
     reopen_res = client.post(
         f"/api/complaints/{complaint_id}/reopen",
-        headers={"Authorization": f"Bearer {citizen_token}"}
+        headers={"Authorization": f"Bearer {citizen_token}"},
+        json={"reason": "Test reason"}
     )
     # Should throw 400 or 404 (because is_deleted check in reopen throws ValidationError)
     assert reopen_res.status_code in [400, 404]

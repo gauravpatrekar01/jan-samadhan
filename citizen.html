@@ -881,8 +881,8 @@
         </div>
       </div>
     `
-            : "") +
           `
+    ${window.renderAIIntelligencePanel(g, 'citizen')}
     <div style="font-weight:700;font-size:.88rem;margin-bottom:8px">Resolution Progress:</div>
     ${renderProgressBar(getProgressFromStatus(g.status))}
     <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
@@ -898,6 +898,15 @@
 
        ${(g.status === "resolved" || g.status === "closed") ? `<button class="btn btn-accent btn-sm" onclick="closeModal('grievanceDetailModal');openFeedback('${gid}')">⭐ Rate Resolution</button>` : ""}
        ${g.feedbackCount ? `<span class="badge badge-success">⭐ ${g.feedbackAverage || g.feedbackRating}/5 · ${g.feedbackCount} ratings</span>` : ""}
+
+       ${(g.status === "resolved" || g.status === "closed" || g.status === "rejected") && !g.is_deleted
+            ? `<button class="btn btn-outline btn-sm" onclick="openReopenModal('${gid}')">🔄 Reopen Complaint</button>`
+            : ""
+       }
+       ${g.status === "submitted" && !g.is_deleted
+            ? `<button class="btn btn-danger btn-sm" onclick="openDeleteModal('${gid}')" style="background:#dc2626;color:#fff;border:none">🗑️ Delete Complaint</button>`
+            : ""
+       }
     </div>
   `;
         startSummaryPolling(gid, g);

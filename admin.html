@@ -1590,8 +1590,25 @@
                     
                     ${renderMarathiSummaryBlock(g, 'admin-detail')}
 
+                    ${window.renderAIIntelligencePanel(g, 'admin')}
+
                     <div class="form-label">Description</div>
                     <div style="background:var(--bg);padding:15px;border-radius:8px;margin-bottom:20px;line-height:1.6">${g.description}</div>
+
+                    <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap">
+                        ${(g.status === "resolved" || g.status === "closed" || g.status === "rejected") && !g.is_deleted
+                             ? `<button class="btn btn-outline btn-sm" onclick="openReopenModal('${g.id}')">🔄 Reopen Complaint</button>`
+                             : ""
+                        }
+                        ${!g.is_deleted
+                             ? `<button class="btn btn-danger btn-sm" onclick="openDeleteModal('${g.id}')" style="background:#dc2626;color:#fff;border:none">🗑️ Delete Complaint</button>`
+                             : ""
+                        }
+                        ${!g.is_deleted
+                             ? `<button class="btn btn-outline btn-sm" style="background:rgba(37,99,235,.1);color:var(--primary-light)" onclick="openExtendDeadlineModal('${g.id}', '${g.sla_deadline || ''}')">📅 Extend SLA Deadline</button>`
+                             : ""
+                        }
+                    </div>
                 `;
                 openModal('complaintDetailsModal');
             } catch (e) {

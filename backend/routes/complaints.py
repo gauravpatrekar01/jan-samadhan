@@ -971,6 +971,11 @@ def list_complaints(
     user: dict = Depends(get_current_user_optional)
 ):
     query = {}
+    # Exclude soft-deleted complaints by default, unless the user is an admin
+    is_admin = user and user.get("role") == "admin"
+    if not is_admin:
+        query["is_deleted"] = {"$ne": True}
+
     if status:
         query["status"] = status
     if priority:
@@ -1966,8 +1971,12 @@ def delete_complaint(id: str, user: dict = Depends(get_current_user)):
         raise e
 
 
+class ReopenComplaintRequest(BaseModel):
+    reason: str
+
+
 @router.post("/{id}/reopen")
-def reopen_complaint(id: str, user: dict = Depends(get_current_user)):
+def reopen_complaint(id: str, req: ReopenComplaintRequest, user: dict = Depends(get_current_user)):
     """Reopen a resolved/closed/rejected complaint."""
     try:
         collection = db.get_collection("complaints")
@@ -2006,7 +2015,7 @@ def reopen_complaint(id: str, user: dict = Depends(get_current_user)):
                 "$push": {
                     "history": {
                         "status": "Reopened",
-                        "remarks": f"Complaint reopened by {role}. Cycle {reopen_count + 1}/3",
+                        "remarks": f"Complaint reopened by {role}. Cycle {reopen_count + 1}/3. Reason: {req.reason}",
                         "timestamp": now,
                         "updated_by_user_id": user.get("sub")
                     }
@@ -2021,7 +2030,7 @@ def reopen_complaint(id: str, user: dict = Depends(get_current_user)):
                 actor_role=role,
                 resource_type="complaint",
                 resource_id=id,
-                details={"reopen_count": reopen_count + 1}
+                details={"reopen_count": reopen_count + 1, "reason": req.reason}
             )
         except Exception:
             pass
@@ -2132,3 +2141,62 @@ def extend_complaint_deadline(
         except Exception:
             pass
         raise e
+
+
+@router.post("/{id}/ai-report/generate")
+async def generate_ai_report_endpoint(
+    id: str,
+    user: dict = Depends(get_current_user)
+):
+    """Generate or regenerate an AI intelligence report for the complaint."""
+    collection = db.get_collection("complaints")
+    complaint = collection.find_one({"id": id})
+    if not complaint:
+        raise NotFoundError("Complaint")
+        
+    # Security Checks
+    role = user.get("role")
+    # Citizens can only view/generate for their own
+    if role == "citizen" and complaint.get("citizen_email") != user.get("sub"):
+        raise AuthorizationError("You are not authorized to access this AI report")
+    # Officers can only view/generate their assigned complaints, unless it is emergency
+    if role == "officer":
+        if complaint.get("assigned_officer") != user.get("sub") and complaint.get("priority", "").lower() != "emergency":
+            raise AuthorizationError("You are not assigned to this complaint")
+    # NGOs can only view/generate their assigned complaints
+    if role == "ngo" and complaint.get("assigned_to_ngo") != user.get("sub"):
+        raise AuthorizationError("This complaint is not assigned to your NGO")
+        
+    from services.ai_report_service import ai_report_service
+    report = await ai_report_service.generate_ai_report(id, refresh=True, performed_by=user.get("sub", "system"))
+    return {"success": True, "data": report}
+
+
+@router.get("/{id}/ai-report")
+async def get_ai_report_endpoint(
+    id: str,
+    refresh: bool = False,
+    user: dict = Depends(get_current_user)
+):
+    """Retrieve the AI intelligence report for the complaint."""
+    collection = db.get_collection("complaints")
+    complaint = collection.find_one({"id": id})
+    if not complaint:
+        raise NotFoundError("Complaint")
+        
+    # Security Checks
+    role = user.get("role")
+    # Citizens can only view/generate for their own
+    if role == "citizen" and complaint.get("citizen_email") != user.get("sub"):
+        raise AuthorizationError("You are not authorized to access this AI report")
+    # Officers can only view/generate their assigned complaints, unless it is emergency
+    if role == "officer":
+        if complaint.get("assigned_officer") != user.get("sub") and complaint.get("priority", "").lower() != "emergency":
+            raise AuthorizationError("You are not assigned to this complaint")
+    # NGOs can only view/generate their assigned complaints
+    if role == "ngo" and complaint.get("assigned_to_ngo") != user.get("sub"):
+        raise AuthorizationError("This complaint is not assigned to your NGO")
+        
+    from services.ai_report_service import ai_report_service
+    report = await ai_report_service.generate_ai_report(id, refresh=refresh, performed_by=user.get("sub", "system"))
+    return {"success": True, "data": report}

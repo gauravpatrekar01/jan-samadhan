@@ -844,6 +844,15 @@
                                 </div>
                             </div>
                         ` : ''}
+
+                        ${window.renderAIIntelligencePanel(g, 'officer')}
+
+                        <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap">
+                            <button class="btn btn-primary btn-sm" onclick="openUpdateModal('${g.id}')">🔄 Update Status</button>
+                            ${g.category === 'Infrastructure' || g.priority === 'high' || g.priority === 'emergency' ? `<button class="btn btn-outline btn-sm" onclick="openConvertModal('${g.id}')">🏗️ Project Conversion</button>` : ''}
+                            <button class="btn btn-ghost btn-sm" onclick="quickResolve('${g.id}')">✅ Quick Resolve</button>
+                            ${!g.is_deleted ? `<button class="btn btn-outline btn-sm" style="background:rgba(37,99,235,.1);color:var(--primary-light)" onclick="openExtendDeadlineModal('${g.id}', '${g.sla_deadline || ''}')">📅 Extend SLA Deadline</button>` : ''}
+                        </div>
                     </div>
                 `;
                 openModal('grievanceDetailModal');

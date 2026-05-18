@@ -724,6 +724,34 @@ class JanSamadhanAPI {
     async getExtensionHistory(projectId) {
         return this._fetch(`/api/projects/extension-history/${projectId}`);
     }
+
+    async getAIReport(id, refresh = false) {
+        return this._fetch(`/api/complaints/${id}/ai-report?refresh=${refresh}`);
+    }
+
+    async generateAIReport(id, refresh = false) {
+        return this._fetch(`/api/complaints/${id}/ai-report/generate?refresh=${refresh}`, { method: 'POST' });
+    }
+
+    async reopenComplaint(id, reason) {
+        return this._fetch(`/api/complaints/${id}/reopen`, {
+            method: 'POST',
+            body: JSON.stringify({ reason })
+        });
+    }
+
+    async extendDeadline(id, newDueDate, reason) {
+        return this._fetch(`/api/complaints/${id}/extend-deadline`, {
+            method: 'POST',
+            body: JSON.stringify({ new_due_date: newDueDate, reason })
+        });
+    }
+
+    async deleteComplaint(id) {
+        return this._fetch(`/api/complaints/${id}`, {
+            method: 'DELETE'
+        });
+    }
 }
 
 // Storage event listener for cross-tab synchronization
@@ -786,3 +814,506 @@ function scheduleTokenRefresh() {
 // Schedule refresh on page load
 window.JanSamadhanAPI = new JanSamadhanAPI();
 scheduleTokenRefresh();
+
+// ── AI INTELLIGENCE PANEL UI RENDERER & ACTIONS ──
+window.renderAIIntelligencePanel = function(g, userRole) {
+    if (!g) return '';
+    const id = g.id || g.grievanceID || g._id;
+    const aiReport = g.ai_report;
+    const hasReport = !!aiReport;
+    
+    // Check role permissions for refresh
+    const canRefresh = (userRole === 'officer' || userRole === 'admin');
+    
+    let html = `
+    <div class="ai-intelligence-panel" style="margin-top:20px;margin-bottom:20px;border:1px solid rgba(37,99,235,0.15);border-radius:12px;background:rgba(37,99,235,0.02);padding:18px;font-family:inherit;box-shadow:0 4px 12px rgba(37,99,235,0.03)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px dashed rgba(37,99,235,0.15);padding-bottom:10px">
+            <h4 style="margin:0;color:var(--primary-light);font-size:1rem;display:flex;align-items:center;gap:8px">
+                <span style="font-size:1.2rem">🤖</span> AI Intelligence Insights
+            </h4>
+            <div style="display:flex;gap:8px;align-items:center">
+    `;
+    
+    if (!hasReport) {
+        html += `
+                <button id="btn-generate-ai-report" class="btn btn-primary btn-sm" onclick="handleGenerateAIReport('${id}')" style="display:flex;align-items:center;gap:6px">
+                    <span class="spinner-border spinner-border-sm" style="width:12px;height:12px;display:none" id="generate-ai-spinner"></span>
+                    <span>Generate AI Report</span>
+                </button>
+        `;
+    } else {
+        html += `
+                <button id="btn-toggle-ai-report" class="btn btn-outline btn-sm" onclick="toggleAIReportSection()" style="display:flex;align-items:center;gap:6px">
+                    <span>👁️ View AI Report</span>
+                </button>
+        `;
+        if (canRefresh) {
+            html += `
+                <button id="btn-refresh-ai-report" class="btn btn-ghost btn-sm" onclick="handleRefreshAIReport('${id}')" title="Regenerate/Overwrite Cached AI Report" style="background:rgba(0,0,0,0.03);border-radius:6px;display:flex;align-items:center;gap:6px">
+                    <span class="spinner-border spinner-border-sm" style="width:12px;height:12px;display:none" id="refresh-ai-spinner"></span>
+                    <span>🔄 Refresh</span>
+                </button>
+            `;
+        }
+    }
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    if (hasReport) {
+        const severityColor = aiReport.severity_score >= 75 ? '#dc2626' : (aiReport.severity_score >= 40 ? '#d97706' : '#16a34a');
+        const urgencyBg = aiReport.urgency_level === 'critical' ? '#7f1d1d' : (aiReport.urgency_level === 'high' ? '#991b1b' : (aiReport.urgency_level === 'medium' ? '#b45309' : '#14532d'));
+        const urgencyColor = '#ffffff';
+        const sentimentEmoji = aiReport.sentiment === 'highly_negative' ? 'Highly Negative' : (aiReport.sentiment === 'negative' ? 'Negative' : 'Neutral');
+        
+        // Render risk flags badges
+        const getRiskColor = (risk) => risk === 'high' ? '#dc2626' : (risk === 'medium' ? '#d97706' : '#16a34a');
+        const riskFlagsHtml = Object.entries(aiReport.risk_flags || {}).map(([key, val]) => `
+            <div style="background:rgba(15,23,42,0.03);border:1px solid rgba(0,0,0,0.05);padding:8px 12px;border-radius:8px;text-align:center">
+                <div style="font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:0.3px">${key.replace('_', ' ')}</div>
+                <div style="font-size:0.85rem;font-weight:800;color:${getRiskColor(val)};margin-top:2px;text-transform:capitalize">${val}</div>
+            </div>
+        `).join('');
+        
+        // Render category validation
+        const catMatch = (aiReport.category_validation?.user_category || '').toLowerCase() === (aiReport.category_validation?.ai_predicted_category || '').toLowerCase();
+        const categoryValHtml = `
+            <div style="display:flex;align-items:center;gap:10px;background:${catMatch ? 'rgba(22,163,74,0.05)' : 'rgba(220,38,38,0.05)'};border:1px solid ${catMatch ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)'};padding:10px 14px;border-radius:8px;font-size:0.85rem;margin-bottom:12px">
+                <span style="font-size:1.2rem">${catMatch ? '✅' : '⚠️'}</span>
+                <div style="flex:1">
+                    <div><strong>Category Match:</strong> ${catMatch ? 'Validated successfully' : 'Mismatch detected'}</div>
+                    <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px">
+                        Filed: <span style="text-decoration:underline">${aiReport.category_validation?.user_category || 'N/A'}</span> · 
+                        AI Predicts: <strong style="color:${catMatch ? 'inherit' : 'var(--danger)'}">${aiReport.category_validation?.ai_predicted_category || 'N/A'}</strong> 
+                        (Confidence: ${Math.round((aiReport.category_validation?.confidence || 0) * 100)}%)
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        html += `
+        <div id="ai-report-details-section" style="display:none;margin-top:10px">
+            <div style="background:rgba(37,99,235,0.04);border-left:3px solid var(--primary-light);padding:12px 16px;border-radius:6px;margin-bottom:14px;font-size:0.88rem;line-height:1.5;color:var(--text)">
+                <strong>Summary Insight:</strong> ${aiReport.summary_insight}
+            </div>
+            
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:12px;margin-bottom:14px">
+                <div style="background:#fff;border:1px solid rgba(0,0,0,0.05);padding:10px 12px;border-radius:10px;display:flex;flex-direction:column;justify-content:center;box-shadow:var(--shadow-sm)">
+                    <span style="font-size:0.7rem;color:var(--text-muted);font-weight:700;text-transform:uppercase">Severity Score</span>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                        <span style="font-size:1.4rem;font-weight:800;color:${severityColor}">${aiReport.severity_score}/100</span>
+                        <div style="flex:1;background:rgba(0,0,0,0.05);height:6px;border-radius:3px;overflow:hidden">
+                            <div style="background:${severityColor};width:${aiReport.severity_score}%;height:100%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background:#fff;border:1px solid rgba(0,0,0,0.05);padding:10px 12px;border-radius:10px;display:flex;flex-direction:column;justify-content:center;box-shadow:var(--shadow-sm)">
+                    <span style="font-size:0.7rem;color:var(--text-muted);font-weight:700;text-transform:uppercase">Urgency Level</span>
+                    <span style="background:${urgencyBg};color:${urgencyColor};padding:3px 8px;border-radius:6px;font-size:0.78rem;font-weight:800;text-transform:uppercase;align-self:flex-start;margin-top:6px;letter-spacing:0.5px">${aiReport.urgency_level}</span>
+                </div>
+                
+                <div style="background:#fff;border:1px solid rgba(0,0,0,0.05);padding:10px 12px;border-radius:10px;display:flex;flex-direction:column;justify-content:center;box-shadow:var(--shadow-sm)">
+                    <span style="font-size:0.7rem;color:var(--text-muted);font-weight:700;text-transform:uppercase">Sentiment</span>
+                    <span style="font-size:0.85rem;font-weight:700;margin-top:6px;color:#1e293b">${sentimentEmoji}</span>
+                </div>
+            </div>
+            
+            <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:14px;margin-bottom:14px">
+                <div>
+                    <h5 style="margin:0 0 8px 0;font-size:0.8rem;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.3px">Risk Profiling</h5>
+                    <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:8px">
+                        ${riskFlagsHtml}
+                    </div>
+                </div>
+                <div>
+                    <h5 style="margin:0 0 8px 0;font-size:0.8rem;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.3px">Routing & Recommended Dept</h5>
+                    <div style="background:#fff;border:1px solid rgba(0,0,0,0.05);padding:12px;border-radius:10px;box-shadow:var(--shadow-sm)">
+                        <div style="font-size:0.9rem;font-weight:800;color:var(--primary-light)">🏫 ${aiReport.recommended_department || 'General Administration'}</div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">Assigned Region: 📍 ${aiReport.entity_extraction?.location || 'Unknown'}</div>
+                    </div>
+                </div>
+            </div>
+            
+            ${categoryValHtml}
+            
+            <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:14px">
+                <div>
+                    <h5 style="margin:0 0 8px 0;font-size:0.8rem;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.3px">Suggested Actions</h5>
+                    <ul style="margin:0;padding-left:18px;font-size:0.82rem;line-height:1.6;color:var(--text)">
+                        ${(aiReport.suggested_actions || []).map(action => `<li style="margin-bottom:4px">${action}</li>`).join('')}
+                    </ul>
+                </div>
+                <div>
+                    <h5 style="margin:0 0 8px 0;font-size:0.8rem;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.3px">Extracted Keywords</h5>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px">
+                        ${(aiReport.entity_extraction?.keywords || []).map(kw => `<span style="background:rgba(0,0,0,0.04);border:1px solid rgba(0,0,0,0.05);color:var(--text);padding:3px 8px;border-radius:6px;font-size:0.75rem;font-weight:600">🏷️ ${kw}</span>`).join('') || '<span style="font-size:0.8rem;color:var(--text-muted)">None</span>'}
+                    </div>
+                    ${aiReport.entity_extraction?.organizations?.length ? `
+                    <h5 style="margin:8px 0 8px 0;font-size:0.8rem;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.3px">Organizations</h5>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px">
+                        ${aiReport.entity_extraction.organizations.map(org => `<span style="background:rgba(37,99,235,0.05);border:1px solid rgba(37,99,235,0.1);color:var(--primary-light);padding:3px 8px;border-radius:6px;font-size:0.75rem;font-weight:600">🏢 ${org}</span>`).join('')}
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+            
+            <div style="text-align:right;font-size:0.7rem;color:var(--text-muted);margin-top:14px;border-top:1px solid rgba(0,0,0,0.05);padding-top:8px">
+                Report generated: 📅 ${new Date(aiReport.generated_at).toLocaleString('en-IN')} · Version ${aiReport.version}
+            </div>
+        </div>
+        `;
+    }
+    
+    html += `
+    </div>
+    `;
+    
+    return html;
+};
+
+// Global click/toggle handlers
+window.toggleAIReportSection = function() {
+    const section = document.getElementById('ai-report-details-section');
+    const btn = document.getElementById('btn-toggle-ai-report');
+    if (!section || !btn) return;
+    
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        btn.innerHTML = '<span>👁️ Hide AI Report</span>';
+        btn.classList.add('active');
+    } else {
+        section.style.display = 'none';
+        btn.innerHTML = '<span>👁️ View AI Report</span>';
+        btn.classList.remove('active');
+    }
+};
+
+window.handleGenerateAIReport = async function(id) {
+    const btn = document.getElementById('btn-generate-ai-report');
+    const spinner = document.getElementById('generate-ai-spinner');
+    if (!btn) return;
+    
+    btn.disabled = true;
+    if (spinner) spinner.style.display = 'inline-block';
+    
+    try {
+        const res = await window.JanSamadhanAPI.generateAIReport(id);
+        if (res) {
+            showToast('🤖 AI Report generated successfully!', 'success');
+            // Re-render the current detail modal
+            if (window.viewDetail) {
+                await window.viewDetail(id);
+            } else if (window.showComplaintDetails) {
+                await window.showComplaintDetails(id);
+            }
+        } else {
+            throw new Error('Failed to generate');
+        }
+    } catch (e) {
+        showToast(e.message || 'Error generating AI report', 'error');
+        btn.disabled = false;
+        if (spinner) spinner.style.display = 'none';
+    }
+};
+
+window.handleRefreshAIReport = async function(id) {
+    const btn = document.getElementById('btn-refresh-ai-report');
+    const spinner = document.getElementById('refresh-ai-spinner');
+    if (!btn) return;
+    
+    btn.disabled = true;
+    if (spinner) spinner.style.display = 'inline-block';
+    
+    try {
+        const res = await window.JanSamadhanAPI.generateAIReport(id, true);
+        if (res) {
+            showToast('🔄 AI Report refreshed successfully!', 'success');
+            // Re-render the current detail modal
+            if (window.viewDetail) {
+                await window.viewDetail(id);
+            } else if (window.showComplaintDetails) {
+                await window.showComplaintDetails(id);
+            }
+        } else {
+            throw new Error('Failed to refresh');
+        }
+    } catch (e) {
+        showToast(e.message || 'Error refreshing AI report', 'error');
+        btn.disabled = false;
+        if (spinner) spinner.style.display = 'none';
+    }
+};
+
+// ── DYNAMIC LIFECYCLE ACTION MODALS (DELETE, REOPEN, EXTEND SLA) ──
+window.openDeleteModal = function(id) {
+    const existing = document.getElementById('dynamic-action-modal');
+    if (existing) existing.remove();
+    
+    const modalHtml = `
+    <div id="dynamic-action-modal" class="modal-overlay show" style="display:flex;align-items:center;justify-content:center;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.6);z-index:9999;backdrop-filter:blur(4px)">
+        <div class="modal-card" style="background:#fff;border-radius:16px;width:100%;max-width:480px;padding:24px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1),0 10px 10px -5px rgba(0,0,0,0.04);animation:modalEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <h3 style="margin:0;font-size:1.15rem;font-weight:800;color:#ef4444;display:flex;align-items:center;gap:8px">
+                    <span>⚠️</span> Delete Complaint
+                </h3>
+                <button onclick="closeDynamicModal()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text-muted)">&times;</button>
+            </div>
+            <p style="margin:0 0 16px 0;font-size:0.9rem;color:var(--text);line-height:1.5">
+                This action is irreversible. It will soft-delete the complaint, hiding it from public feeds while preserving audit records.
+            </p>
+            <div style="background:rgba(239,68,68,0.04);border:1px solid rgba(239,68,68,0.1);border-radius:8px;padding:12px;margin-bottom:16px;font-size:0.85rem">
+                To confirm deletion, please type <strong style="color:#ef4444;user-select:none">DELETE</strong> in the box below.
+            </div>
+            <input type="text" id="delete-confirm-input" placeholder="Type DELETE here..." oninput="validateDeleteInput()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.9rem;margin-bottom:20px;outline:none" autocomplete="off">
+            
+            <div style="display:flex;justify-content:flex-end;gap:12px">
+                <button class="btn btn-outline" onclick="closeDynamicModal()" style="padding:8px 16px;border-radius:8px;font-size:0.88rem;cursor:pointer">Cancel</button>
+                <button id="btn-confirm-delete-action" class="btn btn-danger" onclick="submitDeleteGrievance('${id}')" disabled style="padding:8px 16px;border-radius:8px;font-size:0.88rem;cursor:pointer;background:#ef4444;color:#fff;border:none;opacity:0.5;display:flex;align-items:center;gap:6px">
+                    <span class="spinner-border spinner-border-sm" style="width:12px;height:12px;display:none" id="delete-spinner"></span>
+                    <span>Confirm Delete</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.body.style.overflow = 'hidden';
+};
+
+window.validateDeleteInput = function() {
+    const input = document.getElementById('delete-confirm-input');
+    const btn = document.getElementById('btn-confirm-delete-action');
+    if (!input || !btn) return;
+    
+    if (input.value === 'DELETE') {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+    } else {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+    }
+};
+
+window.submitDeleteGrievance = async function(id) {
+    const btn = document.getElementById('btn-confirm-delete-action');
+    const spinner = document.getElementById('delete-spinner');
+    if (!btn) return;
+    
+    btn.disabled = true;
+    if (spinner) spinner.style.display = 'inline-block';
+    
+    try {
+        const res = await window.JanSamadhanAPI.deleteComplaint(id);
+        if (res.success) {
+            showToast('🗑️ Complaint deleted successfully!', 'success');
+            closeDynamicModal();
+            closeModal('grievanceDetailModal');
+            closeModal('complaintDetailsModal');
+            // Refresh feed
+            if (window.fetchGrievances) {
+                await window.fetchGrievances();
+            } else if (window.loadMyGrievances) {
+                await window.loadMyGrievances();
+            } else if (window.loadComplaints) {
+                await window.loadComplaints();
+            } else {
+                setTimeout(() => window.location.reload(), 1000);
+            }
+        } else {
+            throw new Error(res.error || 'Failed to delete');
+        }
+    } catch (e) {
+        showToast(e.message || 'Error deleting complaint', 'error');
+        btn.disabled = false;
+        if (spinner) spinner.style.display = 'none';
+    }
+};
+
+window.openReopenModal = function(id) {
+    const existing = document.getElementById('dynamic-action-modal');
+    if (existing) existing.remove();
+    
+    const modalHtml = `
+    <div id="dynamic-action-modal" class="modal-overlay show" style="display:flex;align-items:center;justify-content:center;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.6);z-index:9999;backdrop-filter:blur(4px)">
+        <div class="modal-card" style="background:#fff;border-radius:16px;width:100%;max-width:480px;padding:24px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1),0 10px 10px -5px rgba(0,0,0,0.04);animation:modalEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <h3 style="margin:0;font-size:1.15rem;font-weight:800;color:var(--primary-light);display:flex;align-items:center;gap:8px">
+                    <span>🔄</span> Reopen Complaint
+                </h3>
+                <button onclick="closeDynamicModal()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text-muted)">&times;</button>
+            </div>
+            <p style="margin:0 0 12px 0;font-size:0.88rem;color:var(--text-muted)">
+                Please describe the reason why this grievance requires reopening. (Limit: 3 reopening cycles total).
+            </p>
+            <div style="margin-bottom:16px">
+                <label style="display:block;font-size:0.75rem;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase">Reopen Reason <span style="color:#ef4444">*</span></label>
+                <textarea id="reopen-reason-textarea" placeholder="E.g., The resolution provided is incomplete because..." style="width:100%;height:100px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.9rem;outline:none;resize:none;font-family:inherit"></textarea>
+            </div>
+            
+            <div style="display:flex;justify-content:flex-end;gap:12px">
+                <button class="btn btn-outline" onclick="closeDynamicModal()" style="padding:8px 16px;border-radius:8px;font-size:0.88rem;cursor:pointer">Cancel</button>
+                <button id="btn-confirm-reopen-action" class="btn btn-primary" onclick="submitReopenGrievance('${id}')" style="padding:8px 16px;border-radius:8px;font-size:0.88rem;cursor:pointer;display:flex;align-items:center;gap:6px">
+                    <span class="spinner-border spinner-border-sm" style="width:12px;height:12px;display:none" id="reopen-spinner"></span>
+                    <span>Reopen Complaint</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.body.style.overflow = 'hidden';
+};
+
+window.submitReopenGrievance = async function(id) {
+    const reasonText = document.getElementById('reopen-reason-textarea')?.value?.trim();
+    if (!reasonText) {
+        showToast('Please provide a reopening reason', 'error');
+        return;
+    }
+    
+    const btn = document.getElementById('btn-confirm-reopen-action');
+    const spinner = document.getElementById('reopen-spinner');
+    if (!btn) return;
+    
+    btn.disabled = true;
+    if (spinner) spinner.style.display = 'inline-block';
+    
+    try {
+        const res = await window.JanSamadhanAPI.reopenComplaint(id, reasonText);
+        if (res.success) {
+            showToast('🔄 Complaint reopened successfully!', 'success');
+            closeDynamicModal();
+            closeModal('grievanceDetailModal');
+            closeModal('complaintDetailsModal');
+            // Refresh
+            if (window.fetchGrievances) {
+                await window.fetchGrievances();
+            } else if (window.loadMyGrievances) {
+                await window.loadMyGrievances();
+            } else if (window.loadComplaints) {
+                await window.loadComplaints();
+            } else {
+                setTimeout(() => window.location.reload(), 1000);
+            }
+        } else {
+            throw new Error(res.error || 'Failed to reopen');
+        }
+    } catch (e) {
+        showToast(e.message || 'Error reopening complaint', 'error');
+        btn.disabled = false;
+        if (spinner) spinner.style.display = 'none';
+    }
+};
+
+window.openExtendDeadlineModal = function(id, currentSlaDateStr) {
+    const existing = document.getElementById('dynamic-action-modal');
+    if (existing) existing.remove();
+    
+    let minDateStr = '';
+    try {
+        if (currentSlaDateStr) {
+            const currentSla = new Date(currentSlaDateStr);
+            const minDate = new Date(currentSla.getTime() + 60 * 1000);
+            const pad = (num) => String(num).padStart(2, '0');
+            minDateStr = `${minDate.getFullYear()}-${pad(minDate.getMonth()+1)}-${pad(minDate.getDate())}T${pad(minDate.getHours())}:${pad(minDate.getMinutes())}`;
+        }
+    } catch (e) {
+        console.error('Error parsing SLA date:', e);
+    }
+    
+    const modalHtml = `
+    <div id="dynamic-action-modal" class="modal-overlay show" style="display:flex;align-items:center;justify-content:center;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.6);z-index:9999;backdrop-filter:blur(4px)">
+        <div class="modal-card" style="background:#fff;border-radius:16px;width:100%;max-width:480px;padding:24px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1),0 10px 10px -5px rgba(0,0,0,0.04);animation:modalEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <h3 style="margin:0;font-size:1.15rem;font-weight:800;color:var(--primary-light);display:flex;align-items:center;gap:8px">
+                    <span>📅</span> Extend SLA Deadline
+                </h3>
+                <button onclick="closeDynamicModal()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text-muted)">&times;</button>
+            </div>
+            
+            <div style="margin-bottom:14px">
+                <label style="display:block;font-size:0.75rem;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase">New Due Date & Time <span style="color:#ef4444">*</span></label>
+                <input type="datetime-local" id="extend-due-date-input" min="${minDateStr}" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.9rem;outline:none;font-family:inherit">
+                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">Must be later than current deadline: ${currentSlaDateStr ? new Date(currentSlaDateStr).toLocaleString() : 'N/A'}</div>
+            </div>
+            
+            <div style="margin-bottom:20px">
+                <label style="display:block;font-size:0.75rem;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase">Reason <span style="color:#ef4444">*</span></label>
+                <textarea id="extend-reason-textarea" placeholder="Provide justification for deadline extension..." style="width:100%;height:80px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.9rem;outline:none;resize:none;font-family:inherit"></textarea>
+            </div>
+            
+            <div style="display:flex;justify-content:flex-end;gap:12px">
+                <button class="btn btn-outline" onclick="closeDynamicModal()" style="padding:8px 16px;border-radius:8px;font-size:0.88rem;cursor:pointer">Cancel</button>
+                <button id="btn-confirm-extend-action" class="btn btn-primary" onclick="submitExtendDeadline('${id}')" style="padding:8px 16px;border-radius:8px;font-size:0.88rem;cursor:pointer;display:flex;align-items:center;gap:6px">
+                    <span class="spinner-border spinner-border-sm" style="width:12px;height:12px;display:none" id="extend-spinner"></span>
+                    <span>Extend Deadline</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.body.style.overflow = 'hidden';
+};
+
+window.submitExtendDeadline = async function(id) {
+    const newDueDate = document.getElementById('extend-due-date-input')?.value;
+    const reason = document.getElementById('extend-reason-textarea')?.value?.trim();
+    
+    if (!newDueDate) {
+        showToast('Please select a new due date & time', 'error');
+        return;
+    }
+    if (!reason) {
+        showToast('Please provide a reason for extension', 'error');
+        return;
+    }
+    
+    const btn = document.getElementById('btn-confirm-extend-action');
+    const spinner = document.getElementById('extend-spinner');
+    if (!btn) return;
+    
+    btn.disabled = true;
+    if (spinner) spinner.style.display = 'inline-block';
+    
+    try {
+        const isoDate = new Date(newDueDate).toISOString();
+        const res = await window.JanSamadhanAPI.extendDeadline(id, isoDate, reason);
+        if (res.success) {
+            showToast('📅 Deadline extended successfully!', 'success');
+            closeDynamicModal();
+            closeModal('grievanceDetailModal');
+            closeModal('complaintDetailsModal');
+            // Refresh
+            if (window.fetchGrievances) {
+                await window.fetchGrievances();
+            } else if (window.loadMyGrievances) {
+                await window.loadMyGrievances();
+            } else if (window.loadComplaints) {
+                await window.loadComplaints();
+            } else {
+                setTimeout(() => window.location.reload(), 1000);
+            }
+        } else {
+            throw new Error(res.error || 'Failed to extend deadline');
+        }
+    } catch (e) {
+        showToast(e.message || 'Error extending deadline', 'error');
+        btn.disabled = false;
+        if (spinner) spinner.style.display = 'none';
+    }
+};
+
+window.closeDynamicModal = function() {
+    const modal = document.getElementById('dynamic-action-modal');
+    if (modal) {
+        modal.remove();
+    }
+    document.body.style.overflow = '';
+};
