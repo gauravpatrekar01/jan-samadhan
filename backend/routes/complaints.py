@@ -805,6 +805,11 @@ def get_complaint(id: str, user: dict = Depends(get_current_user_optional)):
     if not complaint:
         raise NotFoundError("Complaint")
 
+    if complaint.get("is_deleted"):
+        is_admin = user and user.get("role") == "admin"
+        if not is_admin:
+            raise NotFoundError("Complaint")
+
     # If it is anonymous, bypass the key deletion to keep "Anonymous" placeholders intact
     is_anon = complaint.get("is_anonymous", False)
 
@@ -1168,6 +1173,9 @@ def update_status(
     if not complaint:
         raise NotFoundError("Complaint")
 
+    if complaint.get("is_deleted"):
+        raise ValidationError("Cannot update status of a deleted complaint")
+
     # Officer can only update their assigned complaints, EXCEPT for emergency cases
     if (
         user.get("role") == "officer"
@@ -1196,28 +1204,31 @@ def update_status(
             update_fields["assigned_officer"] = user["sub"]
             remarks = f"[AUTO-ASSIGNED] {remarks}" if remarks else "Emergency complaint auto-assigned to responding officer"
     
-    # Enforce Status Flow
-    STATUS_SEQUENCE = ["submitted", "under_review", "in_progress", "resolved", "closed"]
-    current_status = complaint.get("status", "submitted")
+    # Enforce Status Flow (case-insensitive for robustness against capitalized values)
+    STATUS_SEQUENCE = ["submitted", "under_review", "in_progress", "reopened", "resolved", "closed", "rejected"]
+    current_status = complaint.get("status", "submitted").lower()
+    target_status = status.lower()
     
     try:
         current_idx = STATUS_SEQUENCE.index(current_status)
-        new_idx = STATUS_SEQUENCE.index(status)
+        new_idx = STATUS_SEQUENCE.index(target_status)
         
         # Admin can override any transition
         if user.get("role") != "admin":
             # Allow one-step rollback for review (e.g. in_progress -> under_review)
-            # OR rollback from resolved to in_progress if needed
+            # OR rollback from resolved to in_progress
+            # OR rollback from reopened to in_progress (essential for re-working reopened complaints)
             is_rollback = new_idx < current_idx
-            allowed_rollback = (current_status == "in_progress" and status == "under_review") or \
-                               (current_status == "resolved" and status == "in_progress")
+            allowed_rollback = (current_status == "in_progress" and target_status == "under_review") or \
+                               (current_status == "resolved" and target_status == "in_progress") or \
+                               (current_status == "reopened" and target_status == "in_progress")
             
             if is_rollback and not allowed_rollback:
-                raise ValidationError(f"Invalid status transition from {current_status} to {status}")
+                raise ValidationError(f"Invalid status transition from {current_status} to {target_status}")
                 
             # Prevent skipping unless marking as resolved or closed
             if new_idx > current_idx + 1:
-                if status not in ["resolved", "closed"]:
+                if target_status not in ["resolved", "closed"]:
                     raise ValidationError(f"Cannot skip stages in status flow")
     except ValueError:
         # If status not in sequence (shouldn't happen with allowed_statuses check), just proceed if admin
@@ -1796,3 +1807,328 @@ def get_complaint_comments(
             status_code=500,
             detail=f"Failed to fetch comments: {str(e)}"
         )
+
+
+class ExtendDeadlineRequest(BaseModel):
+    new_due_date: str
+    reason: str
+
+class DeadlineExtensionRequestModel(BaseModel):
+    complaint_id: str
+    requested_deadline: str
+    reason: str
+
+@router.post("/{id}/request-deadline-extension")
+def request_deadline_extension(
+    id: str,
+    req: DeadlineExtensionRequestModel,
+    user: dict = Depends(require_role(["officer"]))
+):
+    """Officer submits a request to extend the deadline — requires admin approval."""
+    collection = db.get_collection("complaints")
+    complaint = collection.find_one({"id": id})
+    if not complaint:
+        raise NotFoundError("Complaint")
+    if complaint.get("is_deleted"):
+        raise ValidationError("Cannot request deadline extension for a deleted complaint")
+    if complaint.get("assigned_officer") != user.get("sub"):
+        raise AuthorizationError("You can only request extensions for your assigned complaints")
+
+    # Validate the requested date
+    try:
+        current_deadline_str = complaint.get("sla_deadline")
+        if current_deadline_str:
+            current_deadline = datetime.fromisoformat(current_deadline_str.replace("Z", "+00:00"))
+            new_deadline = datetime.fromisoformat(req.requested_deadline.replace("Z", "+00:00"))
+            if new_deadline <= current_deadline:
+                raise ValidationError("Requested deadline must be after current deadline")
+    except ValueError:
+        raise ValidationError("Invalid date format. Use ISO format.")
+
+    now = datetime.now(timezone.utc).isoformat()
+    extension_request = {
+        "complaint_id": id,
+        "officer_email": user.get("sub"),
+        "requested_deadline": req.requested_deadline,
+        "reason": req.reason,
+        "current_deadline": complaint.get("sla_deadline"),
+        "status": "pending",  # pending | approved | rejected
+        "requested_at": now,
+        "reviewed_at": None,
+        "reviewed_by": None,
+        "admin_remarks": None
+    }
+
+    db.get_collection("deadline_extension_requests").insert_one(extension_request)
+
+    # Push notification record into complaint history
+    collection.update_one(
+        {"id": id},
+        {"$push": {"history": {
+            "status": complaint.get("status", "in_progress").title().replace("_", " "),
+            "remarks": f"Officer requested deadline extension to {req.requested_deadline[:10]}. Reason: {req.reason}",
+            "timestamp": now,
+            "updated_by_user_id": user.get("sub")
+        }}}
+    )
+
+    try:
+        log_audit(
+            action="DEADLINE_EXTENSION_REQUESTED",
+            actor_email=user.get("sub"),
+            actor_role="officer",
+            resource_type="complaint",
+            resource_id=id,
+            details={"requested_deadline": req.requested_deadline, "reason": req.reason}
+        )
+    except Exception:
+        pass
+
+    return {"success": True, "message": "Deadline extension request submitted. Awaiting admin approval."}
+
+@router.delete("/{id}")
+def delete_complaint(id: str, user: dict = Depends(get_current_user)):
+    """Soft delete a complaint."""
+    try:
+        collection = db.get_collection("complaints")
+        complaint = collection.find_one({"id": id})
+        if not complaint:
+            raise NotFoundError("Complaint")
+        
+        if complaint.get("is_deleted"):
+            raise ValidationError("Complaint is already deleted")
+            
+        role = user.get("role")
+        
+        # Validation
+        if role == "citizen":
+            if complaint.get("citizen_email") != user.get("sub"):
+                raise AuthorizationError("Cannot delete someone else's complaint")
+            if complaint.get("status") != "submitted":
+                raise ValidationError("Citizens can only delete complaints in 'submitted' status")
+                
+        elif role == "officer":
+             raise AuthorizationError("Officers cannot delete complaints. Contact admin.")
+        elif role not in ["admin"]:
+             raise AuthorizationError("Not authorized to delete complaint")
+             
+        now = datetime.now(timezone.utc).isoformat()
+        
+        update_data = {
+            "is_deleted": True,
+            "deleted_at": now,
+            "deleted_by": user.get("sub"),
+            "status": "deleted",
+            "updatedAt": now
+        }
+        
+        collection.update_one(
+            {"id": id},
+            {
+                "$set": update_data,
+                "$push": {
+                    "history": {
+                        "status": "Deleted",
+                        "remarks": f"Complaint soft-deleted by {role}",
+                        "timestamp": now,
+                        "updated_by_user_id": user.get("sub")
+                    }
+                }
+            }
+        )
+        
+        try:
+            log_audit(
+                action="DELETE_COMPLAINT",
+                actor_email=user.get("sub"),
+                actor_role=role,
+                resource_type="complaint",
+                resource_id=id,
+                details={"status_before": complaint.get("status")}
+            )
+        except Exception:
+            pass
+            
+        return {"success": True, "message": "Complaint deleted successfully"}
+    except Exception as e:
+        try:
+            log_audit(
+                action="DELETE_COMPLAINT",
+                actor_email=user.get("sub", "unknown"),
+                actor_role=user.get("role", "unknown"),
+                resource_type="complaint",
+                resource_id=id,
+                details={"error": str(e)},
+                status="failed"
+            )
+        except Exception:
+            pass
+        raise e
+
+
+@router.post("/{id}/reopen")
+def reopen_complaint(id: str, user: dict = Depends(get_current_user)):
+    """Reopen a resolved/closed/rejected complaint."""
+    try:
+        collection = db.get_collection("complaints")
+        complaint = collection.find_one({"id": id})
+        
+        if not complaint:
+            raise NotFoundError("Complaint")
+            
+        if complaint.get("is_deleted"):
+            raise ValidationError("Cannot reopen a deleted complaint")
+            
+        # Check permissions
+        role = user.get("role")
+        if role == "citizen" and complaint.get("citizen_email") != user.get("sub"):
+            raise AuthorizationError("Cannot reopen someone else's complaint")
+            
+        if complaint.get("status") not in ["resolved", "closed", "rejected"]:
+            raise ValidationError(f"Cannot reopen a complaint with status '{complaint.get('status')}'")
+            
+        reopen_count = complaint.get("reopen_count", 0)
+        if reopen_count >= 3:
+            raise ValidationError("Maximum reopening limit (3) reached")
+            
+        now = datetime.now(timezone.utc).isoformat()
+        
+        collection.update_one(
+            {"id": id},
+            {
+                "$set": {
+                    "status": "reopened",
+                    "last_reopened_at": now,
+                    "reopened_by": user.get("sub"),
+                    "updatedAt": now
+                },
+                "$inc": {"reopen_count": 1},
+                "$push": {
+                    "history": {
+                        "status": "Reopened",
+                        "remarks": f"Complaint reopened by {role}. Cycle {reopen_count + 1}/3",
+                        "timestamp": now,
+                        "updated_by_user_id": user.get("sub")
+                    }
+                }
+            }
+        )
+        
+        try:
+            log_audit(
+                action="REOPEN_COMPLAINT",
+                actor_email=user.get("sub"),
+                actor_role=role,
+                resource_type="complaint",
+                resource_id=id,
+                details={"reopen_count": reopen_count + 1}
+            )
+        except Exception:
+            pass
+            
+        return {"success": True, "message": "Complaint reopened successfully"}
+    except Exception as e:
+        try:
+            log_audit(
+                action="REOPEN_COMPLAINT",
+                actor_email=user.get("sub", "unknown"),
+                actor_role=user.get("role", "unknown"),
+                resource_type="complaint",
+                resource_id=id,
+                details={"error": str(e)},
+                status="failed"
+            )
+        except Exception:
+            pass
+        raise e
+
+
+@router.post("/{id}/extend-deadline")
+def extend_complaint_deadline(
+    id: str,
+    req: ExtendDeadlineRequest,
+    user: dict = Depends(require_officer_or_admin)
+):
+    """Extend the deadline of a complaint."""
+    try:
+        collection = db.get_collection("complaints")
+        complaint = collection.find_one({"id": id})
+        
+        if not complaint:
+            raise NotFoundError("Complaint")
+            
+        if complaint.get("is_deleted"):
+            raise ValidationError("Cannot extend deadline for a deleted complaint")
+            
+        if user.get("role") == "officer" and complaint.get("assigned_officer") != user.get("sub"):
+            raise AuthorizationError("Can only extend deadline for assigned complaints")
+            
+        current_deadline_str = complaint.get("sla_deadline")
+        if not current_deadline_str:
+            raise ValidationError("Complaint has no existing deadline")
+            
+        try:
+            current_deadline = datetime.fromisoformat(current_deadline_str.replace("Z", "+00:00"))
+            new_deadline = datetime.fromisoformat(req.new_due_date.replace("Z", "+00:00"))
+        except ValueError:
+            raise ValidationError("Invalid date format. Must be ISO format")
+            
+        if new_deadline <= current_deadline:
+            raise ValidationError("New deadline must be greater than current deadline")
+            
+        now = datetime.now(timezone.utc).isoformat()
+        
+        extension_record = {
+            "previous_deadline": current_deadline_str,
+            "new_deadline": new_deadline.isoformat(),
+            "reason": req.reason,
+            "extended_by": user.get("sub"),
+            "extended_at": now
+        }
+        
+        collection.update_one(
+            {"id": id},
+            {
+                "$set": {
+                    "sla_deadline": new_deadline.isoformat(),
+                    "updatedAt": now
+                },
+                "$push": {
+                    "extension_history": extension_record,
+                    "history": {
+                        "status": complaint.get("status", "in_progress").title().replace("_", " "),
+                        "remarks": f"Deadline extended to {new_deadline.strftime('%Y-%m-%d %H:%M')}. Reason: {req.reason}",
+                        "timestamp": now,
+                        "updated_by_user_id": user.get("sub")
+                    }
+                }
+            }
+        )
+        
+        try:
+            log_audit(
+                action="EXTEND_DEADLINE",
+                actor_email=user.get("sub"),
+                actor_role=user.get("role"),
+                resource_type="complaint",
+                resource_id=id,
+                details={"previous_deadline": current_deadline_str, "new_deadline": new_deadline.isoformat()}
+            )
+        except Exception:
+            pass
+            
+        return {"success": True, "message": "Deadline extended successfully"}
+    except Exception as e:
+        try:
+            log_audit(
+                action="EXTEND_DEADLINE",
+                actor_email=user.get("sub", "unknown"),
+                actor_role=user.get("role", "unknown"),
+                resource_type="complaint",
+                resource_id=id,
+                details={"error": str(e)},
+                status="failed"
+            )
+        except Exception:
+            pass
+        raise e

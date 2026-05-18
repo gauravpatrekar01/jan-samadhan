@@ -22,7 +22,7 @@ def analytics_overview(
     from db import db
     collection = db.get_collection("complaints")
     since = datetime.now(timezone.utc) - timedelta(days=days)
-    docs = list(collection.find({"createdAt": {"$gte": since.isoformat()}}, {"_id": 0, "status": 1, "priority": 1, "category": 1, "region": 1}))
+    docs = list(collection.find({"createdAt": {"$gte": since.isoformat()}, "is_deleted": {"$ne": True}}, {"_id": 0, "status": 1, "priority": 1, "category": 1, "region": 1}))
     total = len(docs)
     resolved = len([d for d in docs if (d.get("status") or "").lower() in {"resolved", "closed"}])
     pending = total - resolved
@@ -57,7 +57,7 @@ def analytics_trends(
 ):
     from db import db
     collection = db.get_collection("complaints")
-    docs = list(collection.find({}, {"_id": 0, "createdAt": 1, "created_at": 1, "timestamp": 1, "status": 1}))
+    docs = list(collection.find({"is_deleted": {"$ne": True}}, {"_id": 0, "createdAt": 1, "created_at": 1, "timestamp": 1, "status": 1}))
     trend = build_daily_trend(docs, days=days)
     series = [p["total"] for p in trend]
     forecast = moving_average_forecast(series, window=3, steps=3)

@@ -611,6 +611,8 @@
             👍 <span class="vote-count">${upvotes}</span>
         </button>
         ${(g.status === "resolved" || g.status === "closed") ? `<button class="btn btn-sm" style="background:rgba(249,115,22,.1);color:var(--accent)" onclick="openFeedback('${gid}')">⭐ Rate Resolution</button>` : ""}
+        ${(g.status === "resolved" || g.status === "closed" || g.status === "rejected") ? `<button class="btn btn-sm" style="background:rgba(37,99,235,.1);color:var(--primary-light)" onclick="reopenComplaint('${gid}')">🔄 Reopen</button>` : ""}
+        ${(g.status === "submitted") ? `<button class="btn btn-sm" style="background:rgba(220,38,38,.08);color:var(--danger)" onclick="deleteComplaint('${gid}')">🗑️ Delete</button>` : ""}
         ${ratingCount ? `<span class="badge badge-success">⭐ ${avgRating}/5 · ${ratingCount} ratings</span>` : ""}
       </div>
     </div>
@@ -910,6 +912,55 @@
     window.viewDetail = viewDetail;
     window.regenerateSummary = regenerateSummary;
     window.generateViewSummary = generateViewSummary;
+
+    async function reopenComplaint(id) {
+      if (!confirm('Reopen this complaint? You can reopen up to 3 times.')) return;
+      try {
+        const user = window._citizenUser || getSessionUser();
+        const token = user?.token;
+        const url = `${window.API_BASE_URL || ''}/api/complaints/${id}/reopen`;
+        console.log("POSTing to:", url);
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            const errMsg = data.error?.message || data.detail || 'Failed to reopen';
+            throw new Error(errMsg);
+        }
+        showToast('✅ Complaint reopened successfully', 'success');
+        loadCitizenGrievances();
+      } catch (e) {
+        showToast(e.message || 'Failed to reopen complaint', 'error');
+      }
+    }
+
+    async function deleteComplaint(id) {
+      if (!confirm('⚠️ Are you sure you want to delete this complaint? This cannot be undone.')) return;
+      try {
+        const user = window._citizenUser || getSessionUser();
+        const token = user?.token;
+        const url = `${window.API_BASE_URL || ''}/api/complaints/${id}`;
+        console.log("DELETEing:", url);
+        const res = await fetch(url, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed to delete');
+        showToast('🗑️ Complaint deleted successfully', 'success');
+        // Remove card from DOM
+        const card = document.getElementById(`gc-${id}`);
+        if (card) card.remove();
+        loadCitizenGrievances();
+      } catch (e) {
+        showToast(e.message || 'Failed to delete complaint', 'error');
+      }
+    }
+
+    window.reopenComplaint = reopenComplaint;
+    window.deleteComplaint = deleteComplaint;
 
     let _summaryPollTimer = null;
     let _summaryPollAttempts = 0;

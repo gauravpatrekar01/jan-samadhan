@@ -30,10 +30,11 @@ def get_dashboard_kpis(
             user_filter = {"assigned_officer": user.get("sub")}
         
         # Core Performance KPIs
-        total_complaints = collection.count_documents({"createdAt": {"$gte": start_date}, **user_filter})
+        total_complaints = collection.count_documents({"createdAt": {"$gte": start_date}, "is_deleted": {"$ne": True}, **user_filter})
         resolved_complaints = collection.count_documents({
             "createdAt": {"$gte": start_date}, 
             "status": {"$in": ["resolved", "closed"]},
+            "is_deleted": {"$ne": True},
             **user_filter
         })
         
@@ -46,6 +47,7 @@ def get_dashboard_kpis(
                 "createdAt": {"$gte": start_date},
                 "status": {"$in": ["resolved", "closed"]},
                 "resolution_time_hours": {"$exists": True, "$ne": None},
+                "is_deleted": {"$ne": True},
                 **user_filter
             }},
             {"$group": {
@@ -64,6 +66,7 @@ def get_dashboard_kpis(
                 "createdAt": {"$gte": start_date},
                 "status": {"$in": ["resolved", "closed"]},
                 "sla_met": {"$exists": True},
+                "is_deleted": {"$ne": True},
                 **user_filter
             }},
             {"$group": {
@@ -84,12 +87,14 @@ def get_dashboard_kpis(
             total = collection.count_documents({
                 "createdAt": {"$gte": start_date},
                 "priority": priority,
+                "is_deleted": {"$ne": True},
                 **user_filter
             })
             resolved = collection.count_documents({
                 "createdAt": {"$gte": start_date},
                 "priority": priority,
                 "status": {"$in": ["resolved", "closed"]},
+                "is_deleted": {"$ne": True},
                 **user_filter
             })
             
@@ -102,7 +107,7 @@ def get_dashboard_kpis(
         
         # Category Performance
         category_pipeline = [
-            {"$match": {"createdAt": {"$gte": start_date}, **user_filter}},
+            {"$match": {"createdAt": {"$gte": start_date}, "is_deleted": {"$ne": True}, **user_filter}},
             {"$group": {
                 "_id": "$category",
                 "total": {"$sum": 1},
@@ -115,7 +120,7 @@ def get_dashboard_kpis(
         
         # Weekly Trends
         weekly_pipeline = [
-            {"$match": {"createdAt": {"$gte": start_date}, **user_filter}},
+            {"$match": {"createdAt": {"$gte": start_date}, "is_deleted": {"$ne": True}, **user_filter}},
             {"$addFields": {
                 "createdAtDate": {
                     "$cond": {
@@ -136,13 +141,14 @@ def get_dashboard_kpis(
         weekly_trends = list(collection.aggregate(weekly_pipeline))
         
         # Recent Activity (Last 24h, 7d)
-        recent_24h = collection.count_documents({"createdAt": {"$gte": yesterday}, **user_filter})
-        recent_7d = collection.count_documents({"createdAt": {"$gte": last_week}, **user_filter})
+        recent_24h = collection.count_documents({"createdAt": {"$gte": yesterday}, "is_deleted": {"$ne": True}, **user_filter})
+        recent_7d = collection.count_documents({"createdAt": {"$gte": last_week}, "is_deleted": {"$ne": True}, **user_filter})
         
         # Escalation Metrics
         escalated_complaints = collection.count_documents({
             "createdAt": {"$gte": start_date},
             "escalated": True,
+            "is_deleted": {"$ne": True},
             **user_filter
         })
         
@@ -154,6 +160,7 @@ def get_dashboard_kpis(
                 "createdAt": {"$gte": start_date},
                 "status": {"$in": ["resolved", "closed"]},
                 "feedbackAverage": {"$exists": True, "$ne": None},
+                "is_deleted": {"$ne": True},
                 **user_filter
             }},
             {"$group": {
@@ -287,7 +294,7 @@ def get_department_kpis(
         
         # Department comparison
         dept_pipeline = [
-            {"$match": {"createdAt": {"$gte": start_date}, **dept_filter}},
+            {"$match": {"createdAt": {"$gte": start_date}, "is_deleted": {"$ne": True}, **dept_filter}},
             {"$group": {
                 "_id": "$department",
                 "total_complaints": {"$sum": 1},

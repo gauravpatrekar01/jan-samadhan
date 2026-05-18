@@ -75,6 +75,17 @@ class ComplaintCreate(BaseModel):
     escalation_level: int = 1
     expected_resolution_date: Optional[datetime] = None
 
+    # Safe Extension Fields for Complaint Lifecycle Features
+    is_deleted: Optional[bool] = False
+    deleted_at: Optional[datetime] = None
+    deleted_by: Optional[str] = None
+
+    reopen_count: Optional[int] = 0
+    last_reopened_at: Optional[datetime] = None
+    reopened_by: Optional[str] = None
+
+    extension_history: Optional[List[Dict[str, Any]]] = []
+
     @field_validator("title")
     @classmethod
     def title_not_empty(cls, v: str) -> str:

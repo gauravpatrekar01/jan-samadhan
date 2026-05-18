@@ -20,6 +20,9 @@ def build_complaint_query(
     """Build a MongoDB query for complaint filtering"""
     query = {}
 
+    # Exclude soft-deleted complaints by default
+    query["is_deleted"] = {"$ne": True}
+
     if near:
         try:
             lat, lng = map(float, near.split(","))

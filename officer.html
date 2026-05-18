@@ -528,6 +528,31 @@
         </div>
     </div>
 
+    <!-- DEADLINE EXTENSION REQUEST MODAL (Officer) -->
+    <div class="modal-overlay" id="deadlineExtensionModal">
+        <div class="modal-box" style="max-width:500px">
+            <div class="modal-header">
+                <h3>📅 Request Deadline Extension</h3>
+                <button class="modal-close" onclick="closeModal('deadlineExtensionModal')">✕</button>
+            </div>
+            <div style="padding:20px">
+                <div id="extModalInfo" style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:16px;font-size:.88rem;color:var(--text-muted)"></div>
+                <div class="form-group">
+                    <label class="form-label">Reason for Extension <span style="color:var(--danger)">*</span></label>
+                    <textarea class="form-control" id="extReason" rows="3" placeholder="e.g. Awaiting contractor report, field survey pending..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Requested New Deadline <span style="color:var(--danger)">*</span></label>
+                    <input type="date" class="form-control" id="extNewDate">
+                </div>
+                <div style="background:rgba(217,119,6,.08);border:1px solid rgba(217,119,6,.3);padding:10px 14px;border-radius:8px;font-size:.82rem;color:var(--warning);margin-bottom:16px">
+                    ⚠️ This request will be reviewed by an Admin before the deadline is extended.
+                </div>
+                <button class="btn btn-primary w-full" id="submitExtBtn" onclick="submitDeadlineExtension()">📤 Submit Request</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Chatbot Widget -->
     <div id="chatbot-widget">
         <button class="chatbot-toggle" id="chatbotToggle">🤖</button>
@@ -737,6 +762,7 @@
                     <button class="btn btn-ghost btn-sm" onclick="viewDetail('${g.id}')">👁️ View Details</button>
                     ${g.category === 'Infrastructure' || g.priority === 'high' || g.priority === 'emergency' ? `<button class="btn btn-outline btn-sm" onclick="openConvertModal('${g.id}')">🏗️ Project Conversion</button>` : ''}
                     <button class="btn btn-ghost btn-sm" onclick="quickResolve('${g.id}')">✅ Quick Resolve</button>
+                    <button class="btn btn-sm" style="background:rgba(37,99,235,.1);color:var(--primary-light)" onclick="openDeadlineExtensionModal('${g.id}', '${g.sla_deadline || ''}')">📅 Request Extension</button>
                     ${g.feedbackCount ? `<span class="badge badge-success">⭐ ${g.feedbackAverage || g.feedbackRating}/5 · ${g.feedbackCount} ratings</span>` : ''}
                   </div>
                 </div>
@@ -902,6 +928,68 @@
         function openConvertModal(id) {
             _convertGID = id;
             openModal('convertProjectModal');
+        }
+
+        // ── Deadline Extension Request ──
+        let _extGID = null;
+
+        function openDeadlineExtensionModal(id, currentDeadline) {
+            _extGID = id;
+            const info = document.getElementById('extModalInfo');
+            if (info) {
+                info.innerHTML = `<strong>Complaint:</strong> <span style="font-family:monospace;color:var(--primary-light)">${id}</span><br>
+                    <strong>Current Deadline:</strong> ${currentDeadline ? new Date(currentDeadline).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'}) : 'No deadline set'}`;
+            }
+            // Set min date to tomorrow
+            const extDate = document.getElementById('extNewDate');
+            if (extDate) {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                extDate.min = tomorrow.toISOString().split('T')[0];
+                extDate.value = '';
+            }
+            document.getElementById('extReason').value = '';
+            openModal('deadlineExtensionModal');
+        }
+
+        async function submitDeadlineExtension() {
+            const reason = document.getElementById('extReason').value.trim();
+            const newDate = document.getElementById('extNewDate').value;
+            if (!reason) return showToast('Please provide a reason', 'warning');
+            if (!newDate) return showToast('Please select a new deadline date', 'warning');
+
+            const btn = document.getElementById('submitExtBtn');
+            btn.disabled = true;
+            btn.textContent = 'Submitting...';
+
+            try {
+                const user = window._officerUser || getSessionUser();
+                const token = user?.token;
+                const res = await fetch(`${window.API_BASE_URL || ''}/api/complaints/${_extGID}/request-deadline-extension`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        complaint_id: _extGID,
+                        requested_deadline: new Date(newDate).toISOString(),
+                        reason: reason
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    const errMsg = data.error?.message || data.detail || 'Request failed';
+                    throw new Error(errMsg);
+                }
+                showToast('📅 Extension request submitted to admin', 'success');
+                closeModal('deadlineExtensionModal');
+            } catch (e) {
+                showToast(e.message || 'Failed to submit request', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📤 Submit Request';
+            }
         }
 
         async function submitProjectConversion() {

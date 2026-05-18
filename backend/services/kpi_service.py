@@ -24,22 +24,22 @@ class KPIService:
         
         # Run synchronous DB queries in an executor to avoid blocking the event loop
         def fetch_stats():
-            total = self.collection.count_documents({})
-            pending = self.collection.count_documents({"status": "submitted"})
-            in_progress = self.collection.count_documents({"status": {"$in": ["under_review", "in_progress"]}})
-            resolved = self.collection.count_documents({"status": {"$in": ["resolved", "closed"]}})
-            rejected = self.collection.count_documents({"status": "rejected"})
+            total = self.collection.count_documents({"is_deleted": {"$ne": True}})
+            pending = self.collection.count_documents({"status": "submitted", "is_deleted": {"$ne": True}})
+            in_progress = self.collection.count_documents({"status": {"$in": ["under_review", "in_progress"]}, "is_deleted": {"$ne": True}})
+            resolved = self.collection.count_documents({"status": {"$in": ["resolved", "closed"]}, "is_deleted": {"$ne": True}})
+            rejected = self.collection.count_documents({"status": "rejected", "is_deleted": {"$ne": True}})
             
             # Avg resolution time
             pipeline = [
-                {"$match": {"status": {"$in": ["resolved", "closed"]}, "resolution_time_hours": {"$exists": True}}},
+                {"$match": {"status": {"$in": ["resolved", "closed"]}, "resolution_time_hours": {"$exists": True}, "is_deleted": {"$ne": True}}},
                 {"$group": {"_id": None, "avg_time": {"$avg": "$resolution_time_hours"}}}
             ]
             res_stats = list(self.collection.aggregate(pipeline))
             avg_res_time = round(res_stats[0]["avg_time"], 1) if res_stats else 0
             
             # SLA violations
-            sla_violations = self.collection.count_documents({"status": {"$in": ["resolved", "closed"]}, "sla_met": False})
+            sla_violations = self.collection.count_documents({"status": {"$in": ["resolved", "closed"]}, "sla_met": False, "is_deleted": {"$ne": True}})
             
             return {
                 "total_complaints": total,
