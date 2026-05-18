@@ -15,8 +15,61 @@ router = APIRouter()
 
 @router.post("/requests")
 @limiter.limit("5/hour")
-def request_handling(request: Request, request_data: NGORequestSchema, user=Depends(require_role(["ngo"]))):
-    """NGO requests to handle a specific grievance."""
+async def request_handling(request: Request, user=Depends(require_role(["ngo"]))):
+    """
+    NGO requests to handle a specific grievance.
+    
+    Sample Valid Request Body:
+    {
+        "complaint_id": "JSM-2026-5B039A9F",
+        "admin_remarks": "Requesting immediate resolution."
+    }
+    """
+    import logging
+    import json
+    logger = logging.getLogger("ngo_requests")
+
+    # 1. Inspect and validate Content-Type header
+    content_type = request.headers.get("content-type", "")
+    if "application/json" not in content_type:
+        logger.warning(f"NGO Request failed due to invalid Content-Type: {content_type}")
+        raise HTTPException(
+            status_code=400,
+            detail="Content-Type must be 'application/json'"
+        )
+
+    # 2. Extract and log incoming request payload before validation
+    body_json = None
+    try:
+        body_bytes = await request.body()
+        body_str = body_bytes.decode("utf-8")
+        logger.info(f"Incoming NGO Request raw payload: {body_str}")
+        if not body_str.strip():
+            raise ValueError("Request body is empty.")
+        body_json = json.loads(body_str)
+    except json.JSONDecodeError as je:
+        logger.error(f"Invalid JSON structure in NGO request: {str(je)}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid JSON structure in request payload: {str(je)}"
+        )
+    except Exception as e:
+        logger.error(f"Failed to read/parse incoming request body: {str(e)}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to read/parse request body: {str(e)}"
+        )
+
+    # 3. Pydantic validation with specific helpful error messages
+    try:
+        request_data = NGORequestSchema.model_validate(body_json)
+    except Exception as ve:
+        logger.error(f"Validation failed for NGO request: {str(ve)}, payload: {body_json}")
+        raise HTTPException(
+            status_code=422,
+            detail=f"Validation failed: {str(ve)}"
+        )
+
     user_doc = db.get_collection("users").find_one({"email": user["sub"]})
     
     # Check if NGO is verified and active
@@ -38,21 +91,34 @@ def request_handling(request: Request, request_data: NGORequestSchema, user=Depe
     # Check if complaint exists and is available
     complaint = complaint_coll.find_one({"id": request_data.complaint_id})
     if not complaint:
-        raise HTTPException(status_code=404, detail="Complaint not found")
+        raise HTTPException(status_code=404, detail=f"Complaint with ID '{request_data.complaint_id}' not found.")
 
-    # Category-Based Matching Check
-    # Category-Based Matching Check (FIXED)
+    # Category-Based Matching Check with flexible synonyms & casing
     complaint_category = (complaint.get("category") or "").strip().lower()
     ngo_categories = [c.strip().lower() for c in user_doc.get("categories", [])]
 
-    if complaint_category not in ngo_categories:
+    # Map category synonyms/aliases to be robust
+    synonyms_map = {
+        "health": "healthcare",
+        "environment": "sanitation",
+        "waste": "sanitation",
+        "power": "electricity",
+        "roads": "infrastructure"
+    }
+
+    expanded_ngo_categories = set(ngo_categories)
+    for cat in ngo_categories:
+        if cat in synonyms_map:
+            expanded_ngo_categories.add(synonyms_map[cat])
+
+    if complaint_category not in expanded_ngo_categories:
         raise HTTPException(
             status_code=400,
-            detail=f"Your NGO is not authorized to handle '{complaint.get('category')}' cases."
-         )
+            detail=f"Your NGO is not authorized to handle '{complaint.get('category')}' cases. Authorized categories are: {user_doc.get('categories', [])}."
+        )
     
     if complaint.get("assigned_to_ngo"):
-         raise HTTPException(status_code=400, detail="Grievance already assigned to another NGO.")
+         raise HTTPException(status_code=400, detail=f"Grievance '{request_data.complaint_id}' is already assigned to another NGO.")
 
     # 8. Fraud Detection & Activity Tracking
     today = datetime.now(timezone.utc).date().isoformat()
@@ -70,7 +136,6 @@ def request_handling(request: Request, request_data: NGORequestSchema, user=Depe
     db.get_collection("users").update_one({"email": user["sub"]}, {"$inc": {"request_count_today": 1}})
 
     # Prevent duplicate requests
-
     request_coll = db.get_collection("ngo_requests")
     existing = request_coll.find_one({
         "complaint_id": request_data.complaint_id,
@@ -166,7 +231,10 @@ def get_ngo_stats(user=Depends(require_role(["ngo"]))):
         {"$group": {"_id": None, "avgRating": {"$avg": "$feedback.rating"}}}
     ]
     rating_result = list(complaint_coll.aggregate(pipeline))
-    avg_rating = round(rating_result[0]["avgRating"], 1) if rating_result else 0.0
+    
+    avg_rating = 0.0
+    if rating_result and rating_result[0].get("avgRating") is not None:
+        avg_rating = round(rating_result[0]["avgRating"], 1)
     
     # Active cases currently being handled
     active_count = complaint_coll.count_documents({

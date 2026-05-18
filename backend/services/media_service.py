@@ -85,7 +85,6 @@ async def upload_media(file: UploadFile, folder: str = "jansamadhan/complaints")
         if content_type in ALLOWED_IMAGE_TYPES:
             resource_type = "image"
             upload_params["resource_type"] = "image"
-            upload_params["format"] = "auto"
         elif content_type in ALLOWED_VIDEO_TYPES:
             resource_type = "video"
             upload_params["resource_type"] = "video"

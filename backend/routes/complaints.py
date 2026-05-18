@@ -1312,7 +1312,7 @@ def get_complaint_timeline(id: str, user: dict = Depends(get_current_user)):
 
 @router.post("/{id}/upload-media")
 @limiter.limit("10/hour")
-def upload_complaint_media(
+async def upload_complaint_media(
     request: Request,
     id: str,
     file: UploadFile = File(...),
@@ -1344,21 +1344,18 @@ def upload_complaint_media(
         if file.content_type not in allowed_types:
             raise ValidationError(f"Invalid file type: {file.content_type}")
             
-        # Actual S3 Upload
-        file_extension = file.filename.split(".")[-1]
-        unique_filename = f"{uuid.uuid4()}.{file_extension}"
+        # Upload to Cloudinary using dynamic media service
+        upload_result = await upload_media(file, folder=f"jansamadhan/complaints/{id}")
         
-        file_content = file.file.read()
-        s3_url = s3_service.upload_file(file_content, file.filename, folder=f"complaints/{id}")
-        
-        if not s3_url:
+        if not upload_result or not upload_result.get("url"):
             raise HTTPException(status_code=500, detail="Cloud storage upload failed")
         
         media_doc = {
-            "url": s3_url,
+            "url": upload_result["url"],
             "media_type": "image" if "image" in file.content_type else ("video" if "video" in file.content_type else "document"),
             "file_name": file.filename,
             "size_bytes": file_size,
+            "public_id": upload_result.get("public_id"),
             "uploaded_at": datetime.now(timezone.utc).isoformat()
         }
         

@@ -171,6 +171,11 @@
             <div class="dash-page" id="page-impact">
                 <div class="stats-grid">
                     <div class="stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-value" id="statActive">0</div>
+                        <div class="stat-label">Active Cases</div>
+                    </div>
+                    <div class="stat-card">
                         <div class="stat-icon">✅</div>
                         <div class="stat-value" id="statResolved">0</div>
                         <div class="stat-label">Total Resolved</div>
@@ -351,9 +356,10 @@
 
             try {
                 const stats = await window.JanSamadhanAPI.getNGOStats();
-                document.getElementById('statResolved').textContent = stats.resolved;
-                document.getElementById('statRating').textContent = stats.avg_rating;
-                document.getElementById('statImpact').textContent = stats.impact_lives;
+                document.getElementById('statActive').textContent = stats.active || 0;
+                document.getElementById('statResolved').textContent = stats.resolved || 0;
+                document.getElementById('statRating').textContent = stats.avg_rating || '0.0';
+                document.getElementById('statImpact').textContent = stats.impact_lives || 0;
             } catch(e) { console.error(e); }
         }
 
@@ -370,7 +376,7 @@
 
             try {
                 const res = await window.JanSamadhanAPI.getNGOAssignedComplaints();
-                const data = res.data || [];
+                const data = Array.isArray(res) ? res : (res.data || []);
                 if(!data.length) {
                     container.innerHTML = `<div class="card" style="text-align:center;padding:60px"><h4>No active assignments.</h4><p>Browse unassigned grievances to start helping.</p></div>`;
                     return;
@@ -469,7 +475,7 @@
 
             try {
                 const res = await window.JanSamadhanAPI.getNGOAvailableComplaints();
-                const data = res.data || [];
+                const data = Array.isArray(res) ? res : (res.data || []);
                 
                 if(!data || data.length === 0) {
                     container.innerHTML = `<div class="card" style="text-align:center;padding:60px">
@@ -501,7 +507,7 @@
             try {
                 const res = await window.JanSamadhanAPI.getMyNGORequests();
                 const container = document.getElementById('requestsList');
-                const data = res.data || [];
+                const data = Array.isArray(res) ? res : (res.data || []);
                 
                 if(!data || data.length === 0) {
                     container.innerHTML = `
