@@ -1,35 +1,236 @@
 {% extends "email/base.html" %}
 
 {% block content %}
-<h2 style="color: #111827; margin-top: 0;">Complaint Assigned</h2>
-<p>Dear {{ officer_name|default('Officer') }},</p>
-<p>A new grievance has been assigned to you for resolution.</p>
 
-<table class="details-table">
+{% set priority_color = '#2563EB' %}
+
+{% if priority|lower == 'high' %}
+{% set priority_color = '#DC2626' %}
+{% elif priority|lower == 'medium' %}
+{% set priority_color = '#F59E0B' %}
+{% endif %}
+
+<h2 style="
+    color:#111827;
+    margin-top:0;
+    font-size:26px;
+    font-weight:700;
+">
+    New Complaint Assigned
+</h2>
+
+<p style="
+    font-size:16px;
+    color:#374151;
+    line-height:1.7;
+">
+    Dear <strong>{{ officer_name|default('Officer') }}</strong>,
+</p>
+
+<p style="
+    font-size:15px;
+    color:#4B5563;
+    line-height:1.8;
+">
+    A new grievance has been assigned to your department for review and resolution through the
+    <strong>JanSamadhan Public Grievance Portal</strong>.
+</p>
+
+<!-- Assignment Banner -->
+<div style="
+    background:#EFF6FF;
+    border:1px solid #2563EB;
+    color:#1D4ED8;
+    padding:14px 18px;
+    border-radius:10px;
+    margin:24px 0;
+    font-size:15px;
+    font-weight:600;
+">
+    Action Required: Review and initiate resolution process
+</div>
+
+<!-- Complaint Details -->
+<table style="
+    width:100%;
+    border-collapse:collapse;
+    margin-top:20px;
+    background:#F9FAFB;
+    border-radius:10px;
+    overflow:hidden;
+">
+
     <tr>
-        <th>Grievance ID</th>
-        <td><strong>{{ complaint_id }}</strong></td>
+        <th style="
+            text-align:left;
+            padding:14px;
+            background:#E5E7EB;
+            color:#111827;
+            width:35%;
+            font-size:14px;
+        ">
+            Grievance ID
+        </th>
+
+        <td style="
+            padding:14px;
+            color:#111827;
+            font-size:14px;
+            font-weight:700;
+        ">
+            {{ complaint_id }}
+        </td>
     </tr>
+
     <tr>
-        <th>Category</th>
-        <td>{{ category }}</td>
+        <th style="
+            text-align:left;
+            padding:14px;
+            background:#F3F4F6;
+            color:#111827;
+            font-size:14px;
+        ">
+            Category
+        </th>
+
+        <td style="
+            padding:14px;
+            color:#374151;
+            font-size:14px;
+        ">
+            {{ category|default('General') }}
+        </td>
     </tr>
+
     <tr>
-        <th>Priority</th>
-        <td><span class="badge badge-{{ priority|lower|default('medium') }}">{{ priority|title }}</span></td>
+        <th style="
+            text-align:left;
+            padding:14px;
+            background:#E5E7EB;
+            color:#111827;
+            font-size:14px;
+        ">
+            Priority Level
+        </th>
+
+        <td style="padding:14px;">
+
+            <span style="
+                display:inline-block;
+                padding:6px 12px;
+                border-radius:20px;
+                font-size:12px;
+                font-weight:700;
+                color:#FFFFFF;
+                background:{{ priority_color }};
+            ">
+                {{ priority|title|default('Medium') }}
+            </span>
+
+        </td>
     </tr>
+
     <tr>
-        <th>Department</th>
-        <td>{{ department }}</td>
+        <th style="
+            text-align:left;
+            padding:14px;
+            background:#F3F4F6;
+            color:#111827;
+            font-size:14px;
+        ">
+            Department
+        </th>
+
+        <td style="
+            padding:14px;
+            color:#374151;
+            font-size:14px;
+        ">
+            {{ department }}
+        </td>
     </tr>
+
     <tr>
-        <th>Deadline</th>
-        <td><span style="color: #c2410c; font-weight: 600;">{{ deadline }}</span></td>
+        <th style="
+            text-align:left;
+            padding:14px;
+            background:#E5E7EB;
+            color:#111827;
+            font-size:14px;
+        ">
+            Resolution Deadline
+        </th>
+
+        <td style="
+            padding:14px;
+            color:#C2410C;
+            font-size:14px;
+            font-weight:700;
+        ">
+            {{ deadline }}
+        </td>
     </tr>
+
 </table>
 
-<p>Please log in to the officer dashboard to review the details and initiate action.</p>
-<div style="text-align: center;">
-    <a href="{{ portal_url|default('#') }}" class="btn">View Complaint</a>
+<!-- Instructions -->
+<p style="
+    margin-top:28px;
+    font-size:15px;
+    color:#4B5563;
+    line-height:1.8;
+">
+    Please log in to the officer dashboard to review complaint details, update status, and initiate the necessary action
+    within the assigned SLA timeline.
+</p>
+
+<!-- CTA -->
+<div style="text-align:center; margin:30px 0;">
+
+    <a href="{{ portal_url|default('#') }}" style="
+            background:#2563EB;
+            color:#FFFFFF;
+            text-decoration:none;
+            padding:14px 28px;
+            border-radius:8px;
+            font-size:15px;
+            font-weight:600;
+            display:inline-block;
+       ">
+        View Complaint Details
+    </a>
+
 </div>
+
+<!-- SLA Warning -->
+<div style="
+    margin-top:30px;
+    padding:18px;
+    background:#FEF2F2;
+    border-left:4px solid #DC2626;
+    border-radius:8px;
+">
+
+    <p style="
+        margin:0;
+        font-size:14px;
+        color:#7F1D1D;
+        line-height:1.7;
+    ">
+        Timely action is required to ensure SLA compliance and efficient grievance resolution.
+    </p>
+
+</div>
+
+<p style="
+    margin-top:30px;
+    color:#111827;
+    font-size:15px;
+    line-height:1.7;
+">
+    Regards,<br>
+    <strong>JanSamadhan Administration</strong><br>
+    Smart Public Grievance Resolution System
+</p>
+
 {% endblock %}

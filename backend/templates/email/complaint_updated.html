@@ -1,31 +1,79 @@
 {% extends "email/base.html" %}
 
 {% block content %}
-<h2 style="color: #111827; margin-top: 0;">Complaint Status Updated</h2>
-<p>Dear {{ citizen_name|default('Citizen') }},</p>
-<p>There has been an update to your grievance.</p>
+<h2 style="color:#0F172A; margin:0 0 20px; font-size:26px; font-weight:700; font-family:Arial,sans-serif; text-align:left;">
+  Complaint Status Updated
+</h2>
 
-<table class="details-table">
-    <tr>
-        <th>Grievance ID</th>
-        <td><strong>{{ complaint_id }}</strong></td>
-    </tr>
-    <tr>
-        <th>New Status</th>
-        <td><span style="font-weight: bold; color: #1e40af;">{{ new_status|title }}</span></td>
-    </tr>
-    <tr>
-        <th>Remarks</th>
-        <td>{{ remarks|default('Status changed by assigned officer.') }}</td>
-    </tr>
-    <tr>
-        <th>Updated At</th>
-        <td>{{ timestamp }}</td>
-    </tr>
+<p style="font-size:16px; color:#374151; line-height:1.7; font-family:Arial,sans-serif; margin:0 0 16px;">
+  Dear <strong>{{ citizen_name|default('Citizen') }}</strong>,
+</p>
+
+<p style="font-size:15px; color:#4B5563; line-height:1.8; font-family:Arial,sans-serif; margin:0 0 24px;">
+  There has been an update to your registered grievance on the <strong>JanSamadhan Public Grievance Portal</strong>. Please review the updated status and details below.
+</p>
+
+<!-- Status Update Alert Banner -->
+{% set alert_bg = '#EFF6FF' %}
+{% set alert_border = '#2563EB' %}
+{% set alert_color = '#1D4ED8' %}
+{% set alert_text = 'Status Update: Active review is in progress.' %}
+{% include "email/alert.html" %}
+
+<!-- Complaint Details Table -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="border:1px solid #E5E7EB; background-color:#ffffff; width:100%; border-collapse:collapse; margin-top:20px;">
+  
+  {% set row_label = 'Grievance ID' %}
+  {% set row_value = complaint_id %}
+  {% set row_is_bold = true %}
+  {% set row_bg = '#FFFFFF' %}
+  {% set row_label_bg = '#F9FAFB' %}
+  {% include "email/detail_row.html" %}
+
+  {% set row_label = 'New Status' %}
+  {% set row_value = new_status|title %}
+  {% set row_is_bold = true %}
+  {% set row_color = '#1E40AF' %}
+  {% set row_bg = '#FFFFFF' %}
+  {% set row_label_bg = '#F9FAFB' %}
+  {% include "email/detail_row.html" %}
+
+  {% set row_label = 'Remarks / Updates' %}
+  {% set row_value = remarks|default('Status changed by assigned officer.') %}
+  {% set row_is_bold = false %}
+  {% set row_bg = '#FFFFFF' %}
+  {% set row_label_bg = '#F9FAFB' %}
+  {% include "email/detail_row.html" %}
+
+  {% set row_label = 'Updated At' %}
+  {% set row_value = timestamp %}
+  {% set row_is_bold = false %}
+  {% set row_bg = '#FFFFFF' %}
+  {% set row_label_bg = '#F9FAFB' %}
+  {% include "email/detail_row.html" %}
+
 </table>
 
-<p>You can view the detailed progress history in your portal dashboard.</p>
-<div style="text-align: center;">
-    <a href="{{ portal_url|default('#') }}" class="btn">View Details</a>
+<p style="margin-top:28px; font-size:15px; color:#4B5563; line-height:1.8; font-family:Arial,sans-serif; margin-bottom:24px;">
+  You can view the detailed progress history and track further updates in your portal dashboard.
+</p>
+
+<!-- CTA Button -->
+<div style="text-align:center; margin:30px 0;">
+  {% set btn_url = portal_url|default('#') %}
+  {% set btn_text = 'View Details' %}
+  {% set btn_color = '#2563EB' %}
+  {% set btn_width = '240' %}
+  {% include "email/button.html" %}
 </div>
+
+<p style="margin-top:30px; font-size:15px; color:#4B5563; line-height:1.8; font-family:Arial,sans-serif;">
+  Thank you for using JanSamadhan.
+</p>
+
+<p style="margin-top:24px; color:#111827; font-size:15px; line-height:1.7; font-family:Arial,sans-serif;">
+  Regards,<br>
+  <strong>JanSamadhan Team</strong><br>
+  Smart Public Grievance Resolution System
+</p>
 {% endblock %}

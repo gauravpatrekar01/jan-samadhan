@@ -427,7 +427,7 @@ def create_complaint(
                 background_tasks.add_task(
                     notify_assignment,
                     assigned_officer, 
-                    id, 
+                    complaint_id, 
                     officer_user.get("name", "Officer"), 
                     c_dict.get("category", "General"),
                     officer_user.get("department", "Field"),

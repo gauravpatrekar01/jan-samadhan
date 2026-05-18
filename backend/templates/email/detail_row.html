@@ -1,0 +1,15 @@
+{% set row_bg = row_bg|default('#ffffff') %}
+{% set row_label = row_label|default('') %}
+{% set row_value = row_value|default('') %}
+{% set row_is_bold = row_is_bold|default(false) %}
+{% set row_color = row_color|default('#374151') %}
+{% set row_label_bg = row_label_bg|default('#F9FAFB') %}
+
+<tr style="background-color:{{ row_bg }};">
+  <th scope="row" style="text-align:left; padding:12px; width:35%; color:#4B5563; background-color:{{ row_label_bg }}; font-size:14px; font-family:Arial,sans-serif; font-weight:600; border-bottom:1px solid #E5E7EB; white-space:nowrap; word-break:break-word; overflow-wrap:break-word;">
+    {{ row_label }}
+  </th>
+  <td style="padding:12px; color:{{ row_color }}; background-color:{{ row_bg }}; font-size:14px; font-family:Arial,sans-serif; border-bottom:1px solid #E5E7EB; word-break:break-word; overflow-wrap:break-word; text-align:left; {% if row_is_bold %}font-weight:bold;{% endif %}">
+    {{ row_value }}
+  </td>
+</tr>

@@ -1,38 +1,87 @@
 {% extends "email/base.html" %}
 
 {% block content %}
-<div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-    <h2 style="color: #991b1b; margin-top: 0; margin-bottom: 10px;">⚠️ SLA Breach Alert</h2>
-    <p style="color: #7f1d1d; margin: 0;">A high-priority complaint has breached its Service Level Agreement (SLA) deadline and requires immediate escalation.</p>
-</div>
+<!-- Critical SLA Breach Alert Banner -->
+{% set alert_bg = '#FEF2F2' %}
+{% set alert_border = '#DC2626' %}
+{% set alert_color = '#991B1B' %}
+{% set alert_title = '⚠️ SLA Breach Alert' %}
+{% set alert_text = 'A high-priority complaint has breached its Service Level Agreement (SLA) deadline and requires immediate administrative escalation.' %}
+{% include "email/alert.html" %}
 
-<p>Dear {{ admin_name|default('Administrator') }},</p>
-<p>Please review the following escalated grievance immediately:</p>
+<p style="font-size:16px; color:#374151; line-height:1.7; font-family:Arial,sans-serif; margin:0 0 16px;">
+  Dear <strong>{{ admin_name|default('Administrator') }}</strong>,
+</p>
 
-<table class="details-table">
-    <tr>
-        <th>Grievance ID</th>
-        <td><strong>{{ complaint_id }}</strong></td>
-    </tr>
-    <tr>
-        <th>Category</th>
-        <td>{{ category }}</td>
-    </tr>
-    <tr>
-        <th>Priority</th>
-        <td><span class="badge badge-emergency">Emergency Escalation</span></td>
-    </tr>
-    <tr>
-        <th>Assigned Officer</th>
-        <td>{{ officer_name|default('Unassigned') }}</td>
-    </tr>
-    <tr>
-        <th>Missed Deadline</th>
-        <td><span style="color: #991b1b; font-weight: 600;">{{ deadline }}</span></td>
-    </tr>
+<p style="font-size:15px; color:#4B5563; line-height:1.8; font-family:Arial,sans-serif; margin:0 0 24px;">
+  The following grievance has exceeded its assigned SLA resolution deadline and has been automatically escalated for urgent review and administrative action.
+</p>
+
+<!-- Complaint Details Table -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="border:1px solid #E5E7EB; background-color:#ffffff; width:100%; border-collapse:collapse; margin-top:20px;">
+  
+  {% set row_label = 'Grievance ID' %}
+  {% set row_value = complaint_id %}
+  {% set row_is_bold = true %}
+  {% set row_bg = '#FFFFFF' %}
+  {% set row_label_bg = '#F9FAFB' %}
+  {% include "email/detail_row.html" %}
+
+  {% set row_label = 'Category' %}
+  {% set row_value = category|default('General') %}
+  {% set row_is_bold = false %}
+  {% set row_bg = '#FFFFFF' %}
+  {% set row_label_bg = '#F9FAFB' %}
+  {% include "email/detail_row.html" %}
+
+  <!-- Emergency Escalation Badge -->
+  {% set badge_bg_color = '#FEF2F2' %}
+  {% set badge_text_color = '#DC2626' %}
+  {% set badge_text = 'Emergency Escalation' %}
+  {% set badge_html %}
+    {% include "email/badge.html" %}
+  {% endset %}
+
+  {% set row_label = 'Priority' %}
+  {% set row_value = badge_html|safe %}
+  {% set row_is_bold = false %}
+  {% set row_bg = '#FFFFFF' %}
+  {% set row_label_bg = '#F9FAFB' %}
+  {% include "email/detail_row.html" %}
+
+  {% set row_label = 'Assigned Officer' %}
+  {% set row_value = officer_name|default('Unassigned') %}
+  {% set row_is_bold = false %}
+  {% set row_bg = '#FFFFFF' %}
+  {% set row_label_bg = '#F9FAFB' %}
+  {% include "email/detail_row.html" %}
+
+  {% set row_label = 'Missed Deadline' %}
+  {% set row_value = deadline %}
+  {% set row_is_bold = true %}
+  {% set row_color = '#991B1B' %}
+  {% set row_bg = '#FFFFFF' %}
+  {% set row_label_bg = '#F9FAFB' %}
+  {% include "email/detail_row.html" %}
+
 </table>
 
-<div style="text-align: center;">
-    <a href="{{ portal_url|default('#') }}" class="btn" style="background-color: #dc2626;">View Escalation Dashboard</a>
+<p style="margin-top:28px; font-size:15px; color:#4B5563; line-height:1.8; font-family:Arial,sans-serif; margin-bottom:24px;">
+  Please review the escalation details immediately, assign corrective actions, and ensure the grievance is resolved to maintain compliance and citizen satisfaction.
+</p>
+
+<!-- CTA Button -->
+<div style="text-align:center; margin:30px 0;">
+  {% set btn_url = portal_url|default('#') %}
+  {% set btn_text = 'View Escalation Dashboard' %}
+  {% set btn_color = '#DC2626' %}
+  {% set btn_width = '260' %}
+  {% include "email/button.html" %}
 </div>
+
+<p style="margin-top:30px; font-size:15px; color:#4B5563; line-height:1.8; font-family:Arial,sans-serif;">
+  Regards,<br>
+  <strong>JanSamadhan Escalation System</strong><br>
+  Smart Public Grievance Resolution System
+</p>
 {% endblock %}

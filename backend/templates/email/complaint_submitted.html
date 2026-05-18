@@ -1,31 +1,207 @@
 {% extends "email/base.html" %}
 
 {% block content %}
-<h2 style="color: #111827; margin-top: 0;">Complaint Submitted Successfully</h2>
-<p>Dear {{ citizen_name|default('Citizen') }},</p>
-<p>Your grievance has been successfully registered in the JanSamadhan portal. Our team will review it shortly.</p>
 
-<table class="details-table">
+<h2 style="color:#0F172A; margin-top:0; font-size:26px; font-weight:700;">
+    Complaint Registered Successfully
+</h2>
+
+<p style="font-size:16px; color:#374151; line-height:1.7;">
+    Dear <strong>{{ citizen_name|default('Citizen') }}</strong>,
+</p>
+
+<p style="font-size:15px; color:#4B5563; line-height:1.8;">
+    Your grievance has been successfully submitted to the
+    <strong>JanSamadhan Public Grievance Portal</strong>.
+    Our concerned department will review your complaint and initiate the resolution process shortly.
+</p>
+
+<!-- Status Banner -->
+<div style="
+    background:#ECFDF5;
+    border:1px solid #10B981;
+    color:#065F46;
+    padding:14px 18px;
+    border-radius:10px;
+    margin:24px 0;
+    font-size:15px;
+    font-weight:600;
+">
+    Status: Complaint Successfully Registered
+</div>
+
+<!-- Complaint Details -->
+<table style="
+    width:100%;
+    border-collapse:collapse;
+    margin-top:20px;
+    background:#F9FAFB;
+    border-radius:10px;
+    overflow:hidden;
+">
+
     <tr>
-        <th>Grievance ID</th>
-        <td><strong>{{ complaint_id }}</strong></td>
+        <th style="
+            text-align:left;
+            padding:14px;
+            background:#E5E7EB;
+            color:#111827;
+            width:35%;
+            font-size:14px;
+        ">
+            Grievance ID
+        </th>
+
+        <td style="
+            padding:14px;
+            color:#111827;
+            font-size:14px;
+            font-weight:700;
+        ">
+            {{ complaint_id }}
+        </td>
     </tr>
+
     <tr>
-        <th>Category</th>
-        <td>{{ category }}</td>
+        <th style="
+            text-align:left;
+            padding:14px;
+            background:#F3F4F6;
+            color:#111827;
+            font-size:14px;
+        ">
+            Category
+        </th>
+
+        <td style="
+            padding:14px;
+            color:#374151;
+            font-size:14px;
+        ">
+            {{ category|default('General') }}
+        </td>
     </tr>
+
     <tr>
-        <th>Priority</th>
-        <td><span class="badge badge-{{ priority|lower|default('medium') }}">{{ priority|title }}</span></td>
+        <th style="
+            text-align:left;
+            padding:14px;
+            background:#E5E7EB;
+            color:#111827;
+            font-size:14px;
+        ">
+            Priority Level
+        </th>
+
+        <td style="padding:14px;">
+            <span style="
+                display:inline-block;
+                padding:6px 12px;
+                border-radius:20px;
+                font-size:12px;
+                font-weight:700;
+                color:white;
+                background:
+                {% if priority|lower == 'high' %}
+                    #DC2626
+                {% elif priority|lower == 'medium' %}
+                    #F59E0B
+                {% else %}
+                    #2563EB
+                {% endif %};
+            ">
+                {{ priority|title|default('Medium') }}
+            </span>
+        </td>
     </tr>
+
     <tr>
-        <th>Filing Time</th>
-        <td>{{ timestamp }}</td>
+        <th style="
+            text-align:left;
+            padding:14px;
+            background:#F3F4F6;
+            color:#111827;
+            font-size:14px;
+        ">
+            Submission Time
+        </th>
+
+        <td style="
+            padding:14px;
+            color:#374151;
+            font-size:14px;
+        ">
+            {{ timestamp }}
+        </td>
     </tr>
+
 </table>
 
-<p>You can track the status of your complaint anytime by visiting our portal.</p>
-<div style="text-align: center;">
-    <a href="{{ portal_url|default('#') }}" class="btn">Track Complaint</a>
+<!-- Tracking Info -->
+<p style="
+    margin-top:28px;
+    font-size:15px;
+    color:#4B5563;
+    line-height:1.8;
+">
+    You can monitor the progress and status updates of your complaint anytime through the JanSamadhan portal.
+</p>
+
+<!-- CTA Button -->
+<div style="text-align:center; margin:30px 0;">
+    <a href="{{ portal_url|default('#') }}" style="
+            background:#2563EB;
+            color:#FFFFFF;
+            text-decoration:none;
+            padding:14px 28px;
+            border-radius:8px;
+            font-size:15px;
+            font-weight:600;
+            display:inline-block;
+       ">
+        Track Complaint Status
+    </a>
 </div>
+
+<!-- Support Section -->
+<div style="
+    margin-top:35px;
+    padding:18px;
+    background:#F9FAFB;
+    border-left:4px solid #2563EB;
+    border-radius:8px;
+">
+
+    <p style="
+        margin:0;
+        font-size:14px;
+        color:#374151;
+        line-height:1.7;
+    ">
+        If you did not submit this complaint or need assistance, please contact the JanSamadhan support team
+        immediately.
+    </p>
+
+</div>
+
+<p style="
+    margin-top:30px;
+    font-size:15px;
+    color:#4B5563;
+    line-height:1.8;
+">
+    Thank you for helping us improve public services.
+</p>
+
+<p style="
+    margin-top:24px;
+    color:#111827;
+    font-size:15px;
+    line-height:1.7;
+">
+    Regards,<br>
+    <strong>JanSamadhan Team</strong><br>
+    Smart Public Grievance Resolution System
+</p>
+
 {% endblock %}

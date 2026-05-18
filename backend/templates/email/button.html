@@ -1,0 +1,23 @@
+<!-- Outlook VML & Web fallback bulletproof button -->
+{% set btn_url = btn_url|default('#') %}
+{% set btn_text = btn_text|default('View') %}
+{% set btn_color = btn_color|default('#2563EB') %}
+{% set btn_width = btn_width|default('220') %}
+{% set btn_height = btn_height|default('45') %}
+{% set btn_text_color = btn_text_color|default('#ffffff') %}
+
+<!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ btn_url }}" style="height:{{ btn_height }}px;v-text-align:center;width:{{ btn_width }}px;" arcsize="10%" stroke="f" fillcolor="{{ btn_color }}">
+  <w:anchorlock/>
+  <center style="color:{{ btn_text_color }};font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">{{ btn_text }}</center>
+</v:roundrect>
+<![endif]-->
+<!--[if !mso]><!-->
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin:0 auto; mso-hide:all;">
+  <tr>
+    <td align="center" bgcolor="{{ btn_color }}" style="-webkit-border-radius: 6px; -moz-border-radius: 6px; border-radius: 6px;">
+      <a href="{{ btn_url }}" style="background-color:{{ btn_color }}; border:1px solid {{ btn_color }}; border-radius:6px; color:{{ btn_text_color }}; display:inline-block; font-family:Arial,sans-serif; font-size:15px; font-weight:bold; line-height:{{ btn_height }}px; text-align:center; text-decoration:none; width:{{ btn_width }}px; -webkit-text-size-adjust:none;">{{ btn_text }}</a>
+    </td>
+  </tr>
+</table>
+<!--<![endif]-->

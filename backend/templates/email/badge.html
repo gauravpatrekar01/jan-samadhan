@@ -1,0 +1,6 @@
+{% set badge_text = badge_text|default('Medium') %}
+{% set badge_bg_color = badge_bg_color|default('#EFF6FF') %}
+{% set badge_text_color = badge_text_color|default('#1D4ED8') %}
+<span style="display:inline-block; padding:6px 12px; border-radius:20px; font-size:12px; font-weight:700; color:{{ badge_text_color }}; background-color:{{ badge_bg_color }}; font-family:Arial,sans-serif; text-transform:uppercase; word-break:normal; overflow-wrap:normal; white-space:nowrap; text-align:center;">
+  {{ badge_text }}
+</span>

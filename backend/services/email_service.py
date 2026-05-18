@@ -26,7 +26,7 @@ class EmailService:
         os.makedirs(template_dir, exist_ok=True)
         
         self.jinja_env = Environment(
-            loader=FileSystemLoader(template_dir),
+            loader=FileSystemLoader([template_dir, os.path.dirname(template_dir)]),
             autoescape=select_autoescape(['html', 'xml'])
         )
 

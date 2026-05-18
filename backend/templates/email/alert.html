@@ -1,0 +1,15 @@
+{% set alert_bg = alert_bg|default('#EFF6FF') %}
+{% set alert_border = alert_border|default('#2563EB') %}
+{% set alert_color = alert_color|default('#1D4ED8') %}
+{% set alert_text = alert_text|default('') %}
+{% set alert_title = alert_title|default('') %}
+<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background-color:{{ alert_bg }}; border-left:4px solid {{ alert_border }}; border-collapse:collapse; margin:20px 0; width:100%;">
+  <tr>
+    <td style="padding:16px 20px; color:{{ alert_color }}; font-family:Arial,sans-serif; font-size:14px; line-height:1.6; text-align:left; word-break:break-word; overflow-wrap:break-word;">
+      {% if alert_title %}
+      <strong style="display:block; font-size:16px; margin-bottom:6px; font-family:Arial,sans-serif; color:{{ alert_color }};">{{ alert_title }}</strong>
+      {% endif %}
+      <span style="font-family:Arial,sans-serif;">{{ alert_text }}</span>
+    </td>
+  </tr>
+</table>

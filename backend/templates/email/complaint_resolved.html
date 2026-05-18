@@ -1,34 +1,253 @@
 {% extends "email/base.html" %}
 
 {% block content %}
-<div style="text-align: center; margin-bottom: 20px;">
-    <span style="font-size: 48px;">✅</span>
-</div>
-<h2 style="color: #111827; margin-top: 0; text-align: center;">Complaint Resolved</h2>
-<p>Dear {{ citizen_name|default('Citizen') }},</p>
-<p>We are pleased to inform you that your grievance has been successfully resolved.</p>
 
-<table class="details-table">
+<!-- Success Icon -->
+<div style="text-align:center; padding-bottom:20px;">
+
+    <div style="
+        width:72px;
+        height:72px;
+        line-height:72px;
+        margin:0 auto;
+        background:#ECFDF5;
+        border:2px solid #10B981;
+        border-radius:50%;
+        text-align:center;
+        font-size:34px;
+        font-family:Arial, sans-serif;
+    ">
+        ✓
+    </div>
+
+</div>
+
+<!-- Heading -->
+<h2 style="
+    color:#111827;
+    margin:0 0 20px 0;
+    text-align:center;
+    font-size:28px;
+    font-weight:700;
+    font-family:Arial, sans-serif;
+">
+    Complaint Resolved Successfully
+</h2>
+
+<!-- Greeting -->
+<p style="
+    margin:0 0 16px 0;
+    font-size:16px;
+    color:#374151;
+    line-height:1.7;
+    font-family:Arial, sans-serif;
+">
+    Dear <strong>{{ citizen_name|default('Citizen') }}</strong>,
+</p>
+
+<!-- Intro -->
+<p style="
+    margin:0 0 20px 0;
+    font-size:15px;
+    color:#4B5563;
+    line-height:1.8;
+    font-family:Arial, sans-serif;
+">
+    We are pleased to inform you that your grievance submitted through the
+    <strong>JanSamadhan Public Grievance Portal</strong>
+    has been successfully resolved by the concerned department.
+</p>
+
+<!-- Status Banner -->
+<div style="
+    background:#ECFDF5;
+    border:1px solid #10B981;
+    color:#065F46;
+    padding:14px 18px;
+    border-radius:8px;
+    font-size:15px;
+    font-weight:600;
+    font-family:Arial, sans-serif;
+    margin-bottom:24px;
+">
+    Status: Complaint Marked as Resolved
+</div>
+
+<!-- Details Table -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="
+    border-collapse:collapse;
+    background:#F9FAFB;
+    border:1px solid #E5E7EB;
+">
+
     <tr>
-        <th>Grievance ID</th>
-        <td><strong>{{ complaint_id }}</strong></td>
+        <th style="
+            text-align:left;
+            padding:14px;
+            background:#E5E7EB;
+            color:#111827;
+            width:35%;
+            font-size:14px;
+            font-family:Arial, sans-serif;
+            border-bottom:1px solid #D1D5DB;
+        ">
+            Grievance ID
+        </th>
+
+        <td style="
+            padding:14px;
+            color:#111827;
+            font-size:14px;
+            font-weight:700;
+            font-family:Arial, sans-serif;
+            border-bottom:1px solid #E5E7EB;
+            word-break:break-word;
+        ">
+            {{ complaint_id }}
+        </td>
     </tr>
+
     <tr>
-        <th>Category</th>
-        <td>{{ category }}</td>
+        <th style="
+            text-align:left;
+            padding:14px;
+            background:#F3F4F6;
+            color:#111827;
+            font-size:14px;
+            font-family:Arial, sans-serif;
+            border-bottom:1px solid #D1D5DB;
+        ">
+            Category
+        </th>
+
+        <td style="
+            padding:14px;
+            color:#374151;
+            font-size:14px;
+            font-family:Arial, sans-serif;
+            border-bottom:1px solid #E5E7EB;
+        ">
+            {{ category|default('General') }}
+        </td>
     </tr>
+
     <tr>
-        <th>Resolution Notes</th>
-        <td>{{ remarks|default('Resolved by the department.') }}</td>
+        <th style="
+            text-align:left;
+            padding:14px;
+            background:#E5E7EB;
+            color:#111827;
+            font-size:14px;
+            font-family:Arial, sans-serif;
+            border-bottom:1px solid #D1D5DB;
+            vertical-align:top;
+        ">
+            Resolution Notes
+        </th>
+
+        <td style="
+            padding:14px;
+            color:#374151;
+            font-size:14px;
+            line-height:1.8;
+            font-family:Arial, sans-serif;
+            border-bottom:1px solid #E5E7EB;
+            word-break:break-word;
+        ">
+            {{ remarks|default('Resolved successfully by the concerned department.') }}
+        </td>
     </tr>
+
     <tr>
-        <th>Resolved At</th>
-        <td>{{ timestamp }}</td>
+        <th style="
+            text-align:left;
+            padding:14px;
+            background:#F3F4F6;
+            color:#111827;
+            font-size:14px;
+            font-family:Arial, sans-serif;
+        ">
+            Resolved At
+        </th>
+
+        <td style="
+            padding:14px;
+            color:#374151;
+            font-size:14px;
+            font-family:Arial, sans-serif;
+        ">
+            {{ timestamp }}
+        </td>
     </tr>
+
 </table>
 
-<p>Your feedback is very important to us. Please take a moment to rate the resolution.</p>
-<div style="text-align: center;">
-    <a href="{{ portal_url|default('#') }}" class="btn">Rate Resolution</a>
+<!-- Feedback -->
+<p style="
+    margin:28px 0 20px 0;
+    font-size:15px;
+    color:#4B5563;
+    line-height:1.8;
+    font-family:Arial, sans-serif;
+">
+    Your feedback helps us improve public grievance services and resolution quality.
+    Please take a moment to rate your experience.
+</p>
+
+<!-- CTA -->
+<div style="text-align:center; padding:10px 0 20px 0;">
+
+    <a href="{{ portal_url|default('#') }}" style="
+            background:#10B981;
+            color:#FFFFFF;
+            text-decoration:none;
+            padding:14px 28px;
+            border-radius:6px;
+            font-size:15px;
+            font-weight:600;
+            font-family:Arial, sans-serif;
+            display:inline-block;
+       ">
+        Rate Resolution
+    </a>
+
 </div>
+
+<!-- Support Box -->
+<div style="
+    margin-top:10px;
+    padding:18px;
+    background:#F9FAFB;
+    border-left:4px solid #2563EB;
+">
+
+    <p style="
+        margin:0;
+        font-size:14px;
+        color:#374151;
+        line-height:1.7;
+        font-family:Arial, sans-serif;
+    ">
+        If you believe the issue is not fully resolved, you may reopen the complaint or contact support through the
+        JanSamadhan portal.
+    </p>
+
+</div>
+
+<!-- Footer -->
+<p style="
+    margin-top:30px;
+    color:#111827;
+    font-size:15px;
+    line-height:1.8;
+    font-family:Arial, sans-serif;
+">
+    Thank you for using JanSamadhan.
+    <br><br>
+
+    Regards,<br>
+    <strong>JanSamadhan Team</strong><br>
+    Smart Public Grievance Resolution System
+</p>
+
 {% endblock %}
