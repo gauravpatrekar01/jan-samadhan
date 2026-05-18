@@ -21,7 +21,7 @@ from audit import log_audit
 from bson import ObjectId
 from bson.errors import InvalidId
 from search import search_complaints, get_complaint_count
-from notifications import notify_status_change, notify_complaint_registered
+from notifications import notify_status_change, notify_complaint_registered, notify_assignment
 from services.summary_service import generate_summary, generate_marathi_summary
 from services.geo_service import normalize_geo_complaint, cluster_geo_points, detect_high_risk_zones
 from services.priority_service import compute_priority_score, escalate_complaint_doc
@@ -421,6 +421,19 @@ def create_complaint(
                 }
             )
             print(f"✅ Auto-assigned to officer: {assigned_officer}")
+            # Notify the officer
+            officer_user = db.get_collection("users").find_one({"email": assigned_officer})
+            if officer_user:
+                background_tasks.add_task(
+                    notify_assignment,
+                    assigned_officer, 
+                    id, 
+                    officer_user.get("name", "Officer"), 
+                    c_dict.get("category", "General"),
+                    officer_user.get("department", "Field"),
+                    c_dict.get("sla_deadline", "Pending"),
+                    officer_user.get("phone")
+                )
 
         # Insert into database
         print("📝 Inserting complaint into database...")
@@ -671,6 +684,19 @@ async def create_complaint_with_media(
                 }
             )
             print(f"✅ Auto-assigned to officer: {assigned_officer}")
+            # Notify the officer
+            officer_user = db.get_collection("users").find_one({"email": assigned_officer})
+            if officer_user:
+                background_tasks.add_task(
+                    notify_assignment,
+                    assigned_officer, 
+                    complaint_id, 
+                    officer_user.get("name", "Officer"), 
+                    complaint_data.get("category", "General"),
+                    officer_user.get("department", "Field"),
+                    complaint_data.get("sla_deadline", "Pending"),
+                    officer_user.get("phone")
+                )
 
         # Insert into database
         print("📝 Inserting complaint into database...")
@@ -982,6 +1008,18 @@ def assign_complaint(
         resource_type="complaint",
         resource_id=id,
         details={"assigned_to": officer_email},
+    )
+    
+    complaint = collection.find_one({"id": id})
+
+    notify_assignment(
+        officer_email,
+        id,
+        officer.get("name", "Officer"),
+        complaint.get("category", "General") if complaint else "General",
+        officer.get("department", "Field"),
+        complaint.get("sla_deadline", "Pending") if complaint else "Pending",
+        officer.get("phone")
     )
 
     return {"success": True, "message": f"Complaint {id} assigned to {officer_email}"}

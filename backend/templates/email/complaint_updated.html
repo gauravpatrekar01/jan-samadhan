@@ -1,0 +1,31 @@
+{% extends "email/base.html" %}
+
+{% block content %}
+<h2 style="color: #111827; margin-top: 0;">Complaint Status Updated</h2>
+<p>Dear {{ citizen_name|default('Citizen') }},</p>
+<p>There has been an update to your grievance.</p>
+
+<table class="details-table">
+    <tr>
+        <th>Grievance ID</th>
+        <td><strong>{{ complaint_id }}</strong></td>
+    </tr>
+    <tr>
+        <th>New Status</th>
+        <td><span style="font-weight: bold; color: #1e40af;">{{ new_status|title }}</span></td>
+    </tr>
+    <tr>
+        <th>Remarks</th>
+        <td>{{ remarks|default('Status changed by assigned officer.') }}</td>
+    </tr>
+    <tr>
+        <th>Updated At</th>
+        <td>{{ timestamp }}</td>
+    </tr>
+</table>
+
+<p>You can view the detailed progress history in your portal dashboard.</p>
+<div style="text-align: center;">
+    <a href="{{ portal_url|default('#') }}" class="btn">View Details</a>
+</div>
+{% endblock %}

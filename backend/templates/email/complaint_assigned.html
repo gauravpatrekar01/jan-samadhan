@@ -1,0 +1,35 @@
+{% extends "email/base.html" %}
+
+{% block content %}
+<h2 style="color: #111827; margin-top: 0;">Complaint Assigned</h2>
+<p>Dear {{ officer_name|default('Officer') }},</p>
+<p>A new grievance has been assigned to you for resolution.</p>
+
+<table class="details-table">
+    <tr>
+        <th>Grievance ID</th>
+        <td><strong>{{ complaint_id }}</strong></td>
+    </tr>
+    <tr>
+        <th>Category</th>
+        <td>{{ category }}</td>
+    </tr>
+    <tr>
+        <th>Priority</th>
+        <td><span class="badge badge-{{ priority|lower|default('medium') }}">{{ priority|title }}</span></td>
+    </tr>
+    <tr>
+        <th>Department</th>
+        <td>{{ department }}</td>
+    </tr>
+    <tr>
+        <th>Deadline</th>
+        <td><span style="color: #c2410c; font-weight: 600;">{{ deadline }}</span></td>
+    </tr>
+</table>
+
+<p>Please log in to the officer dashboard to review the details and initiate action.</p>
+<div style="text-align: center;">
+    <a href="{{ portal_url|default('#') }}" class="btn">View Complaint</a>
+</div>
+{% endblock %}

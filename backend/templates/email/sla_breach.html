@@ -1,0 +1,38 @@
+{% extends "email/base.html" %}
+
+{% block content %}
+<div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+    <h2 style="color: #991b1b; margin-top: 0; margin-bottom: 10px;">⚠️ SLA Breach Alert</h2>
+    <p style="color: #7f1d1d; margin: 0;">A high-priority complaint has breached its Service Level Agreement (SLA) deadline and requires immediate escalation.</p>
+</div>
+
+<p>Dear {{ admin_name|default('Administrator') }},</p>
+<p>Please review the following escalated grievance immediately:</p>
+
+<table class="details-table">
+    <tr>
+        <th>Grievance ID</th>
+        <td><strong>{{ complaint_id }}</strong></td>
+    </tr>
+    <tr>
+        <th>Category</th>
+        <td>{{ category }}</td>
+    </tr>
+    <tr>
+        <th>Priority</th>
+        <td><span class="badge badge-emergency">Emergency Escalation</span></td>
+    </tr>
+    <tr>
+        <th>Assigned Officer</th>
+        <td>{{ officer_name|default('Unassigned') }}</td>
+    </tr>
+    <tr>
+        <th>Missed Deadline</th>
+        <td><span style="color: #991b1b; font-weight: 600;">{{ deadline }}</span></td>
+    </tr>
+</table>
+
+<div style="text-align: center;">
+    <a href="{{ portal_url|default('#') }}" class="btn" style="background-color: #dc2626;">View Escalation Dashboard</a>
+</div>
+{% endblock %}

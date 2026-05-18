@@ -1,0 +1,31 @@
+{% extends "email/base.html" %}
+
+{% block content %}
+<h2 style="color: #111827; margin-top: 0;">Complaint Submitted Successfully</h2>
+<p>Dear {{ citizen_name|default('Citizen') }},</p>
+<p>Your grievance has been successfully registered in the JanSamadhan portal. Our team will review it shortly.</p>
+
+<table class="details-table">
+    <tr>
+        <th>Grievance ID</th>
+        <td><strong>{{ complaint_id }}</strong></td>
+    </tr>
+    <tr>
+        <th>Category</th>
+        <td>{{ category }}</td>
+    </tr>
+    <tr>
+        <th>Priority</th>
+        <td><span class="badge badge-{{ priority|lower|default('medium') }}">{{ priority|title }}</span></td>
+    </tr>
+    <tr>
+        <th>Filing Time</th>
+        <td>{{ timestamp }}</td>
+    </tr>
+</table>
+
+<p>You can track the status of your complaint anytime by visiting our portal.</p>
+<div style="text-align: center;">
+    <a href="{{ portal_url|default('#') }}" class="btn">Track Complaint</a>
+</div>
+{% endblock %}
