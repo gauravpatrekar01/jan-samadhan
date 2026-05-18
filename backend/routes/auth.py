@@ -13,17 +13,7 @@ from datetime import datetime, timezone
 from services.s3_service import s3_service
 from services.s3_service import s3_service
 from dependencies import get_current_user
-from services.otp_service import OTPService
 from pydantic import BaseModel
-
-class OTPSendRequest(BaseModel):
-    phone: str
-    purpose: str = "LOGIN"
-
-class OTPVerifyRequest(BaseModel):
-    phone: str
-    otp_code: str
-    purpose: str = "LOGIN"
 
 router = APIRouter()
 
@@ -300,25 +290,4 @@ def refresh_access_token(refresh_token: dict):
             }
         )
 
-@router.post("/send-otp")
-@limiter.limit("3/minute")
-def send_otp(request: Request, payload: OTPSendRequest, background_tasks: BackgroundTasks):
-    """
-    Send an OTP via SMS for optional verification flow.
-    """
-    success = OTPService.create_and_send_otp(payload.phone, background_tasks, payload.purpose)
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to send OTP. Please try again.")
-    return {"success": True, "message": "OTP sent successfully."}
-
-@router.post("/verify-otp")
-@limiter.limit("5/minute")
-def verify_otp(request: Request, payload: OTPVerifyRequest):
-    """
-    Verify an OTP code.
-    """
-    is_valid = OTPService.verify_otp(payload.phone, payload.otp_code, payload.purpose)
-    if not is_valid:
-        raise HTTPException(status_code=400, detail="Invalid or expired OTP.")
-    return {"success": True, "message": "OTP verified successfully."}
 

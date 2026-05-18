@@ -392,17 +392,9 @@ def start_scheduler():
     scheduler.add_job(check_escalations, "interval", minutes=15)
     scheduler.start()
     
-    # Start SMS and OTP background scheduler
-    from scheduler.jobs import start_scheduler as start_sms_scheduler
-    start_sms_scheduler()
-    
 @app.on_event("shutdown")
 def stop_scheduler():
     scheduler.shutdown()
-    
-    # Stop SMS scheduler
-    from scheduler.jobs import shutdown_scheduler as shutdown_sms_scheduler
-    shutdown_sms_scheduler()
 
 
 

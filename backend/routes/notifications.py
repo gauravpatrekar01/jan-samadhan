@@ -1,92 +1,13 @@
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from pydantic import BaseModel
-import requests
 import time
 from config import settings
-from services.sms_service import SMSService
 from dependencies import get_current_user
 import logging
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-class TestSMSRequest(BaseModel):
-    phone: str
-    message: str = "Test SMS from JanSamadhan Diagnostic endpoint."
-
-@router.get("/gateway-health")
-def gateway_health(user: dict = Depends(get_current_user)):
-    """
-    Diagnostic endpoint to test Android SMS Gateway connectivity.
-    """
-    if user.get("role") != "admin":
-        # Allow checking but log if not admin
-        pass
-        
-    start_time = time.time()
-    try:
-        # Simple health check payload (if supported) or just a GET request to the gateway base URL
-        # We will do a simple GET to test network connectivity
-        base_url = settings.SMS_GATEWAY_URL
-        if base_url.endswith("/send"):
-            base_url = base_url[:-5]
-            
-        logger.info(f"[DIAGNOSTICS] Pinging SMS Gateway: {base_url}")
-        response = requests.get(base_url, timeout=5)
-        
-        duration = round((time.time() - start_time) * 1000, 2)
-        
-        return {
-            "status": "reachable",
-            "url": settings.SMS_GATEWAY_URL,
-            "response_time_ms": duration,
-            "gateway_status_code": response.status_code,
-            "gateway_response": response.text[:200]
-        }
-    except requests.exceptions.Timeout:
-        return {
-            "status": "unreachable",
-            "url": settings.SMS_GATEWAY_URL,
-            "error": "Connection Timed Out. Ensure the Android device is on the same network and the app is open.",
-            "response_time_ms": round((time.time() - start_time) * 1000, 2)
-        }
-    except requests.exceptions.ConnectionError:
-        return {
-            "status": "unreachable",
-            "url": settings.SMS_GATEWAY_URL,
-            "error": "Connection Refused. Android SMS Gateway app might not be running or IP changed."
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "url": settings.SMS_GATEWAY_URL,
-            "error": str(e)
-        }
-
-@router.post("/test-sms")
-def test_sms(request: TestSMSRequest, user: dict = Depends(get_current_user)):
-    """
-    Diagnostic endpoint to send a test SMS synchronously to verify exact failures.
-    """
-    logger.info(f"[DIAGNOSTICS] Triggering test SMS to {request.phone}")
-    
-    # We call SMSService synchronously here to return the exact failure/success directly to the API
-    result = SMSService.send_sms(request.phone, request.message)
-    
-    if result.get("success"):
-        return {
-            "success": True,
-            "message": "Test SMS sent successfully.",
-            "diagnostics": result
-        }
-    else:
-        # We return 200 with success=False so frontend can read the diagnostic payload
-        return {
-            "success": False,
-            "message": "Test SMS failed to send.",
-            "diagnostics": result
-        }
 
 class TestEmailRequest(BaseModel):
     email: str

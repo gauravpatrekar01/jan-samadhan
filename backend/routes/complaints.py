@@ -431,8 +431,7 @@ def create_complaint(
                     officer_user.get("name", "Officer"), 
                     c_dict.get("category", "General"),
                     officer_user.get("department", "Field"),
-                    c_dict.get("sla_deadline", "Pending"),
-                    officer_user.get("phone")
+                    c_dict.get("sla_deadline", "Pending")
                 )
 
         # Insert into database
@@ -464,13 +463,12 @@ def create_complaint(
         except Exception as audit_error:
             print(f"⚠️ Audit log failed: {audit_error}")
             
-        # Send SMS notification
+        # Send Email notification
         try:
-            citizen_phone = user_doc.get("phone") if user_doc else None
-            background_tasks.add_task(notify_complaint_registered, user["sub"], complaint_id, citizen_name, citizen_phone)
-            print("✅ SMS notification queued")
-        except Exception as sms_error:
-            print(f"⚠️ SMS notification failed to queue: {sms_error}")
+            background_tasks.add_task(notify_complaint_registered, user["sub"], complaint_id, citizen_name)
+            print("✅ Email notification queued")
+        except Exception as email_error:
+            print(f"⚠️ Email notification failed to queue: {email_error}")
         
         # Prepare response
         response_data = {
@@ -694,8 +692,7 @@ async def create_complaint_with_media(
                     officer_user.get("name", "Officer"), 
                     complaint_data.get("category", "General"),
                     officer_user.get("department", "Field"),
-                    complaint_data.get("sla_deadline", "Pending"),
-                    officer_user.get("phone")
+                    complaint_data.get("sla_deadline", "Pending")
                 )
 
         # Insert into database
@@ -730,13 +727,12 @@ async def create_complaint_with_media(
         # Start background task for summary generation
         background_tasks.add_task(generate_and_store_summary, complaint_id)
         
-        # Send SMS notification
+        # Send Email notification
         try:
-            citizen_phone = user_doc.get("phone") if user_doc else None
-            background_tasks.add_task(notify_complaint_registered, user["sub"], complaint_id, citizen_name, citizen_phone)
-            print("✅ SMS notification queued")
-        except Exception as sms_error:
-            print(f"⚠️ SMS notification failed to queue: {sms_error}")
+            background_tasks.add_task(notify_complaint_registered, user["sub"], complaint_id, citizen_name)
+            print("✅ Email notification queued")
+        except Exception as email_error:
+            print(f"⚠️ Email notification failed to queue: {email_error}")
         
         # Prepare response
         response_data = {
@@ -1018,8 +1014,7 @@ def assign_complaint(
         officer.get("name", "Officer"),
         complaint.get("category", "General") if complaint else "General",
         officer.get("department", "Field"),
-        complaint.get("sla_deadline", "Pending") if complaint else "Pending",
-        officer.get("phone")
+        complaint.get("sla_deadline", "Pending") if complaint else "Pending"
     )
 
     return {"success": True, "message": f"Complaint {id} assigned to {officer_email}"}
