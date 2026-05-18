@@ -2832,3 +2832,132 @@ tbody tr {
     transform: translateX(0);
   }
 }
+
+/* ============================================================
+   ADVANCED ANALYTICS & LEADERBOARD STYLING
+   ============================================================ */
+.analytics-leaderboard {
+  background: white;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 24px;
+  margin-top: 30px;
+  transition: var(--transition);
+}
+.analytics-leaderboard:hover {
+  box-shadow: var(--shadow-md);
+}
+.leaderboard-header {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.leaderboard-table {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 80px 1.5fr 1fr 1fr 1fr;
+  align-items: center;
+  padding: 14px 20px;
+  border-radius: var(--radius-md);
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+.leaderboard-row:hover:not(.header) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+.leaderboard-row.header {
+  font-weight: 700;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  padding-bottom: 8px;
+  font-size: 0.88rem;
+}
+.leaderboard-row.gold {
+  background: rgba(254, 243, 199, 0.4);
+  border-color: rgba(252, 211, 77, 0.5);
+  color: #92400e;
+}
+.leaderboard-row.silver {
+  background: rgba(241, 245, 249, 0.4);
+  border-color: rgba(203, 213, 225, 0.5);
+}
+.leaderboard-row.bronze {
+  background: rgba(255, 237, 213, 0.4);
+  border-color: rgba(253, 186, 116, 0.5);
+}
+.leaderboard-row .rank {
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+.leaderboard-row .name {
+  font-weight: 600;
+  color: var(--text-dark);
+}
+.leaderboard-row .metric {
+  font-weight: 600;
+  color: var(--text);
+}
+.efficiency-badge {
+  background: var(--primary-light);
+  color: white;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.leaderboard-row.gold .efficiency-badge {
+  background: #d97706;
+}
+
+/* Advanced Analytics KPI Cards styling */
+.analytics-kpi-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.analytics-kpi-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+.kpi-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kpi-icon {
+  font-size: 1.5rem;
+}
+.kpi-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.kpi-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+.kpi-trend {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}

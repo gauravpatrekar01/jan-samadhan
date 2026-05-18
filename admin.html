@@ -153,11 +153,21 @@
                     </div>
                 </div>
 
-                <!-- ADD ADVANCED FILTERS HERE -->
+                </div>
+            </div>
+
+            <!-- ─── CHARTS ─── -->
+            <div class="dash-page" id="page-charts">
+                <div class="page-header">
+                    <div class="page-title">📈 System Analytics</div>
+                    <div class="page-subtitle" style="margin-top:4px">Comprehensive data-driven insights and visual intelligence</div>
+                </div>
+
+                <!-- Advanced Analytics Filters -->
                 <div class="card"
-                    style="margin-top: 40px; padding: 24px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); border-radius: var(--radius-lg)">
+                    style="margin-top: 20px; padding: 24px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); border-radius: var(--radius-lg)">
                     <h4
-                        style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; color: var(--text-dark);">
+                        style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; color: var(--text-dark); flex-wrap: wrap; gap: 12px;">
                         <span><span style="font-size: 1.2rem;">🔍</span> Advanced Analytics Filters</span>
                         <div style="display:flex;gap:8px;flex-wrap:wrap">
                             <button class="btn btn-sm btn-outline" onclick="analyticsManager.exportData('csv')">📥
@@ -216,10 +226,12 @@
                     </div>
                 </div>
 
+                <!-- KPI Cards container populated dynamically by Advanced Analytics -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-top:30px;" id="adminAnalyticsKPIs"></div>
+
                 <!-- Analytics Charts -->
-                <div style="margin-top: 48px; margin-bottom: 32px">
-                    <h3 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 24px">📊 Analytics Charts</h3>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:24px">
+                <div style="margin-top: 30px; margin-bottom: 30px">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(450px,1fr));gap:24px">
                         <div class="card" style="padding: 20px">
                             <h4 style="margin-bottom:16px; font-weight: 600">📈 Complaints Over Time</h4>
                             <div style="height: 300px; position: relative">
@@ -246,28 +258,12 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- ─── CHARTS ─── -->
-            <div class="dash-page" id="page-charts">
-                <div class="page-header">
-                    <div class="page-title">📈 System Analytics</div>
-                    <div class="page-subtitle" style="margin-top:4px">Comprehensive data visualizations</div>
-                </div>
-                <div class="charts-grid" id="mainChartsGrid">
-                    <div class="chart-card" style="height:350px">
-                        <div class="chart-title">📈 Complaints Over Time</div>
-                        <div class="chart-wrap"><canvas id="adminTimeline"></canvas></div>
-                    </div>
-                    <div class="chart-card" style="height:350px">
-                        <div class="chart-title">🗂️ Category-wise Distribution</div>
-                        <div class="chart-wrap"><canvas id="adminCatBar"></canvas></div>
-                    </div>
-                    <div class="chart-card" style="height:350px">
-                        <div class="chart-title">🎯 Priority Distribution</div>
-                        <div class="chart-wrap"><canvas id="adminPriorityPie"></canvas></div>
-                    </div>
-                </div>
+                <!-- Officer Ranking Leaderboard -->
+                <div id="officerLeaderboard" style="margin-top: 30px; margin-bottom: 30px"></div>
+
+                <!-- Advanced Insights Container -->
+                <div class="advanced-insights-container" style="margin-top: 30px; margin-bottom: 30px"></div>
             </div>
 
             <!-- ─── HEATMAP ─── -->
@@ -761,16 +757,17 @@
 
         async function initAdvancedAnalytics() {
             try {
-                if (window.analyticsManager) {
+                if (window.analyticsManager && typeof window.analyticsManager.destroy === 'function') {
                     window.analyticsManager.destroy();
                 }
 
-                window.analyticsManager = new AdvancedAnalyticsManager({
+                analyticsManager = new AdvancedAnalyticsManager({
                     apiBase: window.API_BASE_URL || '/api',
                     userRole: 'admin',
                     userId: sessionStorage.getItem('js_user') ? JSON.parse(sessionStorage.getItem('js_user')).id : null,
                     refreshInterval: 30000
                 });
+                window.analyticsManager = analyticsManager;
 
                 await analyticsManager.initialize();
                 console.log('✅ Advanced Analytics initialized for Admin');
@@ -792,10 +789,11 @@
             if (navEl) { navEl.classList.add('active'); document.getElementById('topbarTitle').textContent = navEl.textContent.trim(); }
             closeSidebar();
             if (id === 'overview') {
-                initAdvancedAnalytics();
                 loadOverview();
             }
-            if (id === 'charts') initCharts();
+            if (id === 'charts') {
+                initAdvancedAnalytics();
+            }
             if (id === 'heatmap') initHeatmap();
             if (id === 'grievances') loadAdminGrievances();
             if (id === 'escalations') loadAdminEscalations();
@@ -813,7 +811,6 @@
                 return;
             }
             document.getElementById('adminTime').textContent = `📅 ${new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
-            initAdvancedAnalytics();
             loadOverview();
         });
 
