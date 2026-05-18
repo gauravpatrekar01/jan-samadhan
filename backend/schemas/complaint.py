@@ -58,6 +58,7 @@ class ComplaintCreate(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     media: Optional[List[MediaAttachment]] = []
+    is_anonymous: Optional[bool] = False
     marathi_summary: Optional[str] = None
     summary_generated: bool = False
     # Social validation fields

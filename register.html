@@ -493,6 +493,19 @@
                         <div id="filePreviewContainer" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(100px, 1fr));gap:10px;margin-top:15px"></div>
                     </div>
 
+                    <!-- Anonymous Toggle -->
+                    <div class="form-group" style="display:flex;gap:12px;align-items:flex-start;margin-top:15px;margin-bottom:20px;padding: 12px;background: var(--bg-card);border: 1px solid var(--border);border-radius: var(--radius-md);">
+                        <input type="checkbox" id="fAnonymous" style="margin-top:4px;width:16px;height:16px;accent-color:var(--primary-light)">
+                        <div style="cursor:pointer">
+                            <label for="fAnonymous" style="font-size:.88rem;font-weight:600;color:var(--text);display:block">
+                                Submit as confidential complaint
+                            </label>
+                            <span style="font-size:.78rem;color:var(--text-muted);display:block;margin-top:2px">
+                                ℹ️ Only system administrators can view your identity. Regular citizens, NGOs, and assigned officers will see "Anonymous".
+                            </span>
+                        </div>
+                    </div>
+
                     <!-- Consent -->
                     <div class="form-group" style="display:flex;gap:12px;align-items:flex-start">
                         <input type="checkbox" id="fConsent"
@@ -978,6 +991,10 @@
                 formData.append('contact_name', name);
                 formData.append('contact_phone', contact);
                 formData.append('contact_email', email);
+
+                // Add is_anonymous
+                const isAnon = document.getElementById('fAnonymous').checked;
+                formData.append('is_anonymous', isAnon ? 'true' : 'false');
 
                 // Add files from input
                 const fileInput = document.getElementById('imgInput');

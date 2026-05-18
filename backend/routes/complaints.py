@@ -71,6 +71,29 @@ def post_process_complaint(c: dict, user: dict | None) -> dict:
     if safe_user_id:
         c["user_vote"] = c.get("votes_history", {}).get(safe_user_id)
     
+    # Secure anonymization for anonymous/confidential complaints
+    is_anon = c.get("is_anonymous", False)
+    user_role = user.get("role") if user else None
+    
+    if is_anon:
+        if user_role != "admin":
+            # Mask all identifying fields
+            c["name"] = "Anonymous"
+            c["citizen_email"] = "Anonymous"
+            c["email"] = "Anonymous"
+            if "contact_info" in c:
+                c["contact_info"] = None
+            if "contact_name" in c:
+                c["contact_name"] = "Anonymous"
+            if "contact_email" in c:
+                c["contact_email"] = "Anonymous"
+            if "contact_phone" in c:
+                c["contact_phone"] = "Anonymous"
+    
+    # Under all circumstances, NEVER expose created_by_user_id in non-admin responses
+    if user_role != "admin" and "created_by_user_id" in c:
+        del c["created_by_user_id"]
+        
     # Clean up internal fields
     if "votes_history" in c:
         del c["votes_history"]
@@ -372,6 +395,8 @@ def create_complaint(
                 "citizen_email": user["sub"],
                 "email": user["sub"],  # For backward compatibility
                 "name": citizen_name,
+                "is_anonymous": complaint.is_anonymous or False,
+                "created_by_user_id": user["sub"],
                 "assigned_officer": None,
                 "assigned_to_ngo": None,
                 "createdAt": now,
@@ -448,7 +473,7 @@ def create_complaint(
         # Log the audit
         try:
             log_audit(
-                action="complaint_created",
+                action="anonymous_complaint_created" if complaint.is_anonymous else "complaint_created",
                 actor_email=user["sub"],
                 actor_role=user.get("role", "citizen"),
                 resource_type="complaint",
@@ -456,7 +481,10 @@ def create_complaint(
                 details={
                     "category": complaint.category,
                     "priority": complaint.priority,
-                    "region": complaint.region
+                    "region": complaint.region,
+                    "user_id": user["sub"],
+                    "complaint_id": complaint_id,
+                    "timestamp": now
                 }
             )
             print("✅ Audit log: OK")
@@ -517,6 +545,7 @@ async def create_complaint_with_media(
     contact_name: str = Form(None),
     contact_phone: str = Form(None),
     contact_email: str = Form(None),
+    is_anonymous: bool = Form(False),
     user: dict = Depends(require_citizen),
 ):
     """
@@ -647,6 +676,8 @@ async def create_complaint_with_media(
                 "citizen_email": user["sub"],
                 "email": user["sub"],  # For backward compatibility
                 "name": citizen_name,
+                "is_anonymous": is_anonymous,
+                "created_by_user_id": user["sub"],
                 "assigned_officer": None,
                 "assigned_to_ngo": None,
                 "createdAt": now,
@@ -708,7 +739,7 @@ async def create_complaint_with_media(
         # Log to audit
         try:
             log_audit(
-                action="complaint_created_with_media",
+                action="anonymous_complaint_created" if is_anonymous else "complaint_created_with_media",
                 actor_email=user["sub"],
                 actor_role=user.get("role", "citizen"),
                 resource_type="complaint",
@@ -717,7 +748,10 @@ async def create_complaint_with_media(
                     "category": category,
                     "priority": priority,
                     "region": region,
-                    "media_count": len(media_attachments)
+                    "media_count": len(media_attachments),
+                    "user_id": user["sub"],
+                    "complaint_id": complaint_id,
+                    "timestamp": now
                 }
             )
             print("✅ Audit log: OK")
@@ -771,18 +805,23 @@ def get_complaint(id: str, user: dict = Depends(get_current_user_optional)):
     if not complaint:
         raise NotFoundError("Complaint")
 
+    # If it is anonymous, bypass the key deletion to keep "Anonymous" placeholders intact
+    is_anon = complaint.get("is_anonymous", False)
+
     # Inject defaults and user data
     complaint = post_process_complaint(complaint, user)
-    if not user or user.get("role") == "citizen":
-        if not is_citizen_owner(complaint, user):
-            # Public feed complaints should remain viewable, but hide private identifiers.
-            complaint = {k: v for k, v in complaint.items() if k not in {"citizen_email", "email"}}
+    
+    if not is_anon:
+        if not user or user.get("role") == "citizen":
+            if not is_citizen_owner(complaint, user):
+                # Public feed complaints should remain viewable, but hide private identifiers.
+                complaint = {k: v for k, v in complaint.items() if k not in {"citizen_email", "email"}}
 
-    # NGO Access Control
-    if user and user.get("role") == "ngo":
-        if complaint.get("assigned_to_ngo") != user["sub"]:
-            # NGO can see public data to decide whether to request, but not full citizen details
-            complaint = {k: v for k, v in complaint.items() if k not in {"citizen_email", "email", "history"}}
+        # NGO Access Control
+        if user and user.get("role") == "ngo":
+            if complaint.get("assigned_to_ngo") != user["sub"]:
+                # NGO can see public data to decide whether to request, but not full citizen details
+                complaint = {k: v for k, v in complaint.items() if k not in {"citizen_email", "email", "history"}}
 
     return {"success": True, "data": complaint}
 
