@@ -16,11 +16,14 @@
     <!-- Leaflet Map Library -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
     <!-- Leaflet MarkerCluster -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/MarkerCluster.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/MarkerCluster.Default.min.css">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/MarkerCluster.min.css">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/MarkerCluster.Default.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/leaflet.markercluster.min.js"></script>
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.1/leaflet.markercluster.min.js"></script>
     <!-- Heatmap.js for heat layer visualization -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/heatmap.js/2.0.5/heatmap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-heat/1.0.5/leaflet-heat.min.js"></script>
@@ -151,13 +154,21 @@
                 </div>
 
                 <!-- ADD ADVANCED FILTERS HERE -->
-                <div class="card" style="margin-top: 40px; padding: 24px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); border-radius: var(--radius-lg)">
-                    <h4 style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; color: var(--text-dark);">
+                <div class="card"
+                    style="margin-top: 40px; padding: 24px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); border-radius: var(--radius-lg)">
+                    <h4
+                        style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; color: var(--text-dark);">
                         <span><span style="font-size: 1.2rem;">🔍</span> Advanced Analytics Filters</span>
                         <div style="display:flex;gap:8px;flex-wrap:wrap">
-                            <button class="btn btn-sm btn-outline" onclick="analyticsManager.exportData('csv')">📥 Export CSV</button>
-                            <button class="btn btn-sm btn-outline" id="downloadPdfBtn" onclick="downloadReport('pdf')" style="background:rgba(220,38,38,.08);color:#dc2626;border-color:#fca5a5">📄 PDF Report</button>
-                            <button class="btn btn-sm btn-outline" id="downloadExcelBtn" onclick="downloadReport('excel')" style="background:rgba(22,163,74,.08);color:#16a34a;border-color:#86efac">📊 Excel Report</button>
+                            <button class="btn btn-sm btn-outline" onclick="analyticsManager.exportData('csv')">📥
+                                Export CSV</button>
+                            <button class="btn btn-sm btn-outline" id="downloadPdfBtn" onclick="downloadReport('pdf')"
+                                style="background:rgba(220,38,38,.08);color:#dc2626;border-color:#fca5a5">📄 PDF
+                                Report</button>
+                            <button class="btn btn-sm btn-outline" id="downloadExcelBtn"
+                                onclick="downloadReport('excel')"
+                                style="background:rgba(22,163,74,.08);color:#16a34a;border-color:#86efac">📊 Excel
+                                Report</button>
                         </div>
                     </h4>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
@@ -256,10 +267,6 @@
                         <div class="chart-title">🎯 Priority Distribution</div>
                         <div class="chart-wrap"><canvas id="adminPriorityPie"></canvas></div>
                     </div>
-                    <div class="chart-card" style="height:350px">
-                        <div class="chart-title">📊 Category Donut</div>
-                        <div class="chart-wrap"><canvas id="adminCatPie"></canvas></div>
-                    </div>
                 </div>
             </div>
 
@@ -270,12 +277,12 @@
                 </div>
                 <!-- Heatmap Statistics Container -->
                 <div id="heatmapStats" style="margin-bottom: 20px"></div>
-                
+
                 <!-- Heatmap Container -->
                 <div class="card" style="margin-bottom:20px;padding:0;overflow:hidden;border-radius:var(--radius-lg)">
                     <div id="adminHeatMap" style="height:500px;width:100%"></div>
                 </div>
-                
+
                 <!-- Regional Statistics -->
                 <h4 style="margin-bottom:12px">Complaint Count by Region</h4>
                 <div id="heatmapGrid"></div>
@@ -469,7 +476,8 @@
                 <div class="page-header">
                     <div>
                         <div class="page-title">🏗️ Project Conversion Requests</div>
-                        <div class="page-subtitle">Review officer requests to convert complaints into infrastructure projects</div>
+                        <div class="page-subtitle">Review officer requests to convert complaints into infrastructure
+                            projects</div>
                     </div>
                 </div>
                 <div class="card" style="padding:0; overflow:hidden">
@@ -571,13 +579,16 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Attachments (Optional)</label>
-                <input type="file" id="noticeFiles" class="form-control" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
-                <div style="font-size: .75rem; color: var(--text-muted); margin-top: 4px;">Max 10MB per file. Images, PDFs, Docs allowed.</div>
+                <input type="file" id="noticeFiles" class="form-control" multiple
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                <div style="font-size: .75rem; color: var(--text-muted); margin-top: 4px;">Max 10MB per file. Images,
+                    PDFs, Docs allowed.</div>
             </div>
             <div class="form-group">
                 <label><input type="checkbox" id="noticePinned"> 📌 Pin to top</label>
             </div>
-            <button class="btn btn-primary" id="publishNoticeBtn" onclick="addAnnouncement()">📢 Publish Announcement</button>
+            <button class="btn btn-primary" id="publishNoticeBtn" onclick="addAnnouncement()">📢 Publish
+                Announcement</button>
         </div>
     </div>
 
@@ -760,7 +771,7 @@
                     userId: sessionStorage.getItem('js_user') ? JSON.parse(sessionStorage.getItem('js_user')).id : null,
                     refreshInterval: 30000
                 });
-                
+
                 await analyticsManager.initialize();
                 console.log('✅ Advanced Analytics initialized for Admin');
             } catch (error) {
@@ -808,7 +819,7 @@
 
         async function initHeatmap() {
             const mapContainer = document.getElementById('adminHeatMap');
-            
+
             if (!mapContainer) {
                 console.error('Map container not found');
                 return;
@@ -826,7 +837,7 @@
                         defaultCenter: [19.5937, 75.7164],
                         defaultZoom: 6
                     });
-                    
+
                     // Initialize and load data
                     await window.adminHeatmapManager.initialize();
                     await window.adminHeatmapManager.loadData();
@@ -855,7 +866,7 @@
                 } catch (e) {
                     console.warn("Could not load heatmapGrid stats", e);
                 }
-                
+
             } catch (err) {
                 console.error('❌ Heatmap initialization error:', err);
                 const errorMsg = err.message || 'Unknown error occurred';
@@ -871,7 +882,7 @@
         async function loadOverview() {
             const statsGrid = document.getElementById('adminStats');
             const kpiBars = document.getElementById('kpiBars');
-            
+
             // Show Skeletons
             statsGrid.classList.add('loading-state');
             statsGrid.innerHTML = Array(5).fill(0).map(() => `
@@ -988,7 +999,7 @@
                     .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0))
                     .slice(0, 5);
             } catch (e) { console.error("Failed to fetch resolved grievances", e); }
-            
+
             document.getElementById('recentResolved').innerHTML = resolvedResults.length
                 ? resolvedResults.map(g => `
                     <div style="padding:16px; border-radius:12px; border:1px solid rgba(22, 163, 74, 0.1); background:white; display:flex; gap:12px; align-items:center; box-shadow: var(--shadow-sm); transition: var(--transition); border-left: 5px solid var(--success)">
@@ -1008,7 +1019,7 @@
             const hasSummary = summaryText.length > 0;
             const status = (g.summary_generation_status || '').toLowerCase();
             const uniqueId = `${context}-summary-${g.id}`;
-            
+
             let contentHtml = '';
             if (hasSummary) {
                 contentHtml = `<div id="${uniqueId}" style="white-space:pre-line;line-height:1.5;color:var(--text);font-size:0.88rem">${summaryText}</div>`;
@@ -1067,8 +1078,8 @@
             try {
                 await window.JanSamadhanAPI.regenerateGrievanceSummary(id);
                 showToast('AI analysis started', 'info');
-                setTimeout(() => { 
-                    loadAdminGrievances(); 
+                setTimeout(() => {
+                    loadAdminGrievances();
                     // Refresh modal if open
                     const modal = document.getElementById('complaintDetailsModal');
                     if (modal.classList.contains('visible')) {
@@ -1105,7 +1116,7 @@
             let data = [];
             try {
                 data = await window.JanSamadhanAPI.getAllGrievances();
-                
+
                 if (search) data = data.filter(g => g.id.toLowerCase().includes(search) || g.description.toLowerCase().includes(search) || (g.title && g.title.toLowerCase().includes(search)));
                 if (category) data = data.filter(g => g.category === category);
                 if (priority) data = data.filter(g => g.priority === priority);
@@ -1244,7 +1255,7 @@
             const btn = document.getElementById('publishNoticeBtn');
             const fileInput = document.getElementById('noticeFiles');
             const pinned = document.getElementById('noticePinned')?.checked || false;
-            
+
             const roles = Array.from(document.querySelectorAll('input[name="noticeRole"]:checked')).map(cb => cb.value);
 
             if (!text) { showToast('Please enter announcement text', 'warning'); return; }
@@ -1258,7 +1269,7 @@
             formData.append('text', text);
             formData.append('pinned', pinned);
             formData.append('visible_to', JSON.stringify(roles));
-            
+
             if (fileInput && fileInput.files.length > 0) {
                 for (let i = 0; i < fileInput.files.length; i++) {
                     formData.append('files', fileInput.files[i]);
