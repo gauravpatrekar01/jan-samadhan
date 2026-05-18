@@ -112,7 +112,7 @@
         <div class="dash-content">
 
             <!-- ─── OVERVIEW ─── -->
-            <div class="dash-page active" id="page-overview">
+            <div class="dash-page active" id="page-overview" style="width: 100%; max-width: none;">
                 <div class="welcome-banner"
                     style="background: linear-gradient(135deg, #0f172a, #1e3a8a, #2563eb); border-radius: var(--radius-lg); padding: 48px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 32px">
                     <div style="flex: 1">
@@ -153,403 +153,404 @@
                     </div>
                 </div>
 
-                </div>
             </div>
-
-            <!-- ─── CHARTS ─── -->
-            <div class="dash-page" id="page-charts">
-                <div class="page-header">
-                    <div class="page-title">📈 System Analytics</div>
-                    <div class="page-subtitle" style="margin-top:4px">Comprehensive data-driven insights and visual intelligence</div>
-                </div>
-
-                <!-- Advanced Analytics Filters -->
-                <div class="card"
-                    style="margin-top: 20px; padding: 24px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); border-radius: var(--radius-lg)">
-                    <h4
-                        style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; color: var(--text-dark); flex-wrap: wrap; gap: 12px;">
-                        <span><span style="font-size: 1.2rem;">🔍</span> Advanced Analytics Filters</span>
-                        <div style="display:flex;gap:8px;flex-wrap:wrap">
-                            <button class="btn btn-sm btn-outline" onclick="analyticsManager.exportData('csv')">📥
-                                Export CSV</button>
-                            <button class="btn btn-sm btn-outline" id="downloadPdfBtn" onclick="downloadReport('pdf')"
-                                style="background:rgba(220,38,38,.08);color:#dc2626;border-color:#fca5a5">📄 PDF
-                                Report</button>
-                            <button class="btn btn-sm btn-outline" id="downloadExcelBtn"
-                                onclick="downloadReport('excel')"
-                                style="background:rgba(22,163,74,.08);color:#16a34a;border-color:#86efac">📊 Excel
-                                Report</button>
-                        </div>
-                    </h4>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
-                        <div>
-                            <label class="form-label" style="font-weight: 600;">Date Range</label>
-                            <select class="form-control" data-filter="days">
-                                <option value="7">Last 7 Days</option>
-                                <option value="30" selected>Last 30 Days</option>
-                                <option value="90">Last 90 Days</option>
-                                <option value="365">Last 1 Year</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="form-label" style="font-weight: 600;">Category</label>
-                            <select class="form-control" data-filter="category">
-                                <option value="">All Categories</option>
-                                <option>Water Supply</option>
-                                <option>Electricity</option>
-                                <option>Roads</option>
-                                <option>Sanitation</option>
-                                <option>Healthcare</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="form-label" style="font-weight: 600;">Priority</label>
-                            <select class="form-control" data-filter="priority">
-                                <option value="">All Priorities</option>
-                                <option value="emergency">Emergency</option>
-                                <option value="high">High</option>
-                                <option value="medium">Medium</option>
-                                <option value="low">Low</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="form-label" style="font-weight: 600;">Location (Region)</label>
-                            <select class="form-control" data-filter="region">
-                                <option value="">All Regions</option>
-                                <option>Mumbai City</option>
-                                <option>Pune</option>
-                                <option>Nagpur</option>
-                                <option>Nashik</option>
-                                <option>Thane</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- KPI Cards container populated dynamically by Advanced Analytics -->
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-top:30px;" id="adminAnalyticsKPIs"></div>
-
-                <!-- Analytics Charts -->
-                <div style="margin-top: 30px; margin-bottom: 30px">
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(450px,1fr));gap:24px">
-                        <div class="card" style="padding: 20px">
-                            <h4 style="margin-bottom:16px; font-weight: 600">📈 Complaints Over Time</h4>
-                            <div style="height: 300px; position: relative">
-                                <canvas id="adminAnalyticsTimeline"></canvas>
-                            </div>
-                        </div>
-                        <div class="card" style="padding: 20px">
-                            <h4 style="margin-bottom:16px; font-weight: 600">🗂️ Category Distribution</h4>
-                            <div style="height: 300px; position: relative">
-                                <canvas id="adminAnalyticsCategory"></canvas>
-                            </div>
-                        </div>
-                        <div class="card" style="padding: 20px">
-                            <h4 style="margin-bottom:16px; font-weight: 600">🎯 Priority Distribution</h4>
-                            <div style="height: 300px; position: relative">
-                                <canvas id="adminAnalyticsPriority"></canvas>
-                            </div>
-                        </div>
-                        <div class="card" style="padding: 20px">
-                            <h4 style="margin-bottom:16px; font-weight: 600">📊 Regional Performance</h4>
-                            <div style="height: 300px; position: relative">
-                                <canvas id="adminAnalyticsRegion"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Officer Ranking Leaderboard -->
-                <div id="officerLeaderboard" style="margin-top: 30px; margin-bottom: 30px"></div>
-
-                <!-- Advanced Insights Container -->
-                <div class="advanced-insights-container" style="margin-top: 30px; margin-bottom: 30px"></div>
-            </div>
-
-            <!-- ─── HEATMAP ─── -->
-            <div class="dash-page" id="page-heatmap">
-                <div class="page-header">
-                    <div class="page-title">🌡️ Region Heatmap</div>
-                </div>
-                <!-- Heatmap Statistics Container -->
-                <div id="heatmapStats" style="margin-bottom: 20px"></div>
-
-                <!-- Heatmap Container -->
-                <div class="card" style="margin-bottom:20px;padding:0;overflow:hidden;border-radius:var(--radius-lg)">
-                    <div id="adminHeatMap" style="height:500px;width:100%"></div>
-                </div>
-
-                <!-- Regional Statistics -->
-                <h4 style="margin-bottom:12px">Complaint Count by Region</h4>
-                <div id="heatmapGrid"></div>
-            </div>
-
-            <!-- ─── GRIEVANCES ─── -->
-            <div class="dash-page" id="page-grievances">
-                <div class="page-header">
-                    <div>
-                        <div class="page-title">📋 All Grievances</div>
-                        <div class="page-subtitle">Complete grievance ledger with admin controls</div>
-                    </div>
-                </div>
-                <div class="filters-bar">
-                    <div class="search-bar" style="flex:1;min-width:180px">
-                        <span class="search-icon">🔍</span>
-                        <input type="text" id="adminSearch" placeholder="Search..." oninput="loadAdminGrievances()">
-                    </div>
-                    <select class="filter-select" id="adminFilterCat" onchange="loadAdminGrievances()">
-                        <option value="">All Categories</option>
-                        <option>Infrastructure</option>
-                        <option>Water Supply</option>
-                        <option>Electricity</option>
-                        <option>Sanitation</option>
-                        <option>Transport</option>
-                        <option>Law & Order</option>
-                        <option>Healthcare</option>
-                        <option>Other</option>
-                    </select>
-                    <select class="filter-select" id="adminFilterPri" onchange="loadAdminGrievances()">
-                        <option value="">All Priorities</option>
-                        <option>Emergency</option>
-                        <option>High</option>
-                        <option>Medium</option>
-                        <option>Low</option>
-                    </select>
-                    <select class="filter-select" id="adminFilterSta" onchange="loadAdminGrievances()">
-                        <option value="">All Status</option>
-                        <option>Submitted</option>
-                        <option>Under Review</option>
-                        <option>In Progress</option>
-                        <option>Resolved</option>
-                        <option>Closed</option>
-                    </select>
-                </div>
-                <div class="table-wrap" style="margin-bottom:16px">
-                    <table id="adminTable">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Name</th>
-                                <th>Category</th>
-                                <th>Priority</th>
-                                <th>Status</th>
-                                <th>Deadline</th>
-                                <th>Region</th>
-                                <th>Filed</th>
-                                <th>Satisfaction</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adminTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- ─── ESCALATIONS ─── -->
-            <div class="dash-page" id="page-escalations">
-                <div class="page-header">
-                    <div class="page-title">🚨 Escalation Monitor</div>
-                    <div class="page-subtitle">Emergency and critical cases requiring senior attention</div>
-                </div>
-                <div class="escalation-list" id="adminEscList"></div>
-            </div>
-
-            <!-- ─── NGO REQUESTS ─── -->
-            <div class="dash-page" id="page-ngoRequests">
-                <div class="page-header">
-                    <div class="page-title">🤝 NGO Task Requests</div>
-                    <div class="page-subtitle">Review applications from NGOs to handle specific grievances</div>
-                </div>
-                <div class="card" style="padding:0; overflow:hidden">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>NGO & Grievance</th>
-                                <th>Requested</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="ngoRequestsTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- ─── NGO VERIFICATION ─── -->
-            <div class="dash-page" id="page-ngoVerification">
-                <div class="page-header">
-                    <div class="page-title">🛡️ NGO Partner Verification</div>
-                    <div class="page-subtitle">Review organization registration papers and onboarding details</div>
-                </div>
-                <div class="card" style="padding:0; overflow:hidden">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Organization</th>
-                                <th>Details</th>
-                                <th>Expertise</th>
-                                <th>Document</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="ngoVerifyTableBody">
-                            <tr>
-                                <td colspan="5" style="text-align:center;padding:40px">⌛ Loading NGO applications...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-
-            <!-- ─── ANNOUNCEMENTS ─── -->
-            <div class="dash-page" id="page-announcements">
-                <div class="page-header">
-                    <div>
-                        <div class="page-title">📢 Manage Announcements</div>
-                    </div>
-                    <button class="btn btn-primary" onclick="openModal('addAnnModal')">+ Add Notice</button>
-                </div>
-                <div class="announce-list" id="adminAnnList"></div>
-            </div>
-
-            <!-- ─── USERS ─── -->
-            <div class="dash-page" id="page-users">
-                <div class="page-header">
-                    <div>
-                        <div class="page-title">👥 User Management</div>
-                        <div class="page-subtitle">Registered citizens, officers and admin accounts</div>
-                    </div>
-                    <button class="btn btn-primary" onclick="openModal('createUserModal')">+ Add Officer</button>
-                </div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px"
-                    id="roleSummary"></div>
-                <div class="users-list" id="usersList"></div>
-            </div>
-
-            <!-- ─── ASSIGNMENTS ─── -->
-            <div class="dash-page" id="page-assignments">
-                <div class="page-header">
-                    <div>
-                        <div class="page-title">🎯 Complaint Assignment</div>
-                        <div class="page-subtitle">Assign unassigned grievances to field officers</div>
-                    </div>
-                </div>
-                <div
-                    style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:20px">
-                    <div>
-                        <label class="form-label">Priority</label>
-                        <select class="form-control" id="assignFilter-priority" onchange="loadAssignmentQueue()">
-                            <option value="">All</option>
-                            <option value="emergency">🚨 Emergency</option>
-                            <option value="high">🔴 High</option>
-                            <option value="medium">🟡 Medium</option>
-                            <option value="low">🟢 Low</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="form-label">Status</label>
-                        <select class="form-control" id="assignFilter-status" onchange="loadAssignmentQueue()">
-                            <option value="">All</option>
-                            <option value="submitted">Submitted</option>
-                            <option value="under_review">Under Review</option>
-                            <option value="in_progress">In Progress</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="form-label">Assign To Officer</label>
-                        <select class="form-control" id="assignFilter-officer">
-                            <option value="">Select Officer...</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="assignment-queue" id="assignmentQueue"></div>
-            </div>
-
-            <!-- ─── CONVERSION REQUESTS ─── -->
-            <div class="dash-page" id="page-convRequests">
-                <div class="page-header">
-                    <div>
-                        <div class="page-title">🏗️ Project Conversion Requests</div>
-                        <div class="page-subtitle">Review officer requests to convert complaints into infrastructure
-                            projects</div>
-                    </div>
-                </div>
-                <div class="card" style="padding:0; overflow:hidden">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Complaint</th>
-                                <th>Requested By</th>
-                                <th>Estimated Budget</th>
-                                <th>Justification</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="convRequestsTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- ─── EXTENSION REQUESTS ─── -->
-            <div class="dash-page" id="page-extRequests">
-                <div class="page-header">
-                    <div>
-                        <div class="page-title">⏳ Deadline Extension Requests</div>
-                        <div class="page-subtitle">Review requests for project completion deadline extensions</div>
-                    </div>
-                </div>
-                <div class="card" style="padding:0; overflow:hidden">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Project ID</th>
-                                <th>Current Deadline</th>
-                                <th>New Requested</th>
-                                <th>Reason</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="extRequestsTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- ─── AUDIT LOG ─── -->
-            <div class="dash-page" id="page-audit">
-                <div class="page-header">
-                    <div>
-                        <div class="page-title">📋 Audit Log</div>
-                        <div class="page-subtitle">Track all admin and officer actions</div>
-                    </div>
-                </div>
-                <div
-                    style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px">
-                    <div>
-                        <label class="form-label">Action Type</label>
-                        <select class="form-control" id="auditFilter-action" onchange="loadAuditLog()">
-                            <option value="">All Actions</option>
-                            <option value="complaint_created">Complaint Created</option>
-                            <option value="complaint_assigned">Complaint Assigned</option>
-                            <option value="complaint_status_updated">Status Updated</option>
-                            <option value="user_verified">User Verified</option>
-                            <option value="notice_created">Notice Created</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="form-label">Actor Email (filter)</label>
-                        <input type="text" class="form-control" id="auditFilter-actor"
-                            placeholder="Email or leave blank" />
-                    </div>
-                    <div style="display:flex;align-items:flex-end">
-                        <button class="btn btn-primary" onclick="loadAuditLog()">Search</button>
-                    </div>
-                </div>
-                <div class="audit-list" id="auditList"></div>
-            </div>
-
         </div>
+
+        <!-- ─── CHARTS ─── -->
+        <div class="dash-page" id="page-charts">
+            <div class="page-header">
+                <div class="page-title">📈 System Analytics</div>
+                <div class="page-subtitle" style="margin-top:4px">Comprehensive data-driven insights and visual
+                    intelligence</div>
+            </div>
+
+            <!-- Advanced Analytics Filters -->
+            <div class="card"
+                style="margin-top: 20px; padding: 24px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); border-radius: var(--radius-lg)">
+                <h4
+                    style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; color: var(--text-dark); flex-wrap: wrap; gap: 12px;">
+                    <span><span style="font-size: 1.2rem;">🔍</span> Advanced Analytics Filters</span>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <button class="btn btn-sm btn-outline" onclick="analyticsManager.exportData('csv')">📥
+                            Export CSV</button>
+                        <button class="btn btn-sm btn-outline" id="downloadPdfBtn" onclick="downloadReport('pdf')"
+                            style="background:rgba(220,38,38,.08);color:#dc2626;border-color:#fca5a5">📄 PDF
+                            Report</button>
+                        <button class="btn btn-sm btn-outline" id="downloadExcelBtn" onclick="downloadReport('excel')"
+                            style="background:rgba(22,163,74,.08);color:#16a34a;border-color:#86efac">📊 Excel
+                            Report</button>
+                    </div>
+                </h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                    <div>
+                        <label class="form-label" style="font-weight: 600;">Date Range</label>
+                        <select class="form-control" data-filter="days">
+                            <option value="7">Last 7 Days</option>
+                            <option value="30" selected>Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                            <option value="365">Last 1 Year</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-weight: 600;">Category</label>
+                        <select class="form-control" data-filter="category">
+                            <option value="">All Categories</option>
+                            <option>Water Supply</option>
+                            <option>Electricity</option>
+                            <option>Roads</option>
+                            <option>Sanitation</option>
+                            <option>Healthcare</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-weight: 600;">Priority</label>
+                        <select class="form-control" data-filter="priority">
+                            <option value="">All Priorities</option>
+                            <option value="emergency">Emergency</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" style="font-weight: 600;">Location (Region)</label>
+                        <select class="form-control" data-filter="region">
+                            <option value="">All Regions</option>
+                            <option>Mumbai City</option>
+                            <option>Pune</option>
+                            <option>Nagpur</option>
+                            <option>Nashik</option>
+                            <option>Thane</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI Cards container populated dynamically by Advanced Analytics -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-top:30px;"
+                id="adminAnalyticsKPIs"></div>
+
+            <!-- Analytics Charts -->
+            <div style="margin-top: 30px; margin-bottom: 30px">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(450px,1fr));gap:24px">
+                    <div class="card" style="padding: 20px">
+                        <h4 style="margin-bottom:16px; font-weight: 600">📈 Complaints Over Time</h4>
+                        <div style="height: 300px; position: relative">
+                            <canvas id="adminAnalyticsTimeline"></canvas>
+                        </div>
+                    </div>
+                    <div class="card" style="padding: 20px">
+                        <h4 style="margin-bottom:16px; font-weight: 600">🗂️ Category Distribution</h4>
+                        <div style="height: 300px; position: relative">
+                            <canvas id="adminAnalyticsCategory"></canvas>
+                        </div>
+                    </div>
+                    <div class="card" style="padding: 20px">
+                        <h4 style="margin-bottom:16px; font-weight: 600">🎯 Priority Distribution</h4>
+                        <div style="height: 300px; position: relative">
+                            <canvas id="adminAnalyticsPriority"></canvas>
+                        </div>
+                    </div>
+                    <div class="card" style="padding: 20px">
+                        <h4 style="margin-bottom:16px; font-weight: 600">📊 Regional Performance</h4>
+                        <div style="height: 300px; position: relative">
+                            <canvas id="adminAnalyticsRegion"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Officer Ranking Leaderboard -->
+            <div id="officerLeaderboard" style="margin-top: 30px; margin-bottom: 30px"></div>
+
+            <!-- Advanced Insights Container -->
+            <div class="advanced-insights-container" style="margin-top: 30px; margin-bottom: 30px"></div>
+            <div style="margin-bottom: 100px"></div>
+        </div>
+
+        <!-- ─── HEATMAP ─── -->
+        <div class="dash-page" id="page-heatmap">
+            <div class="page-header">
+                <div class="page-title">🌡️ Region Heatmap</div>
+            </div>
+            <!-- Heatmap Statistics Container -->
+            <div id="heatmapStats" style="margin-bottom: 20px"></div>
+
+            <!-- Heatmap Container -->
+            <div class="card" style="margin-bottom:20px;padding:0;overflow:hidden;border-radius:var(--radius-lg)">
+                <div id="adminHeatMap" style="height:500px;width:100%"></div>
+            </div>
+
+            <!-- Regional Statistics -->
+            <h4 style="margin-bottom:12px">Complaint Count by Region</h4>
+            <div id="heatmapGrid"></div>
+        </div>
+
+        <!-- ─── GRIEVANCES ─── -->
+        <div class="dash-page" id="page-grievances">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">📋 All Grievances</div>
+                    <div class="page-subtitle">Complete grievance ledger with admin controls</div>
+                </div>
+            </div>
+            <div class="filters-bar">
+                <div class="search-bar" style="flex:1;min-width:180px">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="adminSearch" placeholder="Search..." oninput="loadAdminGrievances()">
+                </div>
+                <select class="filter-select" id="adminFilterCat" onchange="loadAdminGrievances()">
+                    <option value="">All Categories</option>
+                    <option>Infrastructure</option>
+                    <option>Water Supply</option>
+                    <option>Electricity</option>
+                    <option>Sanitation</option>
+                    <option>Transport</option>
+                    <option>Law & Order</option>
+                    <option>Healthcare</option>
+                    <option>Other</option>
+                </select>
+                <select class="filter-select" id="adminFilterPri" onchange="loadAdminGrievances()">
+                    <option value="">All Priorities</option>
+                    <option>Emergency</option>
+                    <option>High</option>
+                    <option>Medium</option>
+                    <option>Low</option>
+                </select>
+                <select class="filter-select" id="adminFilterSta" onchange="loadAdminGrievances()">
+                    <option value="">All Status</option>
+                    <option>Submitted</option>
+                    <option>Under Review</option>
+                    <option>In Progress</option>
+                    <option>Resolved</option>
+                    <option>Closed</option>
+                </select>
+            </div>
+            <div class="table-wrap" style="margin-bottom:16px">
+                <table id="adminTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Deadline</th>
+                            <th>Region</th>
+                            <th>Filed</th>
+                            <th>Satisfaction</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ─── ESCALATIONS ─── -->
+        <div class="dash-page" id="page-escalations">
+            <div class="page-header">
+                <div class="page-title">🚨 Escalation Monitor</div>
+                <div class="page-subtitle">Emergency and critical cases requiring senior attention</div>
+            </div>
+            <div class="escalation-list" id="adminEscList"></div>
+        </div>
+
+        <!-- ─── NGO REQUESTS ─── -->
+        <div class="dash-page" id="page-ngoRequests">
+            <div class="page-header">
+                <div class="page-title">🤝 NGO Task Requests</div>
+                <div class="page-subtitle">Review applications from NGOs to handle specific grievances</div>
+            </div>
+            <div class="card" style="padding:0; overflow:hidden">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>NGO & Grievance</th>
+                            <th>Requested</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ngoRequestsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ─── NGO VERIFICATION ─── -->
+        <div class="dash-page" id="page-ngoVerification">
+            <div class="page-header">
+                <div class="page-title">🛡️ NGO Partner Verification</div>
+                <div class="page-subtitle">Review organization registration papers and onboarding details</div>
+            </div>
+            <div class="card" style="padding:0; overflow:hidden">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Organization</th>
+                            <th>Details</th>
+                            <th>Expertise</th>
+                            <th>Document</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ngoVerifyTableBody">
+                        <tr>
+                            <td colspan="5" style="text-align:center;padding:40px">⌛ Loading NGO applications...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+        <!-- ─── ANNOUNCEMENTS ─── -->
+        <div class="dash-page" id="page-announcements">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">📢 Manage Announcements</div>
+                </div>
+                <button class="btn btn-primary" onclick="openModal('addAnnModal')">+ Add Notice</button>
+            </div>
+            <div class="announce-list" id="adminAnnList"></div>
+        </div>
+
+        <!-- ─── USERS ─── -->
+        <div class="dash-page" id="page-users">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">👥 User Management</div>
+                    <div class="page-subtitle">Registered citizens, officers and admin accounts</div>
+                </div>
+                <button class="btn btn-primary" onclick="openModal('createUserModal')">+ Add Officer</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px"
+                id="roleSummary"></div>
+            <div class="users-list" id="usersList"></div>
+        </div>
+
+        <!-- ─── ASSIGNMENTS ─── -->
+        <div class="dash-page" id="page-assignments">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">🎯 Complaint Assignment</div>
+                    <div class="page-subtitle">Assign unassigned grievances to field officers</div>
+                </div>
+            </div>
+            <div
+                style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:20px">
+                <div>
+                    <label class="form-label">Priority</label>
+                    <select class="form-control" id="assignFilter-priority" onchange="loadAssignmentQueue()">
+                        <option value="">All</option>
+                        <option value="emergency">🚨 Emergency</option>
+                        <option value="high">🔴 High</option>
+                        <option value="medium">🟡 Medium</option>
+                        <option value="low">🟢 Low</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Status</label>
+                    <select class="form-control" id="assignFilter-status" onchange="loadAssignmentQueue()">
+                        <option value="">All</option>
+                        <option value="submitted">Submitted</option>
+                        <option value="under_review">Under Review</option>
+                        <option value="in_progress">In Progress</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Assign To Officer</label>
+                    <select class="form-control" id="assignFilter-officer">
+                        <option value="">Select Officer...</option>
+                    </select>
+                </div>
+            </div>
+            <div class="assignment-queue" id="assignmentQueue"></div>
+        </div>
+
+        <!-- ─── CONVERSION REQUESTS ─── -->
+        <div class="dash-page" id="page-convRequests">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">🏗️ Project Conversion Requests</div>
+                    <div class="page-subtitle">Review officer requests to convert complaints into infrastructure
+                        projects</div>
+                </div>
+            </div>
+            <div class="card" style="padding:0; overflow:hidden">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Complaint</th>
+                            <th>Requested By</th>
+                            <th>Estimated Budget</th>
+                            <th>Justification</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="convRequestsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ─── EXTENSION REQUESTS ─── -->
+        <div class="dash-page" id="page-extRequests">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">⏳ Deadline Extension Requests</div>
+                    <div class="page-subtitle">Review requests for project completion deadline extensions</div>
+                </div>
+            </div>
+            <div class="card" style="padding:0; overflow:hidden">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Project ID</th>
+                            <th>Current Deadline</th>
+                            <th>New Requested</th>
+                            <th>Reason</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="extRequestsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ─── AUDIT LOG ─── -->
+        <div class="dash-page" id="page-audit">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">📋 Audit Log</div>
+                    <div class="page-subtitle">Track all admin and officer actions</div>
+                </div>
+            </div>
+            <div
+                style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px">
+                <div>
+                    <label class="form-label">Action Type</label>
+                    <select class="form-control" id="auditFilter-action" onchange="loadAuditLog()">
+                        <option value="">All Actions</option>
+                        <option value="complaint_created">Complaint Created</option>
+                        <option value="complaint_assigned">Complaint Assigned</option>
+                        <option value="complaint_status_updated">Status Updated</option>
+                        <option value="user_verified">User Verified</option>
+                        <option value="notice_created">Notice Created</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Actor Email (filter)</label>
+                    <input type="text" class="form-control" id="auditFilter-actor" placeholder="Email or leave blank" />
+                </div>
+                <div style="display:flex;align-items:flex-end">
+                    <button class="btn btn-primary" onclick="loadAuditLog()">Search</button>
+                </div>
+            </div>
+            <div class="audit-list" id="auditList"></div>
+        </div>
+
+    </div>
     </div>
 
     <!-- ADD ANNOUNCEMENT MODAL -->
@@ -1594,17 +1595,17 @@
 
                     <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap">
                         ${(g.status === "resolved" || g.status === "closed" || g.status === "rejected") && !g.is_deleted
-                             ? `<button class="btn btn-outline btn-sm" onclick="openReopenModal('${g.id}')">🔄 Reopen Complaint</button>`
-                             : ""
-                        }
+                        ? `<button class="btn btn-outline btn-sm" onclick="openReopenModal('${g.id}')">🔄 Reopen Complaint</button>`
+                        : ""
+                    }
                         ${!g.is_deleted
-                             ? `<button class="btn btn-danger btn-sm" onclick="openDeleteModal('${g.id}')" style="background:#dc2626;color:#fff;border:none">🗑️ Delete Complaint</button>`
-                             : ""
-                        }
+                        ? `<button class="btn btn-danger btn-sm" onclick="openDeleteModal('${g.id}')" style="background:#dc2626;color:#fff;border:none">🗑️ Delete Complaint</button>`
+                        : ""
+                    }
                         ${!g.is_deleted
-                             ? `<button class="btn btn-outline btn-sm" style="background:rgba(37,99,235,.1);color:var(--primary-light)" onclick="openExtendDeadlineModal('${g.id}', '${g.sla_deadline || ''}')">📅 Extend SLA Deadline</button>`
-                             : ""
-                        }
+                        ? `<button class="btn btn-outline btn-sm" style="background:rgba(37,99,235,.1);color:var(--primary-light)" onclick="openExtendDeadlineModal('${g.id}', '${g.sla_deadline || ''}')">📅 Extend SLA Deadline</button>`
+                        : ""
+                    }
                     </div>
                 `;
                 openModal('complaintDetailsModal');
