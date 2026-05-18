@@ -89,7 +89,6 @@ class GeminiPool:
             cfg = types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 temperature=0.3,
-                max_output_tokens=400,
             )
             
             try:
