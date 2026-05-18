@@ -2785,8 +2785,14 @@ tbody tr {
   color: var(--accent-light);
 }
 
+.grid-2 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 30px;
+}
+
 /* ── Mobile Responsiveness ── */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .stats-grid {
     grid-template-columns: 1fr !important;
   }
@@ -2817,10 +2823,12 @@ tbody tr {
 
   .sidebar {
     width: 280px;
-    left: -280px;
+    transform: translateX(-100%);
+    left: 0;
+    transition: transform var(--transition);
   }
 
   .sidebar.open {
-    left: 0;
+    transform: translateX(0);
   }
 }
