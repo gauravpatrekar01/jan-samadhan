@@ -848,7 +848,8 @@
                 }
                 // Update heatmapGrid stats
                 try {
-                    const all = await window.JanSamadhanAPI.getAllGrievances();
+                    const res = await window.JanSamadhanAPI.getAllGrievances();
+                    const all = Array.isArray(res) ? res : (res.data || []);
                     const cats = {};
                     for (let g of all) {
                         cats[g.region || 'Mumbai City'] = (cats[g.region || 'Mumbai City'] || 0) + 1;
@@ -970,8 +971,10 @@
             // Urgent cases
             let urgentResults = [];
             try {
-                const emergency = await window.JanSamadhanAPI.getAllGrievances(null, 'emergency', null, null, null, 0, 10);
-                const high = await window.JanSamadhanAPI.getAllGrievances(null, 'high', null, null, null, 0, 10);
+                const resEmergency = await window.JanSamadhanAPI.getAllGrievances(null, 'emergency', null, null, null, 0, 10);
+                const emergency = Array.isArray(resEmergency) ? resEmergency : (resEmergency.data || []);
+                const resHigh = await window.JanSamadhanAPI.getAllGrievances(null, 'high', null, null, null, 0, 10);
+                const high = Array.isArray(resHigh) ? resHigh : (resHigh.data || []);
                 urgentResults = [...emergency, ...high]
                     .filter(g => g.status !== 'resolved' && g.status !== 'closed')
                     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
@@ -993,8 +996,10 @@
 
             let resolvedResults = [];
             try {
-                const resolved = await window.JanSamadhanAPI.getAllGrievances('resolved', null, null, null, null, 0, 10);
-                const closed = await window.JanSamadhanAPI.getAllGrievances('closed', null, null, null, null, 0, 10);
+                const resResolved = await window.JanSamadhanAPI.getAllGrievances('resolved', null, null, null, null, 0, 10);
+                const resolved = Array.isArray(resResolved) ? resResolved : (resResolved.data || []);
+                const resClosed = await window.JanSamadhanAPI.getAllGrievances('closed', null, null, null, null, 0, 10);
+                const closed = Array.isArray(resClosed) ? resClosed : (resClosed.data || []);
                 resolvedResults = [...resolved, ...closed]
                     .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0))
                     .slice(0, 5);
@@ -1115,7 +1120,8 @@
 
             let data = [];
             try {
-                data = await window.JanSamadhanAPI.getAllGrievances();
+                const res = await window.JanSamadhanAPI.getAllGrievances();
+                data = Array.isArray(res) ? res : (res.data || []);
 
                 if (search) data = data.filter(g => g.id.toLowerCase().includes(search) || g.description.toLowerCase().includes(search) || (g.title && g.title.toLowerCase().includes(search)));
                 if (category) data = data.filter(g => g.category === category);
@@ -1130,9 +1136,9 @@
                 <tr>
                   <td><strong style="color:var(--primary-light)">${g.id}</strong></td>
                   <td>${g.citizen_id ? 'Citizen ' + g.citizen_id.substring(0, 4) : 'Anonymous'}</td>
-                  <td>${categoryIcon(g.category)} ${g.category}</td>
-                  <td>${priorityBadge(g.priority.charAt(0).toUpperCase() + g.priority.slice(1))}</td>
-                  <td>${statusBadge(g.status.charAt(0).toUpperCase() + g.status.slice(1).replace('_', ' '))}</td>
+                  <td>${categoryIcon(g.category)} ${g.category || 'Other'}</td>
+                  <td>${priorityBadge((g.priority || 'medium').charAt(0).toUpperCase() + (g.priority || 'medium').slice(1))}</td>
+                  <td>${statusBadge((g.status || 'submitted').charAt(0).toUpperCase() + (g.status || 'submitted').slice(1).replace('_', ' '))}</td>
                   <td style="font-size:.8rem; white-space:nowrap">${formatDeadline(g.sla_deadline)} ${getDeadlineBadge(g.sla_deadline)}</td>
                   <td>${g.region || 'N/A'}</td>
                   <td style="font-size:.8rem">${new Date(g.createdAt || g.created_at || g.timestamp || Date.now()).toLocaleString('en-IN')}</td>
@@ -1187,7 +1193,8 @@
         async function loadAdminEscalations() {
             let escalated = [];
             try {
-                const queue = await window.JanSamadhanAPI.getAllGrievances();
+                const res = await window.JanSamadhanAPI.getAllGrievances();
+                const queue = Array.isArray(res) ? res : (res.data || []);
                 escalated = queue.filter(g => g.escalated || g.priority?.toLowerCase() === 'emergency');
             } catch (e) { console.warn(e); }
 
@@ -1202,7 +1209,7 @@
         <div class="esc-id">🚨 ${g.id} – ${g.category} | ${g.region || 'N/A'}</div>
         <div class="esc-desc">👤 ${g.citizen_id || 'Anonymous'} | 📍 ${g.location || 'N/A'}</div>
         <div style="font-size:.8rem;color:#7f1d1d;margin-top:4px">${g.description.substring(0, 100)}...</div>
-        <div style="margin-top:6px">${statusBadge(g.status.charAt(0).toUpperCase() + g.status.slice(1).replace('_', ' '))} ${timeAgo(g.created_at)}</div>
+        <div style="margin-top:6px">${statusBadge((g.status || 'submitted').charAt(0).toUpperCase() + (g.status || 'submitted').slice(1).replace('_', ' '))} ${timeAgo(g.created_at || g.createdAt)}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
         <button class="btn btn-sm" style="background:#7f1d1d;color:#fff" onclick="adminUpdate('${g.id}')">Update</button>
@@ -1431,7 +1438,8 @@
             const status = document.getElementById('assignFilter-status')?.value || '';
 
             try {
-                const data = await window.JanSamadhanAPI.getAllGrievances(status, priority, null, null, null, 0, 100);
+                const res = await window.JanSamadhanAPI.getAllGrievances(status, priority, null, null, null, 0, 100);
+                const data = Array.isArray(res) ? res : (res.data || []);
                 const unassigned = data.filter(g => !g.assigned_officer || g.assigned_officer === 'null');
 
                 if (!unassigned.length) {

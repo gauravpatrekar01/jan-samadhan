@@ -684,7 +684,9 @@
                 if (search) {
                     const q = search.toLowerCase();
                     grievances = grievances.filter(g =>
-                        g.id.includes(q) || g.description.toLowerCase().includes(q) || g.title.toLowerCase().includes(q)
+                        (g.grievanceID || g.id || '').toLowerCase().includes(q) || 
+                        (g.description || '').toLowerCase().includes(q) || 
+                        (g.title || '').toLowerCase().includes(q)
                     );
                 }
                 if (category) grievances = grievances.filter(g => g.category === category);
@@ -712,11 +714,11 @@
                       <div class="gc-id">${g.grievanceID || g.id}</div>
                       <div class="gc-title">${g.category}${g.subcategory ? ' – ' + g.subcategory : ''}</div>
                       <div class="gc-meta">
-                        ${priorityBadge(g.priority.charAt(0).toUpperCase() + g.priority.slice(1))} 
-                        ${statusBadge(g.status.charAt(0).toUpperCase() + g.status.slice(1).replace('_', ' '))}
-                        <span style="font-size:.78rem;color:var(--text-muted)">🏙️ ${g.region}</span>
+                        ${priorityBadge((g.priority || 'medium').charAt(0).toUpperCase() + (g.priority || 'medium').slice(1))} 
+                        ${statusBadge((g.status || 'submitted').charAt(0).toUpperCase() + (g.status || 'submitted').slice(1).replace('_', ' '))}
+                        <span style="font-size:.78rem;color:var(--text-muted)">🏙️ ${g.region || 'N/A'}</span>
                         <div style="font-size:.78rem;color:var(--text-muted);margin-top:4px">
-                            📅 Filed: ${timeAgo(g.created_at)} | 🕒 Deadline: ${formatDeadline(g.sla_deadline)} 
+                            📅 Filed: ${timeAgo(g.created_at || g.createdAt)} | 🕒 Deadline: ${formatDeadline(g.sla_deadline)} 
                             ${getDeadlineBadge(g.sla_deadline)}
                         </div>
                       </div>
@@ -752,9 +754,9 @@
                 content.innerHTML = `
                     <div style="font-size:.88rem;line-height:1.6">
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-                            <div><span style="color:var(--text-muted);font-size:.75rem">CATEGORY</span><br><strong>${categoryIcon(g.category)} ${g.category}</strong></div>
-                            <div><span style="color:var(--text-muted);font-size:.75rem">PRIORITY</span><br>${priorityBadge(g.priority.charAt(0).toUpperCase() + g.priority.slice(1))}</div>
-                            <div><span style="color:var(--text-muted);font-size:.75rem">STATUS</span><br>${statusBadge(g.status.charAt(0).toUpperCase() + g.status.slice(1).replace('_', ' '))}</div>
+                            <div><span style="color:var(--text-muted);font-size:.75rem">CATEGORY</span><br><strong>${categoryIcon(g.category)} ${g.category || 'Other'}</strong></div>
+                            <div><span style="color:var(--text-muted);font-size:.75rem">PRIORITY</span><br>${priorityBadge((g.priority || 'medium').charAt(0).toUpperCase() + (g.priority || 'medium').slice(1))}</div>
+                            <div><span style="color:var(--text-muted);font-size:.75rem">STATUS</span><br>${statusBadge((g.status || 'submitted').charAt(0).toUpperCase() + (g.status || 'submitted').slice(1).replace('_', ' '))}</div>
                             <div><span style="color:var(--text-muted);font-size:.75rem">REGION</span><br><strong>📍 ${g.region || 'N/A'}</strong></div>
                         </div>
 
@@ -1111,7 +1113,8 @@
 
             let grievances = [];
             try {
-                grievances = await window.JanSamadhanAPI.getAllGrievances();
+                const res = await window.JanSamadhanAPI.getAllGrievances();
+                grievances = Array.isArray(res) ? res : (res.data || []);
             } catch (e) {
                 console.warn(e);
                 showToast('Failed to load complaints', 'error');
@@ -1121,8 +1124,8 @@
                 const q = search.toLowerCase();
                 grievances = grievances.filter(g => (g.grievanceID || g.id).toLowerCase().includes(q) || g.description.toLowerCase().includes(q) || (g.category && g.category.toLowerCase().includes(q)));
             }
-            if (status) grievances = grievances.filter(g => g.status.toLowerCase() === status.toLowerCase().replace(' ', '_'));
-            if (priority) grievances = grievances.filter(g => g.priority.toLowerCase() === priority.toLowerCase());
+            if (status) grievances = grievances.filter(g => (g.status || 'submitted').toLowerCase() === status.toLowerCase().replace(' ', '_'));
+            if (priority) grievances = grievances.filter(g => (g.priority || 'medium').toLowerCase() === priority.toLowerCase());
 
             const container = document.getElementById('allComplaintsList');
             if (!container) return;
@@ -1142,17 +1145,17 @@
             }
 
             container.innerHTML = grievances.map(g => `
-    <div class="grievance-card priority-${g.priority.toLowerCase()}">
+    <div class="grievance-card priority-${(g.priority || 'medium').toLowerCase()}">
       <div class="gc-header">
         <div class="gc-icon" style="background:${categoryColor(g.category)}">${categoryIcon(g.category)}</div>
         <div style="flex:1">
           <div class="gc-id">${g.grievanceID || g.id}</div>
-          <div class="gc-title">${g.category}</div>
-          <div class="gc-meta">${priorityBadge(g.priority.charAt(0).toUpperCase() + g.priority.slice(1))} ${statusBadge(g.status.charAt(0).toUpperCase() + g.status.slice(1).replace('_', ' '))} <span style="font-size:.78rem;color:var(--text-muted)">${g.region || 'N/A'}</span></div>
+          <div class="gc-title">${g.category || 'Other'}</div>
+          <div class="gc-meta">${priorityBadge((g.priority || 'medium').charAt(0).toUpperCase() + (g.priority || 'medium').slice(1))} ${statusBadge((g.status || 'submitted').charAt(0).toUpperCase() + (g.status || 'submitted').slice(1).replace('_', ' '))} <span style="font-size:.78rem;color:var(--text-muted)">${g.region || 'N/A'}</span></div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <select class="status-select" onchange="quickStatusUpdate('${g.id}', this.value)">
-            ${window.JanSamadhan.STATUS_STAGES.map(s => `<option ${g.status.toLowerCase() === s.toLowerCase().replace(' ', '_') ? 'selected' : ''}>${s}</option>`).join('')}
+            ${window.JanSamadhan.STATUS_STAGES.map(s => `<option ${(g.status || 'submitted').toLowerCase() === s.toLowerCase().replace(' ', '_') ? 'selected' : ''}>${s}</option>`).join('')}
           </select>
           <button class="btn btn-ghost btn-sm" onclick="openUpdateModal('${g.id}')">✏️</button>
         </div>
@@ -1180,7 +1183,8 @@
         async function loadEscalations() {
             let escalated = [];
             try {
-                const queue = await window.JanSamadhanAPI.getAllGrievances();
+                const res = await window.JanSamadhanAPI.getAllGrievances();
+                const queue = Array.isArray(res) ? res : (res.data || []);
                 escalated = queue.filter(g => g.escalated || g.priority?.toLowerCase() === 'emergency');
             } catch (e) { console.warn(e); }
 
@@ -1210,7 +1214,8 @@
             let stats = { priority_distribution: {}, status_distribution: {}, byCategory: {} };
             try {
                 stats = await window.JanSamadhanAPI.getAnalyticsOverview();
-                const allG = await window.JanSamadhanAPI.getAllGrievances();
+                const res = await window.JanSamadhanAPI.getAllGrievances();
+                const allG = Array.isArray(res) ? res : (res.data || []);
                 const cats = {};
                 for (let g of allG) { cats[g.category] = (cats[g.category] || 0) + 1; }
                 stats.byCategory = cats;

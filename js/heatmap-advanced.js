@@ -141,7 +141,7 @@ class AdvancedHeatmapManager {
                 }));
             } else {
                 const response = await window.JanSamadhanAPI.getAllGrievances();
-                this.allComplaints = response || [];
+                this.allComplaints = Array.isArray(response) ? response : (response.data || []);
             }
             
             // Apply filters and update visualization

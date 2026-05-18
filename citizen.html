@@ -1055,7 +1055,8 @@
       if (!container) return;
       let grievances = [];
       try {
-        grievances = await window.JanSamadhanAPI.getAllGrievances();
+        const res = await window.JanSamadhanAPI.getAllGrievances();
+        grievances = Array.isArray(res) ? res : (res?.data || []);
       } catch (e) { }
       const resolved = grievances.filter(
         (g) => g.status === "resolved" || g.status === "closed",
@@ -1228,7 +1229,8 @@
       const lastID = sessionStorage.getItem("lastGrievanceID");
       let grievances = [];
       try {
-        grievances = await window.JanSamadhanAPI.getAllGrievances();
+        const res = await window.JanSamadhanAPI.getAllGrievances();
+        grievances = Array.isArray(res) ? res : (res?.data || []);
       } catch (e) { }
 
       let showList = [];

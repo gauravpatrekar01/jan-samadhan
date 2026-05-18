@@ -280,7 +280,7 @@ async function initCharts() {
         ]);
         
         stats = adminStats;
-        allG = grievances;
+        allG = Array.isArray(grievances) ? grievances : (grievances.data || []);
 
         // Count categories because admin analytics doesn't return categories directly yet
         const cats = {};

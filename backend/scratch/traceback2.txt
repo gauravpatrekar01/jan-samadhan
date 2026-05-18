@@ -1,0 +1,39 @@
+python : INFO:root:{'method': 'GET', 'path': '/api/complaints/', 'duration': '1.9174s', 'status_code': 200, 'client': 
+'testclient'}
+At line:1 char:1
++ python scratch/test_complaints_endpoint.py > scratch/output2.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (INFO:root:{'met...: 'testclient'}:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+{"asctime": "2026-05-18 17:36:41,674", "levelname": "INFO", "name": "root", "message": "", "method": "GET", "path": 
+"/api/complaints/", "duration": "1.9174s", "status_code": 200, "client": "testclient"}
+INFO:httpx:HTTP Request: GET http://testserver/api/complaints/ "HTTP/1.1 200 OK"
+{"asctime": "2026-05-18 17:36:41,679", "levelname": "INFO", "name": "httpx", "message": "HTTP Request: GET 
+http://testserver/api/complaints/ \"HTTP/1.1 200 OK\""}
+INFO:root:{'method': 'POST', 'path': '/api/auth/admin-login', 'duration': '0.8995s', 'status_code': 200, 'client': 
+'testclient'}
+{"asctime": "2026-05-18 17:36:42,583", "levelname": "INFO", "name": "root", "message": "", "method": "POST", "path": 
+"/api/auth/admin-login", "duration": "0.8995s", "status_code": 200, "client": "testclient"}
+INFO:httpx:HTTP Request: POST http://testserver/api/auth/admin-login "HTTP/1.1 200 OK"
+{"asctime": "2026-05-18 17:36:42,586", "levelname": "INFO", "name": "httpx", "message": "HTTP Request: POST 
+http://testserver/api/auth/admin-login \"HTTP/1.1 200 OK\""}
+INFO:root:{'method': 'GET', 'path': '/api/complaints/', 'duration': '1.0375s', 'status_code': 200, 'client': 
+'testclient'}
+{"asctime": "2026-05-18 17:36:43,628", "levelname": "INFO", "name": "root", "message": "", "method": "GET", "path": 
+"/api/complaints/", "duration": "1.0375s", "status_code": 200, "client": "testclient"}
+INFO:httpx:HTTP Request: GET http://testserver/api/complaints/ "HTTP/1.1 200 OK"
+{"asctime": "2026-05-18 17:36:43,631", "levelname": "INFO", "name": "httpx", "message": "HTTP Request: GET 
+http://testserver/api/complaints/ \"HTTP/1.1 200 OK\""}
+1. Testing anonymous GET /api/complaints/
+Status Code: 200
+JSON length: 25
+
+2. Testing admin GET /api/complaints/
+Login status: 200
+Login success: True
+Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbkBleGFtcGxlLmNvbSIsInJvbGUiOiJhZG1pbiIsImxhbmciOiJlbiIsImV4cCI6MTc3OTEwNzgwMiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc3OTEwNjAwMi41NzM5MTR9._FYwyWv7H-QLBRnAAIs3gJSEaTuvLcN7FDxy-nGLwoo
+Admin GET status: 200
+Admin JSON length: 25
+Complaint 19 (TEST-APPROVAL-COMPLAINT-1) is missing priority!
+Complaint 22 (TEST-JSM-COMPLAINT-1234) is missing priority!
