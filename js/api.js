@@ -825,6 +825,11 @@ window.renderAIIntelligencePanel = function(g, userRole) {
     // Check role permissions for refresh
     const canRefresh = (userRole === 'officer' || userRole === 'admin');
     
+    // Citizens cannot generate AI reports, so don't show the panel if it has no report
+    if (!hasReport && userRole === 'citizen') {
+        return '';
+    }
+    
     let html = `
     <div class="ai-intelligence-panel" style="margin-top:20px;margin-bottom:20px;border:1px solid rgba(37,99,235,0.15);border-radius:12px;background:rgba(37,99,235,0.02);padding:18px;font-family:inherit;box-shadow:0 4px 12px rgba(37,99,235,0.03)">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px dashed rgba(37,99,235,0.15);padding-bottom:10px">
