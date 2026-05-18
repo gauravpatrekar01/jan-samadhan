@@ -2716,7 +2716,7 @@ tbody tr {
   }
 
   .chatbot-window {
-    width: calc(100vw - 30px);
+    width: calc(100vw - 100px);
     right: 15px;
   }
 
