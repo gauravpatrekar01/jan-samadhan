@@ -1,87 +1,301 @@
 {% extends "email/base.html" %}
 
 {% block content %}
-<!-- Critical SLA Breach Alert Banner -->
-{% set alert_bg = '#FEF2F2' %}
-{% set alert_border = '#DC2626' %}
-{% set alert_color = '#991B1B' %}
-{% set alert_title = '⚠️ SLA Breach Alert' %}
-{% set alert_text = 'A high-priority complaint has breached its Service Level Agreement (SLA) deadline and requires immediate administrative escalation.' %}
-{% include "email/alert.html" %}
 
-<p style="font-size:16px; color:#374151; line-height:1.7; font-family:Arial,sans-serif; margin:0 0 16px;">
-  Dear <strong>{{ admin_name|default('Administrator') }}</strong>,
+<!-- Critical Alert Banner -->
+<div style="
+    background:#FEF2F2;
+    border:1px solid #FECACA;
+    padding:20px;
+    margin-bottom:24px;
+    border-radius:8px;
+">
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+
+            <td width="50" valign="top" style="
+                font-size:34px;
+                line-height:34px;
+                font-family:Arial, sans-serif;
+            ">
+                ⚠
+            </td>
+
+            <td valign="top">
+
+                <h2 style="
+                    color:#991B1B;
+                    margin:0 0 10px 0;
+                    font-size:24px;
+                    font-weight:700;
+                    font-family:Arial, sans-serif;
+                ">
+                    SLA Breach Alert
+                </h2>
+
+                <p style="
+                    margin:0;
+                    color:#7F1D1D;
+                    font-size:15px;
+                    line-height:1.7;
+                    font-family:Arial, sans-serif;
+                ">
+                    A high-priority grievance has breached its Service Level Agreement (SLA) timeline and requires
+                    immediate administrative escalation and intervention.
+                </p>
+
+            </td>
+
+        </tr>
+    </table>
+
+</div>
+
+<!-- Greeting -->
+<p style="
+    margin:0 0 16px 0;
+    font-size:16px;
+    color:#374151;
+    line-height:1.7;
+    font-family:Arial, sans-serif;
+">
+    Dear <strong>{{ admin_name|default('Administrator') }}</strong>,
 </p>
 
-<p style="font-size:15px; color:#4B5563; line-height:1.8; font-family:Arial,sans-serif; margin:0 0 24px;">
-  The following grievance has exceeded its assigned SLA resolution deadline and has been automatically escalated for urgent review and administrative action.
+<!-- Intro -->
+<p style="
+    margin:0 0 22px 0;
+    font-size:15px;
+    color:#4B5563;
+    line-height:1.8;
+    font-family:Arial, sans-serif;
+">
+    The following grievance has exceeded its assigned SLA resolution deadline and has been automatically escalated for
+    urgent review and administrative action.
 </p>
 
-<!-- Complaint Details Table -->
-<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="border:1px solid #E5E7EB; background-color:#ffffff; width:100%; border-collapse:collapse; margin-top:20px;">
-  
-  {% set row_label = 'Grievance ID' %}
-  {% set row_value = complaint_id %}
-  {% set row_is_bold = true %}
-  {% set row_bg = '#FFFFFF' %}
-  {% set row_label_bg = '#F9FAFB' %}
-  {% include "email/detail_row.html" %}
+<!-- Escalation Status -->
+<div style="
+    background:#FFF7ED;
+    border:1px solid #FDBA74;
+    color:#9A3412;
+    padding:14px 18px;
+    border-radius:8px;
+    font-size:15px;
+    font-weight:600;
+    font-family:Arial, sans-serif;
+    margin-bottom:24px;
+">
+    Escalation Status: Immediate Attention Required
+</div>
 
-  {% set row_label = 'Category' %}
-  {% set row_value = category|default('General') %}
-  {% set row_is_bold = false %}
-  {% set row_bg = '#FFFFFF' %}
-  {% set row_label_bg = '#F9FAFB' %}
-  {% include "email/detail_row.html" %}
+<!-- Complaint Details -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="
+    border-collapse:collapse;
+    background:#F9FAFB;
+    border:1px solid #E5E7EB;
+">
 
-  <!-- Emergency Escalation Badge -->
-  {% set badge_bg_color = '#FEF2F2' %}
-  {% set badge_text_color = '#DC2626' %}
-  {% set badge_text = 'Emergency Escalation' %}
-  {% set badge_html %}
-    {% include "email/badge.html" %}
-  {% endset %}
+    <tr>
+        <th style="
+            text-align:left;
+            padding:14px;
+            background:#E5E7EB;
+            color:#111827;
+            width:35%;
+            font-size:14px;
+            font-family:Arial, sans-serif;
+            border-bottom:1px solid #D1D5DB;
+        ">
+            Grievance ID
+        </th>
 
-  {% set row_label = 'Priority' %}
-  {% set row_value = badge_html|safe %}
-  {% set row_is_bold = false %}
-  {% set row_bg = '#FFFFFF' %}
-  {% set row_label_bg = '#F9FAFB' %}
-  {% include "email/detail_row.html" %}
+        <td style="
+            padding:14px;
+            color:#111827;
+            font-size:14px;
+            font-weight:700;
+            font-family:Arial, sans-serif;
+            border-bottom:1px solid #E5E7EB;
+            word-break:break-word;
+        ">
+            {{ complaint_id }}
+        </td>
+    </tr>
 
-  {% set row_label = 'Assigned Officer' %}
-  {% set row_value = officer_name|default('Unassigned') %}
-  {% set row_is_bold = false %}
-  {% set row_bg = '#FFFFFF' %}
-  {% set row_label_bg = '#F9FAFB' %}
-  {% include "email/detail_row.html" %}
+    <tr>
+        <th style="
+            text-align:left;
+            padding:14px;
+            background:#F3F4F6;
+            color:#111827;
+            font-size:14px;
+            font-family:Arial, sans-serif;
+            border-bottom:1px solid #D1D5DB;
+        ">
+            Category
+        </th>
 
-  {% set row_label = 'Missed Deadline' %}
-  {% set row_value = deadline %}
-  {% set row_is_bold = true %}
-  {% set row_color = '#991B1B' %}
-  {% set row_bg = '#FFFFFF' %}
-  {% set row_label_bg = '#F9FAFB' %}
-  {% include "email/detail_row.html" %}
+        <td style="
+            padding:14px;
+            color:#374151;
+            font-size:14px;
+            font-family:Arial, sans-serif;
+            border-bottom:1px solid #E5E7EB;
+        ">
+            {{ category|default('General') }}
+        </td>
+    </tr>
+
+    <tr>
+        <th style="
+            text-align:left;
+            padding:14px;
+            background:#E5E7EB;
+            color:#111827;
+            font-size:14px;
+            font-family:Arial, sans-serif;
+            border-bottom:1px solid #D1D5DB;
+        ">
+            Escalation Priority
+        </th>
+
+        <td style="
+            padding:14px;
+            border-bottom:1px solid #E5E7EB;
+        ">
+
+            <span style="
+                display:inline-block;
+                background:#DC2626;
+                color:#FFFFFF;
+                padding:6px 12px;
+                border-radius:20px;
+                font-size:12px;
+                font-weight:700;
+                font-family:Arial, sans-serif;
+            ">
+                Emergency Escalation
+            </span>
+
+        </td>
+    </tr>
+
+    <tr>
+        <th style="
+            text-align:left;
+            padding:14px;
+            background:#F3F4F6;
+            color:#111827;
+            font-size:14px;
+            font-family:Arial, sans-serif;
+            border-bottom:1px solid #D1D5DB;
+        ">
+            Assigned Officer
+        </th>
+
+        <td style="
+            padding:14px;
+            color:#374151;
+            font-size:14px;
+            font-family:Arial, sans-serif;
+            border-bottom:1px solid #E5E7EB;
+        ">
+            {{ officer_name|default('Unassigned') }}
+        </td>
+    </tr>
+
+    <tr>
+        <th style="
+            text-align:left;
+            padding:14px;
+            background:#E5E7EB;
+            color:#111827;
+            font-size:14px;
+            font-family:Arial, sans-serif;
+        ">
+            Missed Deadline
+        </th>
+
+        <td style="
+            padding:14px;
+            color:#991B1B;
+            font-size:14px;
+            font-weight:700;
+            font-family:Arial, sans-serif;
+        ">
+            {{ deadline }}
+        </td>
+    </tr>
 
 </table>
 
-<p style="margin-top:28px; font-size:15px; color:#4B5563; line-height:1.8; font-family:Arial,sans-serif; margin-bottom:24px;">
-  Please review the escalation details immediately, assign corrective actions, and ensure the grievance is resolved to maintain compliance and citizen satisfaction.
+<!-- Action Instructions -->
+<p style="
+    margin:28px 0 20px 0;
+    font-size:15px;
+    color:#4B5563;
+    line-height:1.8;
+    font-family:Arial, sans-serif;
+">
+    Please review the escalation details, assign corrective actions if necessary, and ensure the grievance is resolved
+    at the earliest to maintain SLA compliance and citizen satisfaction.
 </p>
 
-<!-- CTA Button -->
-<div style="text-align:center; margin:30px 0;">
-  {% set btn_url = portal_url|default('#') %}
-  {% set btn_text = 'View Escalation Dashboard' %}
-  {% set btn_color = '#DC2626' %}
-  {% set btn_width = '260' %}
-  {% include "email/button.html" %}
+<!-- CTA -->
+<div style="
+    text-align:center;
+    padding:10px 0 20px 0;
+">
+
+    <a href="{{ portal_url|default('#') }}" style="
+            background:#DC2626;
+            color:#FFFFFF;
+            text-decoration:none;
+            padding:14px 28px;
+            border-radius:6px;
+            font-size:15px;
+            font-weight:600;
+            font-family:Arial, sans-serif;
+            display:inline-block;
+       ">
+        View Escalation Dashboard
+    </a>
+
 </div>
 
-<p style="margin-top:30px; font-size:15px; color:#4B5563; line-height:1.8; font-family:Arial,sans-serif;">
-  Regards,<br>
-  <strong>JanSamadhan Escalation System</strong><br>
-  Smart Public Grievance Resolution System
+<!-- Compliance Notice -->
+<div style="
+    margin-top:10px;
+    padding:18px;
+    background:#FEF2F2;
+    border-left:4px solid #DC2626;
+">
+
+    <p style="
+        margin:0;
+        font-size:14px;
+        color:#7F1D1D;
+        line-height:1.7;
+        font-family:Arial, sans-serif;
+    ">
+        Continued SLA violations may impact departmental performance metrics and administrative compliance reporting.
+    </p>
+
+</div>
+
+<!-- Footer -->
+<p style="
+    margin-top:30px;
+    color:#111827;
+    font-size:15px;
+    line-height:1.8;
+    font-family:Arial, sans-serif;
+">
+    Regards,<br>
+    <strong>JanSamadhan Escalation System</strong><br>
+    Smart Public Grievance Resolution System
 </p>
+
 {% endblock %}
