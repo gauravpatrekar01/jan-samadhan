@@ -1239,7 +1239,7 @@
     function openLoginModal(role) {
       console.log("🔓 Opening login modal for:", role);
       if (role === 'ngo') {
-        openModal('ngoPartnerModal');
+        window.location.href = 'ngo-portal.html';
         return;
       }
       window.JanSamadhanAuth.role = role;

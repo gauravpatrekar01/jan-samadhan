@@ -179,8 +179,13 @@ window.JanSamadhan = {
 };
 
 function getSessionUser() {
-    const user = localStorage.getItem('js_user');
-    return user ? JSON.parse(user) : null;
+    try {
+        const user = sessionStorage.getItem('js_user') || localStorage.getItem('js_user');
+        return user ? JSON.parse(user) : null;
+    } catch (e) {
+        console.error("Error reading session user:", e);
+        return null;
+    }
 }
 
 function isOnline() {
