@@ -788,35 +788,82 @@ def get_complaint(id: str, user: dict = Depends(get_current_user_optional)):
 
 
 @router.post("/{id}/generate-summary")
+@limiter.limit("3/minute")
 def regenerate_complaint_summary(
     id: str,
     background_tasks: BackgroundTasks,
+    request: Request,
     target_language: str = Query(None),
     user: dict = Depends(get_current_user),
 ):
     """
-    Restricted Processing Action:
     Regenerate and PERSIST AI summary for a complaint.
-    Only for owner, admin, officer, or NGO.
+    Accessible to ALL authenticated users with rate limiting (max 3/min) and audit logging.
     """
-    collection = db.get_collection("complaints")
-    complaint = collection.find_one({"id": id}, {"_id": 0})
-    if not complaint:
-        raise NotFoundError("Complaint")
+    start_time = datetime.now(timezone.utc)
+    actor_email = user.get("sub", "unknown")
+    actor_role = user.get("role", "citizen")
+    ip_address = request.client.host if request.client else "unknown"
 
-    # Strict ownership/privileged checks for PERSISTENT changes
-    is_privileged = user.get("role") in ["admin", "officer", "ngo"]
-    is_owner = is_citizen_owner(complaint, user)
-    
-    if not is_privileged and not is_owner:
-        raise AuthorizationError("Not authorized to trigger background processing for this complaint")
+    try:
+        collection = db.get_collection("complaints")
+        complaint = collection.find_one({"id": id}, {"_id": 0})
+        if not complaint:
+            duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            log_audit(
+                action="complaint_summary_regenerated",
+                actor_email=actor_email,
+                actor_role=actor_role,
+                resource_type="complaint",
+                resource_id=id,
+                details={
+                    "ip": ip_address,
+                    "response_time_ms": duration_ms,
+                    "error": "Complaint not found"
+                },
+                status="failed"
+            )
+            raise NotFoundError("Complaint")
 
-    collection.update_one(
-        {"id": id},
-        {"$set": {"summary_generated": False, "summary_generation_status": "pending", "summary_last_error": None}},
-    )
-    background_tasks.add_task(generate_and_store_summary, id, target_language)
-    return {"success": True, "message": "Background summary regeneration started", "id": id}
+        collection.update_one(
+            {"id": id},
+            {"$set": {"summary_generated": False, "summary_generation_status": "pending", "summary_last_error": None}},
+        )
+        background_tasks.add_task(generate_and_store_summary, id, target_language)
+
+        duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+        log_audit(
+            action="complaint_summary_regenerated",
+            actor_email=actor_email,
+            actor_role=actor_role,
+            resource_type="complaint",
+            resource_id=id,
+            details={
+                "ip": ip_address,
+                "response_time_ms": duration_ms,
+                "target_language": target_language or "Marathi"
+            },
+            status="success"
+        )
+        return {"success": True, "message": "Background summary regeneration started", "id": id}
+
+    except Exception as e:
+        if not isinstance(e, HTTPException):
+            duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            log_audit(
+                action="complaint_summary_regenerated",
+                actor_email=actor_email,
+                actor_role=actor_role,
+                resource_type="complaint",
+                resource_id=id,
+                details={
+                    "ip": ip_address,
+                    "response_time_ms": duration_ms,
+                    "error": str(e)
+                },
+                status="failed"
+            )
+        raise e
 
 
 @router.post("/{id}/generate-view-summary")

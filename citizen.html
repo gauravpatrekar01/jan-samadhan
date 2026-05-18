@@ -731,12 +731,32 @@
     }
 
     async function regenerateSummary(id) {
+      // Direct button selection using a robust query selector matching the onclick action
+      const btn = document.querySelector(`button[onclick*="regenerateSummary('${id}')"]`);
+      let originalHtml = "";
+      if (btn) {
+        originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" style="width:12px;height:12px;margin-right:6px;border-width:2px"></span> Generating...`;
+      }
       try {
         await window.JanSamadhanAPI.regenerateGrievanceSummary(id);
-        showToast("Persistent summary regeneration started", "info");
+        showToast("Persistent summary regeneration started successfully", "success");
         setTimeout(() => viewDetail(id), 1500);
       } catch (e) {
-        showToast(`Failed to trigger processing: ${e.message}`, "error");
+        console.error("Regeneration failed:", e);
+        showToast(`Regeneration failed: ${e.message}`, "error");
+        // Fallback to transient summary only on actual server/API failure
+        showToast("Triggering quick transient fallback summary...", "info");
+        try {
+          await generateViewSummary(id, `detail-summary-${id}`);
+        } catch (fallbackError) {
+          showToast(`Fallback also failed: ${fallbackError.message}`, "error");
+        }
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+        }
       }
     }
 
@@ -864,13 +884,7 @@
     <div style="font-weight:700;font-size:.88rem;margin-bottom:8px">Resolution Progress:</div>
     ${renderProgressBar(getProgressFromStatus(g.status))}
     <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
-       ${window._citizenUser && window._citizenUser.sub &&
-            ((g.citizen_email &&
-              g.citizen_email.toLowerCase() ===
-              window._citizenUser.sub.toLowerCase()) ||
-              (g.email &&
-                g.email.toLowerCase() === window._citizenUser.sub.toLowerCase()) ||
-              ["admin", "officer", "ngo"].includes(window._citizenUser.role))
+       ${window._citizenUser
             ? `<button class="btn btn-ghost btn-sm" onclick="regenerateSummary('${gid}')">🔄 Regenerate AI Summary</button>`
             : ""
           }
@@ -894,6 +908,8 @@
 
     // Attach to window to ensure global availability
     window.viewDetail = viewDetail;
+    window.regenerateSummary = regenerateSummary;
+    window.generateViewSummary = generateViewSummary;
 
     let _summaryPollTimer = null;
     let _summaryPollAttempts = 0;
